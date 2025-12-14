@@ -1,0 +1,48 @@
+name: flutter_application_1
+description: "A new Flutter project."
+publish_to: "none"
+version: 0.1.0
+
+environment:
+  sdk: ^3.0.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  provider: ^6.0.6
+  shared_preferences: ^2.3.2
+  image_picker: ^1.0.7
+  flutter_localizations:
+    sdk: flutter
+  intl: ^0.20.2
+  # Optional: real device location support - uncomment and configure permissions if using on device
+  geolocator: ^14.0.2
+  geocoding: ^2.0.5
+  url_launcher: ^6.2.5
+  mailer: ^6.0.0
+  flutter_local_notifications: ^17.0.0
+  image_cropper: ^8.0.2
+  connectivity_plus: ^6.0.3
+  share_plus: ^12.0.1
+  firebase_core: ^4.2.1
+  firebase_auth: ^6.1.2
+  cloud_firestore: ^6.1.0
+  google_sign_in: ^6.2.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.13.1
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/data/markets.json
+    - assets/data/markets_istanbul.json
+    - assets/images/
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/copilot_ikon.png"

@@ -1,0 +1,1099 @@
+[
+    {
+        "id": "m1",
+        "name": "Taksim Semt Pazarı",
+        "description": "Taksim çevresinde taze ürünler",
+        "latitude": 41.0369,
+        "longitude": 28.9858,
+        "neighborhood": "Taksim",
+        "district": "Beyoğlu",
+        "city": "İstanbul",
+        "openDays": [
+            "Cumartesi",
+            "Pazar"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze",
+            "Şarküteri"
+        ]
+    },
+    {
+        "id": "m2",
+        "name": "Beyoğlu Pazarı",
+        "description": "Beyoğlu semt pazarı",
+        "latitude": 41.0317,
+        "longitude": 28.9760,
+        "neighborhood": "Karaköy",
+        "district": "Beyoğlu",
+        "city": "İstanbul",
+        "openDays": [
+            "Çarşamba"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze",
+            "Balık"
+        ]
+    },
+    {
+        "id": "m3",
+        "name": "Eminönü Pazarı",
+        "description": "Denize yakın semt pazarı",
+        "latitude": 41.0134,
+        "longitude": 28.9713,
+        "neighborhood": "Eminönü",
+        "district": "Fatih",
+        "city": "İstanbul",
+        "openDays": [
+            "Cumartesi"
+        ],
+        "products": [
+            "Baharat",
+            "Peynir",
+            "Zeytin"
+        ]
+    },
+    {
+        "id": "m7",
+        "name": "Kadıköy Pazarı",
+        "description": "Taze meyve ve sebze",
+        "latitude": 40.9860,
+        "longitude": 29.0259,
+        "neighborhood": "Kadıköy",
+        "district": "Kadıköy",
+        "city": "İstanbul",
+        "openDays": [
+            "Pazar"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze",
+            "Tekstil"
+        ]
+    },
+    {
+        "id": "kp_pzt1",
+        "name": "Karşıyaka Kapalı Semt Pazarı",
+        "description": "4002. Sk., Çevik Kuvvet Bölgesi (Kazancı Bedih Parkı Yanı)",
+        "latitude": 37.1800,
+        "longitude": 38.8000,
+        "neighborhood": "Karşıyaka",
+        "district": "Karaköprü",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Pazartesi"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "kp_pzt2",
+        "name": "Atakent Kapalı Semt Pazarı",
+        "description": "6089. Sk., Mehmet Güneş Arkası",
+        "latitude": 37.1680,
+        "longitude": 38.7920,
+        "neighborhood": "Atakent",
+        "district": "Karaköprü",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Pazartesi"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "kp_pzt3",
+        "name": "Güllübağ Çadırlı Semt Pazarı",
+        "description": "3011. Sk., 603. Cad. Yolu Üzeri",
+        "latitude": 37.1900,
+        "longitude": 38.7800,
+        "neighborhood": "Güllübağ",
+        "district": "Karaköprü",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Pazartesi"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "kp_sal1",
+        "name": "Akbayır Açık Semt Pazarı",
+        "description": "1019. Sk., Çırağan Sitesi Önü",
+        "latitude": 37.1850,
+        "longitude": 38.7850,
+        "neighborhood": "Akbayır",
+        "district": "Karaköprü",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Salı"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "kp_sal2",
+        "name": "Doğukent Kapalı Semt Pazarı",
+        "description": "1237. Sk., Gençlik Spor Müdürlüğü Arkası",
+        "latitude": 37.1820,
+        "longitude": 38.8050,
+        "neighborhood": "Doğukent",
+        "district": "Karaköprü",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Salı"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "kp_sal3",
+        "name": "Batıkent Açık Semt Pazarı",
+        "description": "4230. Sk. (Kooperatif-2)",
+        "latitude": 37.1950,
+        "longitude": 38.8100,
+        "neighborhood": "Batıkent",
+        "district": "Karaköprü",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Salı"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "kp_car1",
+        "name": "Akpiyar Kapalı Semt Pazarı",
+        "description": "4052. Sk.",
+        "latitude": 37.1750,
+        "longitude": 38.7950,
+        "neighborhood": "Akpiyar",
+        "district": "Karaköprü",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Çarşamba"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "kp_car2",
+        "name": "Seyrantepe Semt Pazarı",
+        "description": "8129. Sk., Sağlık Ocağı Altı",
+        "latitude": 37.2000,
+        "longitude": 38.8200,
+        "neighborhood": "Seyrantepe",
+        "district": "Karaköprü",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Çarşamba"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "kp_car3",
+        "name": "Atakent Açık Semt Pazarı",
+        "description": "6092. Sk., 2. Etap Faruk Çelik Kompleksi Arkası",
+        "latitude": 37.1690,
+        "longitude": 38.7930,
+        "neighborhood": "Atakent",
+        "district": "Karaköprü",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Çarşamba"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "kp_per1",
+        "name": "Seyrantepe Açık Semt Pazarı",
+        "description": "8275. Sk. (Yol üzerine kuruluyor)",
+        "latitude": 37.2010,
+        "longitude": 38.8210,
+        "neighborhood": "Seyrantepe",
+        "district": "Karaköprü",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Perşembe"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "kp_per2",
+        "name": "Narlıkuyu Kapalı Semt Pazarı",
+        "description": "1142. Sk.",
+        "latitude": 37.1750,
+        "longitude": 38.8100,
+        "neighborhood": "Narlıkuyu",
+        "district": "Karaköprü",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Perşembe"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "kp_per3",
+        "name": "Narlıkuyu (Koop-2) Semt Pazarı",
+        "description": "1308. Sk.",
+        "latitude": 37.1760,
+        "longitude": 38.8110,
+        "neighborhood": "Narlıkuyu",
+        "district": "Karaköprü",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Perşembe"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "kp_cum1",
+        "name": "Şenevler Kapalı Semt Pazarı",
+        "description": "6129-6132. Sk.",
+        "latitude": 37.1720,
+        "longitude": 38.7950,
+        "neighborhood": "Şenevler",
+        "district": "Karaköprü",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Cuma"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "kp_cum2",
+        "name": "Şenevler (Cuma 2) Semt Pazarı",
+        "description": "6132. Sk.",
+        "latitude": 37.1730,
+        "longitude": 38.7960,
+        "neighborhood": "Şenevler",
+        "district": "Karaköprü",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Cuma"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "kp_cum3",
+        "name": "Çankaya Küçük Cuma Pazarı",
+        "description": "2007. Sk., 35 Metrelik Yol Üzeri",
+        "latitude": 37.1780,
+        "longitude": 38.7900,
+        "neighborhood": "Çankaya",
+        "district": "Karaköprü",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Cuma"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "kp_cmt1",
+        "name": "Akpiyar (Cmt) Kapalı Semt Pazarı",
+        "description": "4003. Cad.",
+        "latitude": 37.1760,
+        "longitude": 38.7960,
+        "neighborhood": "Akpiyar",
+        "district": "Karaköprü",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Cumartesi"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "hl_pzt1",
+        "name": "Ulubatlı Semt Pazarı",
+        "description": "Prof. A. Karahan Cd. Turgut Özal Parkı Yanı",
+        "latitude": 37.1660,
+        "longitude": 38.7920,
+        "neighborhood": "Ulubatlı",
+        "district": "Haliliye",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Pazartesi"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "hl_pzt2",
+        "name": "Ertuğrul Gazi Semt Pazarı",
+        "description": "323. Sokak Resul Allah Camii Yanı",
+        "latitude": 37.1720,
+        "longitude": 38.8050,
+        "neighborhood": "Ertuğrul Gazi",
+        "district": "Haliliye",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Pazartesi"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "hl_pzt3",
+        "name": "Devteyşti (Pzt) Semt Pazarı",
+        "description": "9615. Sokak",
+        "latitude": 37.1350,
+        "longitude": 38.8250,
+        "neighborhood": "Devteyşti",
+        "district": "Haliliye",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Pazartesi"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "hl_pzt4",
+        "name": "Sancaktar Semt Pazarı",
+        "description": "1133. Sokak",
+        "latitude": 37.1580,
+        "longitude": 38.8150,
+        "neighborhood": "Sancaktar",
+        "district": "Haliliye",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Pazartesi"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "hl_sal1",
+        "name": "Yenişehir Semt Pazarı",
+        "description": "235. Sokak",
+        "latitude": 37.1550,
+        "longitude": 38.7850,
+        "neighborhood": "Yenişehir",
+        "district": "Haliliye",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Salı"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "hl_sal2",
+        "name": "İmam Bakır Semt Pazarı",
+        "description": "Veteriner Cd. GAP Araştırma Enstitüsü Yanı",
+        "latitude": 37.1850,
+        "longitude": 38.7750,
+        "neighborhood": "İmam Bakır",
+        "district": "Haliliye",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Salı"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "hl_sal3",
+        "name": "Bamyasuyu Semt Pazarı",
+        "description": "142. Sokak",
+        "latitude": 37.1620,
+        "longitude": 38.7900,
+        "neighborhood": "Bamyasuyu",
+        "district": "Haliliye",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Salı"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "hl_sal4",
+        "name": "Konuklu Semt Pazarı",
+        "description": "5030. Sokak",
+        "latitude": 37.1100,
+        "longitude": 38.8600,
+        "neighborhood": "Konuklu",
+        "district": "Haliliye",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Salı"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "hl_sal5",
+        "name": "Hızmalı Semt Pazarı",
+        "description": "49. ve 56. Sokak Hz. Ayşe Camii Yanı",
+        "latitude": 37.1580,
+        "longitude": 38.7820,
+        "neighborhood": "Hızmalı",
+        "district": "Haliliye",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Salı"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "hl_car1",
+        "name": "Mimar Sinan Semt Pazarı",
+        "description": "Cengiz Topel Caddesi",
+        "latitude": 37.1680,
+        "longitude": 38.7880,
+        "neighborhood": "Mimar Sinan",
+        "district": "Haliliye",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Çarşamba",
+            "Cumartesi"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "hl_car2",
+        "name": "Devteyşti (Çar) Semt Pazarı",
+        "description": "Salih Özcan Bulvarı",
+        "latitude": 37.1360,
+        "longitude": 38.8210,
+        "neighborhood": "Devteyşti",
+        "district": "Haliliye",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Çarşamba"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "hl_car3",
+        "name": "Sırrın Semt Pazarı",
+        "description": "Köylükent Sitesi",
+        "latitude": 37.1450,
+        "longitude": 38.8100,
+        "neighborhood": "Sırrın",
+        "district": "Haliliye",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Çarşamba"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "hl_per1",
+        "name": "Yeşildirek Semt Pazarı",
+        "description": "424. Sokak Yunus Emre Cd. Üzeri",
+        "latitude": 37.1750,
+        "longitude": 38.8000,
+        "neighborhood": "Yeşildirek",
+        "district": "Haliliye",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Perşembe"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "hl_per2",
+        "name": "Ahmet Yesevi (Per) Semt Pazarı",
+        "description": "2243. Sokak",
+        "latitude": 37.1250,
+        "longitude": 38.8050,
+        "neighborhood": "Ahmet Yesevi",
+        "district": "Haliliye",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Perşembe"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "hl_per3",
+        "name": "İpekyol Semt Pazarı",
+        "description": "1911. Sokak",
+        "latitude": 37.1520,
+        "longitude": 38.7780,
+        "neighborhood": "İpekyol",
+        "district": "Haliliye",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Perşembe"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "hl_cum1",
+        "name": "Karşıyaka Semt Pazarı",
+        "description": "590. Sokak",
+        "latitude": 37.1650,
+        "longitude": 38.8080,
+        "neighborhood": "Karşıyaka",
+        "district": "Haliliye",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Cuma"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "hl_cum2",
+        "name": "Yavuz Selim Semt Pazarı",
+        "description": "2104. Sokak",
+        "latitude": 37.1420,
+        "longitude": 38.7950,
+        "neighborhood": "Yavuz Selim",
+        "district": "Haliliye",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Cuma"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "hl_cum3",
+        "name": "Şair Nabi Semt Pazarı",
+        "description": "Buluntu Hoca Parkı yanı",
+        "latitude": 37.1610,
+        "longitude": 38.7860,
+        "neighborhood": "Şair Nabi",
+        "district": "Haliliye",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Cuma"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "hl_cum4",
+        "name": "Ahmet Yesevi (Cum) Semt Pazarı",
+        "description": "Sultan Abdulhamid Bulvarı",
+        "latitude": 37.1260,
+        "longitude": 38.8060,
+        "neighborhood": "Ahmet Yesevi",
+        "district": "Haliliye",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Cuma"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "hl_cmt2",
+        "name": "Selahaddin Eyyubi Semt Pazarı",
+        "description": "219. Sokak",
+        "latitude": 37.1560,
+        "longitude": 38.8020,
+        "neighborhood": "Selahaddin Eyyubi",
+        "district": "Haliliye",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Cumartesi"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "ey_pzt1",
+        "name": "Yenice Kapalı Semt Pazarı",
+        "description": "3991. Sokak, Yenice Mah.",
+        "latitude": 37.1250,
+        "longitude": 38.7950,
+        "neighborhood": "Yenice",
+        "district": "Eyyübiye",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Pazartesi"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "ey_pzt2",
+        "name": "Nenehatun Semt Pazarı",
+        "description": "3630. Sokak, Osmanlı Mah.",
+        "latitude": 37.1320,
+        "longitude": 38.8050,
+        "neighborhood": "Osmanlı",
+        "district": "Eyyübiye",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Pazartesi",
+            "Cuma"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "ey_pzt3",
+        "name": "Dereboyu Semt Pazarı",
+        "description": "Dereboyu, Direkli Mah.",
+        "latitude": 37.1450,
+        "longitude": 38.7750,
+        "neighborhood": "Direkli",
+        "district": "Eyyübiye",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Pazartesi"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "ey_pzt4",
+        "name": "Toki Emekliler Pazarı",
+        "description": "Toki Emekliler Sitesi",
+        "latitude": 37.1550,
+        "longitude": 38.7650,
+        "neighborhood": "Batıkent",
+        "district": "Eyyübiye",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Pazartesi"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "ey_sal1",
+        "name": "Onikiler Kapalı Semt Pazarı",
+        "description": "Harrankapı Cad.",
+        "latitude": 37.1380,
+        "longitude": 38.7920,
+        "neighborhood": "Onikiler",
+        "district": "Eyyübiye",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Salı",
+            "Cuma"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "ey_sal2",
+        "name": "Muradiye Semt Pazarı",
+        "description": "Eyüp Petrol Üstü 3432. Sokak",
+        "latitude": 37.1350,
+        "longitude": 38.7850,
+        "neighborhood": "Muradiye",
+        "district": "Eyyübiye",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Salı"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "ey_sal3",
+        "name": "Hayati Harrani (Salı) Pazarı",
+        "description": "Oruç Camii Yanı 3956. Sokak",
+        "latitude": 37.1180,
+        "longitude": 38.7950,
+        "neighborhood": "Hayati Harrani",
+        "district": "Eyyübiye",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Salı"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "ey_sal4",
+        "name": "H. Harrani (Vet) Pazarı",
+        "description": "Veterinerlik Fakülte Karşısı",
+        "latitude": 37.1200,
+        "longitude": 38.7980,
+        "neighborhood": "Hayati Harrani",
+        "district": "Eyyübiye",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Salı"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "ey_car1",
+        "name": "Eyüpnabi Semt Pazarı",
+        "description": "Akçakale Cad., Hyundai Yanı",
+        "latitude": 37.1280,
+        "longitude": 38.7880,
+        "neighborhood": "Eyüpnabi",
+        "district": "Eyyübiye",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Çarşamba"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "ey_car2",
+        "name": "Beykapısı Semt Pazarı",
+        "description": "Mahmutoğlu Bedendibi Cad.",
+        "latitude": 37.1520,
+        "longitude": 38.7950,
+        "neighborhood": "Beykapısı",
+        "district": "Eyyübiye",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Çarşamba"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "ey_car3",
+        "name": "Direkli (Çar) Semt Pazarı",
+        "description": "Yıldız Plaza Önü",
+        "latitude": 37.1460,
+        "longitude": 38.7760,
+        "neighborhood": "Direkli",
+        "district": "Eyyübiye",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Çarşamba"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "ey_car4",
+        "name": "Toki Kapalı Semt Pazarı",
+        "description": "15 Temmuz Batıkent",
+        "latitude": 37.1560,
+        "longitude": 38.7660,
+        "neighborhood": "Batıkent",
+        "district": "Eyyübiye",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Çarşamba",
+            "Cumartesi"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "ey_car5",
+        "name": "Şıhmaksut Semt Pazarı",
+        "description": "Ceylan Cad.",
+        "latitude": 37.1420,
+        "longitude": 38.7880,
+        "neighborhood": "Şıhmaksut",
+        "district": "Eyyübiye",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Çarşamba"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "ey_per1",
+        "name": "Yenice (Per) Semt Pazarı",
+        "description": "5019. Sokak, Sağlık Ocağı Yanı",
+        "latitude": 37.1260,
+        "longitude": 38.7960,
+        "neighborhood": "Yenice",
+        "district": "Eyyübiye",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Perşembe"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "ey_per2",
+        "name": "Süleymansah Semt Pazarı",
+        "description": "3826. Sokak, M. Akif İnan Okulu Yanı",
+        "latitude": 37.1350,
+        "longitude": 38.7750,
+        "neighborhood": "Süleymansah",
+        "district": "Eyyübiye",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Perşembe"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "ey_per3",
+        "name": "Eyüpnabi (Per) Semt Pazarı",
+        "description": "3589. Sokak, Erenoğlu Market Yanı",
+        "latitude": 37.1290,
+        "longitude": 38.7890,
+        "neighborhood": "Eyüpnabi",
+        "district": "Eyyübiye",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Perşembe"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "ey_per4",
+        "name": "Dedeosman Semt Pazarı",
+        "description": "Zeytinlik Mance",
+        "latitude": 37.1480,
+        "longitude": 38.7850,
+        "neighborhood": "Dedeosman",
+        "district": "Eyyübiye",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Perşembe"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "ey_cum1",
+        "name": "Eyüpkent Kapalı Semt Pazarı",
+        "description": "3962. Sokak, Borsa Arkası",
+        "latitude": 37.1350,
+        "longitude": 38.7800,
+        "neighborhood": "Eyyüpkent",
+        "district": "Eyyübiye",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Cuma"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "ey_cum2",
+        "name": "Topdağı Semt Pazarı",
+        "description": "Topdağı Mahallesi",
+        "latitude": 37.1450,
+        "longitude": 38.8020,
+        "neighborhood": "Topdağı",
+        "district": "Eyyübiye",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Cuma"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "ey_cmt1",
+        "name": "Hacıbayram Semt Pazarı",
+        "description": "Umut Sokak",
+        "latitude": 37.1420,
+        "longitude": 38.7980,
+        "neighborhood": "Hacıbayram",
+        "district": "Eyyübiye",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Cumartesi"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "ey_cmt2",
+        "name": "Selçuklu Semt Pazarı",
+        "description": "Sokak Açık Semt Pazarı",
+        "latitude": 37.1320,
+        "longitude": 38.7720,
+        "neighborhood": "Selçuklu",
+        "district": "Eyyübiye",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Cumartesi"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "ey_cmt3",
+        "name": "Osmanlı Deresi Semt Pazarı",
+        "description": "3725. Sokak",
+        "latitude": 37.1330,
+        "longitude": 38.8060,
+        "neighborhood": "Osmanlı",
+        "district": "Eyyübiye",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Cumartesi"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "ey_cmt4",
+        "name": "Akşemsettin Semt Pazarı",
+        "description": "Trafo Yanı",
+        "latitude": 37.1380,
+        "longitude": 38.7680,
+        "neighborhood": "Akşemsettin",
+        "district": "Eyyübiye",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Cumartesi"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    },
+    {
+        "id": "ey_cmt5",
+        "name": "Kadıoğlu Semt Pazarı",
+        "description": "Tılfindir Parkı Önü",
+        "latitude": 37.1550,
+        "longitude": 38.7920,
+        "neighborhood": "Kadıoğlu",
+        "district": "Eyyübiye",
+        "city": "Şanlıurfa",
+        "openDays": [
+            "Cumartesi"
+        ],
+        "products": [
+            "Meyve",
+            "Sebze"
+        ]
+    }
+]
