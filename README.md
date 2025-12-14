@@ -1,53 +1,66 @@
-# Flutter Application 1
+# Pazaryeri
 
-## Pazaryeri App — Mimari & Nasıl Geliştirilmeli
+Semt pazarları, ürün arama, doluluk oranları ve bildirim/şikayet yönetimi sağlayan Flutter uygulaması.
 
-* [ ]
+## Özellikler
 
-- lib/core: Servis arayüzleri ve location servisleri (mock ve geolocator)
-- lib/data: Model ve repository arayüzleri/implementasyonları (Mock repository yüklü)
-- lib/presentation: UI, viewmodel ve bileşenler
+*   **Kullanıcı Yönetimi:**
+    *   Giriş Yap / Kayıt Ol (E-posta & Şifre, Google ile Giriş).
+    *   **Misafir Modu:** Üye olmadan uygulamayı inceleme imkanı.
+    *   Profil Düzenleme: Fotoğraf yükleme/kırpma, kişisel bilgileri güncelleme.
+    *   Şifre Sıfırlama.
+*   **Pazaryeri Keşfi:**
+    *   Konuma dayalı pazar listeleme.
+    *   **Tab Gezintisi:** 4 ana sekme (Pazaryeri, Ara, Doluluk, Bildir).
+*   **Arama:** Ürün ismine göre pazar arama ve adres görüntüleme.
+*   **Doluluk Oranları:** Pazaryerlerinin anlık doluluk yüzdelerini görüntüleme.
+*   **Bildirim/Şikayet:** Pazaryerleri için şikayet veya bildirim oluşturma.
+*   **Diğer:**
+    *   Favoriler ve Yorumlarım.
+    *   Tema (Karanlık/Aydınlık) ve Dil (Türkçe/İngilizce) desteği.
 
-Kullanılan ana paketler: `provider`, `geolocator` (opsiyonel), `geocoding` (opsiyonel)
+## Proje Mimarisi
 
-Çalıştırma noktası: `lib/main.dart`
+Proje MVVM (Model-View-ViewModel) mimarisi ve `provider` paketi kullanılarak geliştirilmiştir.
 
-Hızlı başlatma:
+*   `lib/core`: Servis arayüzleri ve yardımcı sınıflar (Location servisleri vb.).
+*   `lib/data`: Veri modelleri ve repository implementasyonları.
+*   `lib/presentation`: UI ekranları, ViewModel sınıfları ve widget'lar.
 
-1. `flutter pub get` çalıştırın
-2. Emulatör/cihazda çalıştırın: `flutter run`
+**Kullanılan Ana Paketler:** `provider`, `firebase_auth`, `cloud_firestore`, `geolocator`, `image_picker`, `shared_preferences`.
 
-Geçiş: Gerçek konum servislerini kullanmak için `main.dart` dosyasında `MockLocationService` yerine `GeolocatorLocationService` oluşturun ve gerekli Android/iOS izinlerini eklemeyi unutmayın.
+## Kurulum ve Çalıştırma
 
-Permissions (Android/iOS) notları:
-- Android: `android/app/src/main/AndroidManifest.xml` içinde aşağıdaki izinleri ekleyin:
-	- `<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />`
-	- `<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />`
-- iOS: `ios/Runner/Info.plist` içine şu anahtarları ekleyin:
-	- `NSLocationWhenInUseUsageDescription` — "Uygulama yakınındaki semt pazarlarını bulmak için konumunuza erişim gereklidir"
+1.  Bağımlılıkları yükleyin:
+    ```bash
+    flutter pub get
+    ```
+2.  Uygulamayı çalıştırın:
+    ```bash
+    flutter run
+    ```
 
-Kişiselleştirme & genişletme önerileri:
-- Repository sınıfını gerçek bir HTTP servise bağlayın veya Firebase Firestore kullanın.
-- Unit/integration testleri ekleyin (viewmodel/unit tests).
-- Kullanıcı konumunu güncellemek için bir refresh düğmesi veya sürekli güncelleme seçeneği ekleyin.
+**Not:** Gerçek konum servislerini kullanmak için `main.dart` dosyasında `MockLocationService` yerine `GeolocatorLocationService` kullanıldığından emin olun.
 
+## Gerekli İzinler
 
-# flutter_application_1
+Uygulamanın tam fonksiyonlu çalışması için aşağıdaki izinlerin yapılandırılması gerekir:
 
-A new Flutter project.
+**Android (`android/app/src/main/AndroidManifest.xml`):**
+```xml
+<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+```
 
-Eklenen özellikler:
-- Alt kısmında 4 ana buton (PAZARYERİ, ARA, DOLULUK, BİLDİR) ile tab gezintisi.
-- `ARA` sayfasında ürün ismi girilerek, o ürünü satan pazaryerleri listelenir; tıklanınca adres gösterilir.
-- `DOLULUK` sayfasında pazaryerlerinin doluluk oranı (yüzdelik) gösterilir; tıklayınca adres gösterilir.
-- `BİLDİR` sayfasında tüm pazaryerleri listelenir; birine tıklanarak şikayet/bildirim formu açılır ve gönderildiğinde onay Snackbar'ı görünür.
+**iOS (`ios/Runner/Info.plist`):**
+*   `NSLocationWhenInUseUsageDescription`: "Uygulama yakınındaki semt pazarlarını bulmak için konumunuza erişim gereklidir."
 
-Eklenen dosyalar:
-- `lib/presentation/screens/search_screen.dart`
-- `lib/presentation/screens/occupancy_screen.dart`
-- `lib/presentation/screens/report_list_screen.dart`
-- `lib/presentation/screens/report_form_screen.dart`
+## Dosya Yapısı ve Eklenenler
 
-Model güncellemeleri:
-- `Market` modeline `products` ve `occupancyPercentage` alanları eklendi.
-
+*   **Ekranlar:**
+    *   `search_screen.dart`: Ürün arama ekranı.
+    *   `occupancy_screen.dart`: Doluluk oranları ekranı.
+    *   `report_list_screen.dart` & `report_form_screen.dart`: Bildirim listeleme ve oluşturma.
+    *   `account_screen.dart`: Profil ve ayarlar yönetimi.
+*   **Modeller:**
+    *   `Market` modeli `products` ve `occupancyPercentage` alanlarını içerir.
