@@ -11,11 +11,13 @@ class LanguageViewModel extends ChangeNotifier {
     _loadLanguage();
   }
 
+  // Uygulama açılışında dili yükle
   Future<void> _loadLanguage() async {
     _currentLanguage = await AuthService.instance.getLanguage();
     notifyListeners();
   }
 
+  // Dili değiştir
   Future<void> changeLanguage(String languageCode) async {
     if (_currentLanguage == languageCode) return;
     _currentLanguage = languageCode;
@@ -23,6 +25,6 @@ class LanguageViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Arayüzden kolayca çeviri almak için yardımcı metod
+  // Anahtara karşılık gelen metni getir
   String translate(String key) => AppStrings.getString(key, _currentLanguage);
 }

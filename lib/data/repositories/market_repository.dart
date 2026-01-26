@@ -14,6 +14,9 @@ abstract class MarketRepository {
 
   /// Returns a list of markets matching the given IDs
   Future<List<Market>> fetchMarketsByIds(List<String> ids);
+
+  /// Returns all markets
+  Future<List<Market>> fetchAllMarkets();
 }
 
 class MockMarketRepository implements MarketRepository {
@@ -1057,6 +1060,11 @@ class MockMarketRepository implements MarketRepository {
     return all.where((m) => ids.contains(m.id)).toList();
   }
 
+  @override
+  Future<List<Market>> fetchAllMarkets() async {
+    return _allMockMarkets;
+  }
+
   Market _createMarket(
     String id,
     String name,
@@ -1161,6 +1169,17 @@ class FirestoreMarketRepository implements MarketRepository {
       }
     }
     return allMarkets;
+  }
+
+  @override
+  Future<List<Market>> fetchAllMarkets() async {
+    try {
+      final snapshot = await _firestore.collection('markets').get();
+      return snapshot.docs.map((doc) => _mapDocumentToMarket(doc)).toList();
+    } catch (e) {
+      print('Error fetching all markets: $e');
+      return [];
+    }
   }
 
   Market _mapDocumentToMarket(DocumentSnapshot doc, {Address? userLocation}) {
@@ -1401,17 +1420,6 @@ class JsonMarketRepository implements MarketRepository {
       // Log the error so we can debug
       print('JsonMarketRepository error: $e');
       print(st);
-      // If we tried loading the national dataset and it failed, try Istanbul asset as a fallback
-      if (assetPath != 'assets/data/markets_istanbul.json') {
-        try {
-          // recursively call fetchNearbyMarkets to reuse parsing logic
-          return JsonMarketRepository(
-            assetPath: 'assets/data/markets_istanbul.json',
-          ).fetchNearbyMarkets(forAddress: forAddress);
-        } catch (_) {
-          // ignore and fallback to mock
-        }
-      }
       // Fallback to mock repository data so the app has markets to show
       final fallback = MockMarketRepository();
       final fallbackMarkets = await fallback.fetchNearbyMarkets(
@@ -1437,6 +1445,11 @@ class JsonMarketRepository implements MarketRepository {
       print('JsonMarketRepository fetchMarketsByIds error: $e');
       return [];
     }
+  }
+
+  @override
+  Future<List<Market>> fetchAllMarkets() async {
+    return _loadAllMarkets();
   }
 
   double _haversineDistance(

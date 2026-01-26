@@ -1,5 +1,9 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
@@ -9,6 +13,7 @@ import '../viewmodels/home_viewmodel.dart';
 import 'auth_viewmodel.dart';
 import 'auth_service.dart';
 import '../widgets/custom_app_bar.dart';
+import '../viewmodels/product_detail_screen.dart';
 
 class MarketDetailScreen extends StatefulWidget {
   final Market market;
@@ -25,18 +30,57 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
   double _userRating = 0;
 
   List<Map<String, dynamic>> _reviews = [];
+  late GoogleMapController _mapController;
+  final Set<Marker> _markers = {};
 
   @override
   void initState() {
     super.initState();
+    _requestLocationPermission();
     _loadReviews();
+    _markers.add(
+      Marker(
+        markerId: MarkerId(widget.market.id),
+        position: LatLng(
+            widget.market.address.latitude, widget.market.address.longitude),
+        infoWindow: InfoWindow(title: widget.market.name),
+      ),
+    );
+  }
+
+  Future<void> _requestLocationPermission() async {
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _moveToUserLocation() async {
+    try {
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.whileInUse ||
+          permission == LocationPermission.always) {
+        final position = await Geolocator.getCurrentPosition();
+        _mapController.animateCamera(
+          CameraUpdate.newLatLng(
+            LatLng(position.latitude, position.longitude),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Konuma gidilemedi: $e');
+    }
   }
 
   Future<void> _loadReviews() async {
     final allReviews = await AuthService.instance.getReviews();
-    final marketReviews = allReviews
-        .where((r) => r['marketId'] == widget.market.id)
-        .toList();
+    final marketReviews =
+        allReviews.where((r) => r['marketId'] == widget.market.id).toList();
 
     // Yorumları tarihe göre (yeniden eskiye) sırala
     marketReviews.sort(
@@ -103,6 +147,179 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
     await Share.share(text);
   }
 
+  void _setMapStyle(GoogleMapController controller) {
+    // https://mapstyle.withgoogle.com/ adresinden alınan örnek koyu tema stili
+    const String darkMapStyle = '''
+[
+  {
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#242f3e"
+      }
+    ]
+  },
+  {
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "#746855"
+      }
+    ]
+  },
+  {
+    "elementType": "labels.text.stroke",
+    "stylers": [
+      {
+        "color": "#242f3e"
+      }
+    ]
+  },
+  {
+    "featureType": "administrative.locality",
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "#d59563"
+      }
+    ]
+  },
+  {
+    "featureType": "poi",
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "#d59563"
+      }
+    ]
+  },
+  {
+    "featureType": "poi.park",
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#263c3f"
+      }
+    ]
+  },
+  {
+    "featureType": "poi.park",
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "#6b9a76"
+      }
+    ]
+  },
+  {
+    "featureType": "road",
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#38414e"
+      }
+    ]
+  },
+  {
+    "featureType": "road",
+    "elementType": "geometry.stroke",
+    "stylers": [
+      {
+        "color": "#212a37"
+      }
+    ]
+  },
+  {
+    "featureType": "road",
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "#9ca5b3"
+      }
+    ]
+  },
+  {
+    "featureType": "road.highway",
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#746855"
+      }
+    ]
+  },
+  {
+    "featureType": "road.highway",
+    "elementType": "geometry.stroke",
+    "stylers": [
+      {
+        "color": "#1f2835"
+      }
+    ]
+  },
+  {
+    "featureType": "road.highway",
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "#f3d19c"
+      }
+    ]
+  },
+  {
+    "featureType": "transit",
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#2f3948"
+      }
+    ]
+  },
+  {
+    "featureType": "transit.station",
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "#d59563"
+      }
+    ]
+  },
+  {
+    "featureType": "water",
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#17263c"
+      }
+    ]
+  },
+  {
+    "featureType": "water",
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "#515c6d"
+      }
+    ]
+  },
+  {
+    "featureType": "water",
+    "elementType": "labels.text.stroke",
+    "stylers": [
+      {
+        "color": "#17263c"
+      }
+    ]
+  }
+]
+    ''';
+
+    if (Theme.of(context).brightness == Brightness.dark) {
+      controller.setMapStyle(darkMapStyle);
+    } else {
+      controller.setMapStyle(null); // Varsayılan stil
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final langVM = Provider.of<LanguageViewModel>(context);
@@ -164,38 +381,30 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Pazar Konumu (Statik Harita Görseli)
-            GestureDetector(
-              onTap: _openMap, // Görsele tıklayınca da harita açılsın
-              child: SizedBox(
-                height: MediaQuery.of(context).size.height * 0.3,
-                width: double.infinity,
-                child: Image.network(
-                  // Yandex Static Maps API kullanarak konumun gerçek harita görselini alıyoruz.
-                  // ll: boylam,enlem (merkez)
-                  // z: zoom seviyesi (16 yakın plan için ideal)
-                  // l: harita tipi (map)
-                  // pt: işaretçi (boylam,enlem,stil)
-                  'https://static-maps.yandex.ru/1.x/?lang=tr_TR&ll=${widget.market.address.longitude},${widget.market.address.latitude}&z=16&l=map&size=600,300&pt=${widget.market.address.longitude},${widget.market.address.latitude},pm2rdm',
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    // İnternet yoksa veya yüklenemezse eski ikonu göster
-                    return Container(
-                      color: Colors.grey.shade200,
-                      child: Icon(
-                        Icons.storefront,
-                        size: 100,
-                        color: Colors.grey.shade400,
-                      ),
-                    );
-                  },
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return Container(
-                      color: Colors.grey.shade200,
-                      child: const Center(child: CircularProgressIndicator()),
-                    );
-                  },
+            SizedBox(
+              height: MediaQuery.of(context).size.height * 0.3,
+              width: double.infinity,
+              child: GoogleMap(
+                initialCameraPosition: CameraPosition(
+                  target: LatLng(
+                    widget.market.address.latitude,
+                    widget.market.address.longitude,
+                  ),
+                  zoom: 15,
                 ),
+                markers: _markers,
+                myLocationEnabled: true,
+                myLocationButtonEnabled: true,
+                onMapCreated: (controller) {
+                  _mapController = controller;
+                  _setMapStyle(controller);
+                  _moveToUserLocation();
+                },
+                gestureRecognizers: {
+                  Factory<OneSequenceGestureRecognizer>(
+                    () => EagerGestureRecognizer(),
+                  ),
+                },
               ),
             ),
             Padding(
@@ -230,7 +439,9 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
                             color: Colors.transparent,
                             child: Text(
                               widget.market.name,
-                              style: Theme.of(context).textTheme.headlineSmall
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .headlineSmall
                                   ?.copyWith(fontWeight: FontWeight.bold),
                             ),
                           ),
@@ -278,15 +489,16 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 24),
+                  _buildOccupancyBar(context),
+                  const SizedBox(height: 24),
                   Text(
                     widget.market.description,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Colors.grey.shade700,
-                    ),
+                          color: Colors.grey.shade700,
+                        ),
                   ),
                   const SizedBox(height: 24),
-
                   _buildDetailRow(
                     context,
                     Icons.location_on,
@@ -294,21 +506,26 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
                     '${widget.market.address.neighborhood}, ${widget.market.address.district} / ${widget.market.address.city}',
                   ),
                   const SizedBox(height: 16),
-
                   _buildWeeklyCalendar(context),
-                  const SizedBox(height: 16),
-
-                  _buildDetailRow(
-                    context,
-                    Icons.shopping_basket,
-                    langVM.translate('products_label'),
-                    widget.market.products.isNotEmpty
-                        ? widget.market.products.join(', ')
-                        : langVM.translate('general_products'),
-                  ),
-
+                  const SizedBox(height: 24),
+                  _buildProductsSection(context),
                   const SizedBox(height: 32),
-
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => _showSellersBottomSheet(context),
+                      icon: const Icon(Icons.people),
+                      label: Text(langVM.translate('sellers_title')),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        textStyle: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
@@ -330,8 +547,8 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
                   Text(
                     langVM.translate('reviews_title'),
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                   const SizedBox(height: 16),
                   _buildReviewForm(context),
@@ -343,6 +560,239 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  void _showSellersBottomSheet(BuildContext context) {
+    final langVM = Provider.of<LanguageViewModel>(context, listen: false);
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(16),
+          height: MediaQuery.of(context).size.height * 0.6,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Text(
+                langVM.translate('sellers_title'),
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: FutureBuilder<List<Map<String, dynamic>>>(
+                  future: AuthService.instance
+                      .fetchSellersForMarket(widget.market.id),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                      return Center(
+                        child: Text(
+                          langVM.translate('no_sellers_found'),
+                          style: TextStyle(color: Colors.grey.shade600),
+                        ),
+                      );
+                    }
+
+                    final sellers = snapshot.data!;
+                    return ListView.separated(
+                      itemCount: sellers.length,
+                      separatorBuilder: (ctx, i) => const Divider(),
+                      itemBuilder: (context, index) {
+                        final seller = sellers[index];
+                        final stallName = seller['stallName'] ??
+                            '${seller['firstName']} ${seller['lastName']}';
+                        final stallDesc = seller['stallDescription'] ?? '';
+                        final profilePic = seller['profilePicture'];
+
+                        return ListTile(
+                          leading: CircleAvatar(
+                            backgroundImage:
+                                (profilePic != null && profilePic.isNotEmpty)
+                                    ? NetworkImage(profilePic)
+                                    : null,
+                            child: (profilePic == null || profilePic.isEmpty)
+                                ? const Icon(Icons.person)
+                                : null,
+                          ),
+                          title: Text(
+                            stallName,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          subtitle: stallDesc.isNotEmpty
+                              ? Text(stallDesc,
+                                  maxLines: 2, overflow: TextOverflow.ellipsis)
+                              : null,
+                          isThreeLine: stallDesc.isNotEmpty,
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () {
+                            Navigator.pop(context); // Satıcılar listesini kapat
+                            _showSellerProducts(context, seller); // Ürünleri aç
+                          },
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showSellerProducts(BuildContext context, Map<String, dynamic> seller) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.6,
+          minChildSize: 0.4,
+          maxChildSize: 0.9,
+          builder: (context, scrollController) {
+            return Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '${seller['stallName'] ?? seller['firstName']} Ürünleri',
+                          style: Theme.of(context).textTheme.titleLarge,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                Expanded(
+                  child: FutureBuilder<List<Map<String, dynamic>>>(
+                    future: AuthService.instance
+                        .fetchSellerProductsFromDb(seller['id']),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      } else if (snapshot.hasError) {
+                        return Center(child: Text('Hata: ${snapshot.error}'));
+                      } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                        return const Center(
+                            child: Text('Bu satıcının henüz ürünü yok.'));
+                      }
+
+                      final products = snapshot.data!;
+                      return ListView.separated(
+                        controller: scrollController,
+                        itemCount: products.length,
+                        separatorBuilder: (ctx, i) => const Divider(height: 1),
+                        itemBuilder: (context, index) {
+                          final product = products[index];
+                          return ListTile(
+                            leading: _buildProductImage(product['imagePath']),
+                            title: Text(product['name']),
+                            subtitle: Text(
+                                '${product['price']} ₺ / ${product['unit'] ?? 'Birim'}'),
+                            trailing: product['inStock'] == true
+                                ? const Icon(Icons.check_circle,
+                                    color: Colors.green, size: 16)
+                                : const Icon(Icons.remove_circle,
+                                    color: Colors.red, size: 16),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => ProductDetailScreen(
+                                    product: product,
+                                    sellerName: seller['stallName'] ??
+                                        '${seller['firstName']} ${seller['lastName']}',
+                                  ),
+                                ),
+                              );
+                            },
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildProductImage(String? path) {
+    if (path == null || path.isEmpty) {
+      return Container(
+        width: 48,
+        height: 48,
+        decoration: BoxDecoration(
+          color: Colors.grey[200],
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: const Icon(Icons.shopping_basket, color: Colors.grey),
+      );
+    }
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: path.startsWith('http')
+          ? Image.network(
+              path,
+              width: 48,
+              height: 48,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => Container(
+                width: 48,
+                height: 48,
+                color: Colors.grey[200],
+                child: const Icon(Icons.error, color: Colors.grey),
+              ),
+            )
+          : Image.file(
+              File(path),
+              width: 48,
+              height: 48,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => Container(
+                width: 48,
+                height: 48,
+                color: Colors.grey[200],
+                child: const Icon(Icons.error, color: Colors.grey),
+              ),
+            ),
     );
   }
 
@@ -416,7 +866,23 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
                     return;
                   }
 
-                  final user = context.read<AuthViewModel>().currentUser;
+                  final authVM = context.read<AuthViewModel>();
+                  // Misafir kontrolü: Eğer misafirse uyarı göster ve giriş yapmaya yönlendir
+                  if (authVM.isGuest) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(langVM.translate('guest_message')),
+                        action: SnackBarAction(
+                          label: langVM.translate('login'),
+                          onPressed: () => authVM
+                              .exitGuestMode(), // Giriş ekranına yönlendirir
+                        ),
+                      ),
+                    );
+                    return;
+                  }
+
+                  final user = authVM.currentUser;
                   final now = DateTime.now();
                   final dateStr =
                       '${now.day.toString().padLeft(2, '0')}.${now.month.toString().padLeft(2, '0')}.${now.year}';
@@ -462,16 +928,13 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
             review['user'].hashCode.abs() % Colors.primaries.length;
         final color = Colors.primaries[colorIndex];
 
-        final isCurrentUser =
-            review['userId'] != null &&
+        final isCurrentUser = review['userId'] != null &&
             review['userId'] == authVM.currentUser?.id;
-        final profilePic = isCurrentUser
-            ? authVM.currentUser?.profilePicturePath
-            : null;
+        final profilePic =
+            isCurrentUser ? authVM.currentUser?.profilePicturePath : null;
 
         final likes = (review['likes'] as List<dynamic>?) ?? [];
-        final isLiked =
-            authVM.currentUser != null &&
+        final isLiked = authVM.currentUser != null &&
             likes.contains(authVM.currentUser!.id);
 
         return Card(
@@ -488,14 +951,13 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
                       children: [
                         CircleAvatar(
                           radius: 16,
-                          backgroundColor: profilePic != null
-                              ? Colors.transparent
-                              : color,
+                          backgroundColor:
+                              profilePic != null ? Colors.transparent : color,
                           backgroundImage: profilePic != null
                               ? (profilePic.startsWith('http')
-                                        ? NetworkImage(profilePic)
-                                        : FileImage(File(profilePic)))
-                                    as ImageProvider
+                                      ? NetworkImage(profilePic)
+                                      : FileImage(File(profilePic)))
+                                  as ImageProvider
                               : null,
                           child: profilePic == null
                               ? Text(
@@ -737,6 +1199,162 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
               ],
             );
           }),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProductsSection(BuildContext context) {
+    final langVM = Provider.of<LanguageViewModel>(context);
+    final products = widget.market.products;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              Icons.shopping_basket,
+              color: Theme.of(context).primaryColor,
+              size: 28,
+            ),
+            const SizedBox(width: 16),
+            Text(
+              langVM.translate('products_label'),
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (products.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(left: 44),
+            child: Text(
+              langVM.translate('general_products'),
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          )
+        else
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 1.0,
+            ),
+            itemCount: products.length,
+            itemBuilder: (context, index) {
+              final product = products[index];
+              return Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.shade200),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.03),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).primaryColor.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.local_offer,
+                        color: Theme.of(context).primaryColor,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: Text(
+                        product,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+      ],
+    );
+  }
+
+  Widget _buildOccupancyBar(BuildContext context) {
+    // Simülasyon: ID'ye göre sabit bir doluluk oranı üret (0.0 - 1.0 arası)
+    final occupancyRate = (widget.market.id.hashCode % 101) / 100.0;
+    final percent = (occupancyRate * 100).toInt();
+
+    Color color;
+    String label;
+    if (occupancyRate < 0.4) {
+      color = Colors.green;
+      label = 'Tenha';
+    } else if (occupancyRate < 0.7) {
+      color = Colors.orange;
+      label = 'Normal';
+    } else {
+      color = Colors.red;
+      label = 'Kalabalık';
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Anlık Doluluk',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.grey.shade800,
+                fontSize: 16,
+              ),
+            ),
+            Text(
+              '$label (%$percent)',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: color,
+                fontSize: 16,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: LinearProgressIndicator(
+            value: occupancyRate,
+            backgroundColor: Colors.grey.shade200,
+            color: color,
+            minHeight: 12,
+          ),
         ),
       ],
     );

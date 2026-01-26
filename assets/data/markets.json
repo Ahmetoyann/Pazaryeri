@@ -1,83 +1,10 @@
 [
     {
-        "id": "m1",
-        "name": "Taksim Semt Pazarı",
-        "description": "Taksim çevresinde taze ürünler",
-        "latitude": 41.0369,
-        "longitude": 28.9858,
-        "neighborhood": "Taksim",
-        "district": "Beyoğlu",
-        "city": "İstanbul",
-        "openDays": [
-            "Cumartesi",
-            "Pazar"
-        ],
-        "products": [
-            "Meyve",
-            "Sebze",
-            "Şarküteri"
-        ]
-    },
-    {
-        "id": "m2",
-        "name": "Beyoğlu Pazarı",
-        "description": "Beyoğlu semt pazarı",
-        "latitude": 41.0317,
-        "longitude": 28.9760,
-        "neighborhood": "Karaköy",
-        "district": "Beyoğlu",
-        "city": "İstanbul",
-        "openDays": [
-            "Çarşamba"
-        ],
-        "products": [
-            "Meyve",
-            "Sebze",
-            "Balık"
-        ]
-    },
-    {
-        "id": "m3",
-        "name": "Eminönü Pazarı",
-        "description": "Denize yakın semt pazarı",
-        "latitude": 41.0134,
-        "longitude": 28.9713,
-        "neighborhood": "Eminönü",
-        "district": "Fatih",
-        "city": "İstanbul",
-        "openDays": [
-            "Cumartesi"
-        ],
-        "products": [
-            "Baharat",
-            "Peynir",
-            "Zeytin"
-        ]
-    },
-    {
-        "id": "m7",
-        "name": "Kadıköy Pazarı",
-        "description": "Taze meyve ve sebze",
-        "latitude": 40.9860,
-        "longitude": 29.0259,
-        "neighborhood": "Kadıköy",
-        "district": "Kadıköy",
-        "city": "İstanbul",
-        "openDays": [
-            "Pazar"
-        ],
-        "products": [
-            "Meyve",
-            "Sebze",
-            "Tekstil"
-        ]
-    },
-    {
         "id": "kp_pzt1",
         "name": "Karşıyaka Kapalı Semt Pazarı",
         "description": "4002. Sk., Çevik Kuvvet Bölgesi (Kazancı Bedih Parkı Yanı)",
-        "latitude": 37.1800,
-        "longitude": 38.8000,
+        "latitude": 37.16768,
+        "longitude": 38.83277,
         "neighborhood": "Karşıyaka",
         "district": "Karaköprü",
         "city": "Şanlıurfa",
@@ -93,13 +20,13 @@
         "id": "kp_pzt2",
         "name": "Atakent Kapalı Semt Pazarı",
         "description": "6089. Sk., Mehmet Güneş Arkası",
-        "latitude": 37.1680,
-        "longitude": 38.7920,
+        "latitude": 37.23158,
+        "longitude": 38.80147,
         "neighborhood": "Atakent",
         "district": "Karaköprü",
         "city": "Şanlıurfa",
         "openDays": [
-            "Pazartesi"
+            "Pazar"
         ],
         "products": [
             "Meyve",
@@ -126,9 +53,9 @@
     {
         "id": "kp_sal1",
         "name": "Akbayır Açık Semt Pazarı",
-        "description": "1019. Sk., Çırağan Sitesi Önü",
-        "latitude": 37.1850,
-        "longitude": 38.7850,
+        "description": "1025. Sk., No:21",
+        "latitude": 37.20015,
+        "longitude": 38.80125,
         "neighborhood": "Akbayır",
         "district": "Karaköprü",
         "city": "Şanlıurfa",

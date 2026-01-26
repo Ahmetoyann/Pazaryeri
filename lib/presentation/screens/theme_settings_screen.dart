@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'theme_viewmodel.dart';
+import '../viewmodels/theme_viewmodel.dart';
 import '../viewmodels/language_viewmodel.dart';
 
 class ThemeSettingsScreen extends StatelessWidget {
@@ -34,22 +34,27 @@ class ThemeSettingsScreen extends StatelessWidget {
             ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
-          SegmentedButton<bool>(
+          SegmentedButton<int>(
             segments: [
-              ButtonSegment<bool>(
-                value: false,
+              ButtonSegment<int>(
+                value: 0,
+                label: Text(langVM.translate('system')),
+                icon: const Icon(Icons.brightness_auto),
+              ),
+              ButtonSegment<int>(
+                value: 1,
                 label: Text(langVM.translate('light')),
                 icon: const Icon(Icons.light_mode),
               ),
-              ButtonSegment<bool>(
-                value: true,
+              ButtonSegment<int>(
+                value: 2,
                 label: Text(langVM.translate('dark')),
                 icon: const Icon(Icons.dark_mode),
               ),
             ],
-            selected: {themeVM.isDarkMode},
-            onSelectionChanged: (Set<bool> newSelection) {
-              themeVM.toggleTheme(newSelection.first);
+            selected: {themeVM.themeModeIndex},
+            onSelectionChanged: (Set<int> newSelection) {
+              themeVM.setThemeMode(newSelection.first);
             },
           ),
           const SizedBox(height: 32),

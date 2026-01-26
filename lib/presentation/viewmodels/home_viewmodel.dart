@@ -23,6 +23,7 @@ class HomeViewModel extends ChangeNotifier {
   List<Market> favoriteMarkets = [];
   List<String> _favoriteIds = [];
   String? errorMessage;
+  String? selectedDay;
 
   Future<void> loadData() async {
     try {
@@ -136,6 +137,21 @@ class HomeViewModel extends ChangeNotifier {
     selectedProvince = null;
     provinceMarkets = [];
     notifyListeners();
+  }
+
+  void updateDayFilter(String? day) {
+    selectedDay = day;
+    notifyListeners();
+  }
+
+  List<Market> get filteredNearbyMarkets {
+    if (selectedDay == null) return nearbyMarkets;
+    return nearbyMarkets.where((m) => m.openDays.contains(selectedDay)).toList();
+  }
+
+  List<Market> get filteredProvinceMarkets {
+    if (selectedDay == null) return provinceMarkets;
+    return provinceMarkets.where((m) => m.openDays.contains(selectedDay)).toList();
   }
 
   // --- FAVORİLER ---

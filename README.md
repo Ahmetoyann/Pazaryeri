@@ -64,4 +64,4 @@ Uygulamanın tam fonksiyonlu çalışması için aşağıdaki izinlerin yapılan
   - `report_list_screen.dart` & `report_form_screen.dart`: Bildirim listeleme ve oluşturma.
   - `account_screen.dart`: Profil ve ayarlar yönetimi.
 - **Modeller:**
-  - `Market` modeli `products` ve `occupancyPercentage` alanlarını içerir.
+  - `Market` modeli `products` alanlarını içerir.

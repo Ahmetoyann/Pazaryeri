@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../presentation/viewmodels/home_viewmodel.dart';
 import '../../core/regions/provinces.dart';
+import '../../data/models/market.dart';
 import 'package:geolocator/geolocator.dart';
 import '../widgets/market_card.dart';
 import '../widgets/location_chip.dart';
@@ -46,8 +47,23 @@ double _similarity(String a, String b) {
   return score.clamp(0.0, 1.0);
 }
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  final List<String> _days = [
+    'Pazartesi',
+    'Salı',
+    'Çarşamba',
+    'Perşembe',
+    'Cuma',
+    'Cumartesi',
+    'Pazar',
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -55,6 +71,8 @@ class HomeScreen extends StatelessWidget {
     final langVM = context.watch<LanguageViewModel>();
 
     Widget _buildProvinceMarketsList(HomeViewModel vm) {
+      final filteredList = vm.filteredProvinceMarkets;
+
       if (vm.provinceMarkets.isEmpty) {
         return Center(
           child: Column(
@@ -75,12 +93,19 @@ class HomeScreen extends StatelessWidget {
           ),
         );
       }
+
+      if (filteredList.isEmpty) {
+        return Center(
+          child: Text('${vm.selectedDay} günü açık pazar bulunamadı.'),
+        );
+      }
+
       return ListView.separated(
         padding: const EdgeInsets.symmetric(vertical: 8),
-        itemCount: vm.provinceMarkets.length,
+        itemCount: filteredList.length,
         separatorBuilder: (c, i) => const SizedBox(height: 12),
         itemBuilder: (context, index) {
-          final m = vm.provinceMarkets[index];
+          final m = filteredList[index];
           return MarketCard(
             market: m,
             isHorizontal: false,
@@ -98,12 +123,7 @@ class HomeScreen extends StatelessWidget {
     }
 
     Widget _buildNearbyMarketsList(HomeViewModel vm) {
-      // Yatay liste için sadece ilk 5 pazarı alalım
-      final horizontalList = vm.nearbyMarkets.take(5).toList();
-
-      // Dikey liste için tüm pazarları (veya yatay listeden sonrasını) alabiliriz
-      // Şimdilik tümünü gösterelim.
-      final verticalList = vm.nearbyMarkets;
+      final filteredList = vm.filteredNearbyMarkets;
 
       if (vm.nearbyMarkets.isEmpty) {
         return Center(
@@ -126,6 +146,20 @@ class HomeScreen extends StatelessWidget {
           ),
         );
       }
+
+      if (filteredList.isEmpty) {
+        return Center(
+          child: Text('${vm.selectedDay} günü açık pazar bulunamadı.'),
+        );
+      }
+
+      // Yatay liste için sadece ilk 5 pazarı alalım
+      final horizontalList = filteredList.take(5).toList();
+
+      // Dikey liste için tüm pazarları (veya yatay listeden sonrasını) alabiliriz
+      // Şimdilik tümünü gösterelim.
+      final verticalList = filteredList;
+
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -232,12 +266,14 @@ class HomeScreen extends StatelessWidget {
                             children: [
                               Icon(
                                 Icons.my_location,
-                                color: Theme.of(context).colorScheme.primary,
+                                color: Colors.green,
                               ),
                               const SizedBox(width: 12),
                               Text(
                                 langVM.translate('location_title'),
-                                style: Theme.of(context).textTheme.titleLarge
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleLarge
                                     ?.copyWith(fontWeight: FontWeight.bold),
                               ),
                             ],
@@ -382,33 +418,32 @@ class HomeScreen extends StatelessWidget {
                     onSelected: (selection) async {
                       await vm.loadMarketsForProvince(selection);
                     },
-                    fieldViewBuilder:
-                        (
-                          context,
-                          textEditingController,
-                          focusNode,
-                          onFieldSubmitted,
-                        ) {
-                          return TextField(
-                            controller: textEditingController,
-                            focusNode: focusNode,
-                            decoration: InputDecoration(
-                              labelText: langVM.translate(
-                                'search_province_hint',
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderSide: BorderSide(
-                                  color: Theme.of(context).colorScheme.primary,
-                                ),
-                                borderRadius: BorderRadius.circular(36),
-                              ),
-                              prefixIcon: Icon(Icons.search),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(36),
-                              ),
+                    fieldViewBuilder: (
+                      context,
+                      textEditingController,
+                      focusNode,
+                      onFieldSubmitted,
+                    ) {
+                      return TextField(
+                        controller: textEditingController,
+                        focusNode: focusNode,
+                        decoration: InputDecoration(
+                          labelText: langVM.translate(
+                            'search_province_hint',
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderSide: BorderSide(
+                              color: Theme.of(context).colorScheme.primary,
                             ),
-                          );
-                        },
+                            borderRadius: BorderRadius.circular(36),
+                          ),
+                          prefixIcon: Icon(Icons.search),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(36),
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -421,6 +456,26 @@ class HomeScreen extends StatelessWidget {
                     child: Text(langVM.translate('clear_selection')),
                   ),
               ],
+            ),
+            const SizedBox(height: 12),
+            // Gün Filtreleri
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: _days.map((day) {
+                  final isSelected = vm.selectedDay == day;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8.0),
+                    child: FilterChip(
+                      label: Text(day),
+                      selected: isSelected,
+                      onSelected: (selected) {
+                        vm.updateDayFilter(selected ? day : null);
+                      },
+                    ),
+                  );
+                }).toList(),
+              ),
             ),
             const SizedBox(height: 12),
             if (vm.state == ViewState.busy) ...[

@@ -18,7 +18,7 @@ class SearchScreen extends StatefulWidget {
 class _SearchScreenState extends State<SearchScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _query = '';
-  bool _filterOpenToday = false;
+  bool _filterOpenToday = true;
   bool _filterWeekend = false;
   List<String> _recentSearches = [];
 
@@ -84,11 +84,10 @@ class _SearchScreenState extends State<SearchScreen> {
       if (_query.isNotEmpty) {
         final nameMatch = market.name.toLowerCase().contains(lowerQuery);
         final districtMatch = market.address.district.toLowerCase().contains(
-          lowerQuery,
-        );
-        final neighborhoodMatch = market.address.neighborhood
-            .toLowerCase()
-            .contains(lowerQuery);
+              lowerQuery,
+            );
+        final neighborhoodMatch =
+            market.address.neighborhood.toLowerCase().contains(lowerQuery);
         // Ürünlerde arama
         final productMatch = market.products.any(
           (p) => p.toLowerCase().contains(lowerQuery),
@@ -107,8 +106,7 @@ class _SearchScreenState extends State<SearchScreen> {
       // 3. "Hafta Sonu" Filtresi
       bool matchesWeekend = true;
       if (_filterWeekend) {
-        matchesWeekend =
-            market.openDays.contains('Cumartesi') ||
+        matchesWeekend = market.openDays.contains('Cumartesi') ||
             market.openDays.contains('Pazar');
       }
 
@@ -172,7 +170,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     borderRadius: BorderRadius.circular(36),
                   ),
                   filled: true,
-                  fillColor: const Color.fromARGB(129, 13, 12, 12),
+                  fillColor: const Color.fromARGB(129, 255, 255, 255),
                 ),
               ),
             ),
@@ -211,29 +209,94 @@ class _SearchScreenState extends State<SearchScreen> {
                           : _buildRecentSearchesList(langVM),
                     )
                   : results.isEmpty
-                  ? Center(child: Text(langVM.translate('no_results')))
-                  : ListView.separated(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: results.length,
-                      separatorBuilder: (context, index) =>
-                          const SizedBox(height: 12),
-                      itemBuilder: (context, index) {
-                        final market = results[index];
-                        return MarketCard(
-                          market: market,
-                          isHorizontal: false,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    MarketDetailScreen(market: market),
-                              ),
+                      ? Center(child: Text(langVM.translate('no_results')))
+                      : ListView.separated(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: results.length,
+                          separatorBuilder: (context, index) =>
+                              const SizedBox(height: 12),
+                          itemBuilder: (context, index) {
+                            final market = results[index];
+
+                            // Doluluk oranı simülasyonu (Gerçek veride API'den gelmeli)
+                            final occupancyLevel = market.id.hashCode % 3;
+                            Color statusColor;
+                            IconData statusIcon;
+                            String statusText;
+
+                            switch (occupancyLevel) {
+                              case 0:
+                                statusColor = Colors.green;
+                                statusIcon = Icons.person_outline;
+                                statusText = '%25'; // Tenha
+                                break;
+                              case 1:
+                                statusColor = Colors.orange;
+                                statusIcon = Icons.people_outline;
+                                statusText = '%60'; // Normal
+                                break;
+                              case 2:
+                              default:
+                                statusColor = Colors.red;
+                                statusIcon = Icons.groups;
+                                statusText = '%95'; // Kalabalık
+                                break;
+                            }
+
+                            return Stack(
+                              children: [
+                                MarketCard(
+                                  market: market,
+                                  isHorizontal: false,
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            MarketDetailScreen(market: market),
+                                      ),
+                                    );
+                                  },
+                                ),
+                                Positioned(
+                                  top: 16,
+                                  right: 16,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: statusColor.withOpacity(0.9),
+                                      borderRadius: BorderRadius.circular(12),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.2),
+                                          blurRadius: 4,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(statusIcon,
+                                            size: 14, color: Colors.white),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          statusText,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
                             );
                           },
-                        );
-                      },
-                    ),
+                        ),
             ),
           ],
         ),

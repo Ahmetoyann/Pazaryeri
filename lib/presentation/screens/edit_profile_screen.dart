@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'auth_viewmodel.dart';
+import '../widgets/success_dialog.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -41,6 +43,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Future<void> _saveProfile() async {
+    // Kaydet butonuna basıldığında klavyeyi kapat
+    FocusScope.of(context).unfocus();
+
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
@@ -50,26 +55,27 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       }
 
       await context.read<AuthViewModel>().updateUserInfo(
-        firstName: _firstNameController.text.trim(),
-        lastName: _lastNameController.text.trim(),
-        phoneNumber: _phoneController.text.trim(),
-        email: _emailController.text.trim(),
-        dateOfBirth: _selectedDate!,
-        newPassword: _passwordController.text.isNotEmpty
-            ? _passwordController.text
-            : null,
-      );
+            firstName: _firstNameController.text.trim(),
+            lastName: _lastNameController.text.trim(),
+            phoneNumber: _phoneController.text.trim(),
+            email: _emailController.text.trim(),
+            dateOfBirth: _selectedDate!,
+            newPassword: _passwordController.text.isNotEmpty
+                ? _passwordController.text
+                : null,
+          );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profil başarıyla güncellendi.')),
+        await showSuccessDialog(
+          context,
+          message: 'Bilgiler güncellendi!',
+          onDismiss: () {
+            if (mounted) Navigator.of(context).pop(); // Ekranı kapat
+          },
         );
-        Navigator.of(context).pop();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Hata: $e')));
+        await showErrorDialog(context, message: 'Hata: $e');
       }
     } finally {
       if (mounted) {
@@ -128,6 +134,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   prefixIcon: Icon(Icons.phone),
                 ),
                 keyboardType: TextInputType.phone,
+                inputFormatters: [_PhoneInputFormatter()],
                 validator: (v) =>
                     v!.isEmpty ? 'Telefon numarası boş olamaz' : null,
               ),
@@ -189,6 +196,65 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Telefon numarası formatlayıcı: (5XX) XXX XX XX
+class _PhoneInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    // Sadece rakamları al
+    final text = newValue.text.replaceAll(RegExp(r'\D'), '');
+
+    // Başta 0 varsa temizle
+    final cleanText = text.startsWith('0') ? text.substring(1) : text;
+
+    // Maksimum 10 hane
+    if (cleanText.length > 10) return oldValue;
+
+    final buffer = StringBuffer();
+
+    // (5XX)
+    if (cleanText.isNotEmpty) {
+      buffer.write('(');
+      if (cleanText.length >= 3) {
+        buffer.write(cleanText.substring(0, 3));
+        buffer.write(') ');
+      } else {
+        buffer.write(cleanText);
+      }
+    }
+
+    // XXX
+    if (cleanText.length > 3) {
+      if (cleanText.length >= 6) {
+        buffer.write(cleanText.substring(3, 6));
+        buffer.write(' ');
+      } else {
+        buffer.write(cleanText.substring(3));
+      }
+    }
+
+    // XX
+    if (cleanText.length > 6) {
+      if (cleanText.length >= 8) {
+        buffer.write(cleanText.substring(6, 8));
+        buffer.write(' ');
+      } else {
+        buffer.write(cleanText.substring(6));
+      }
+    }
+
+    // XX
+    if (cleanText.length > 8) {
+      buffer.write(cleanText.substring(8));
+    }
+
+    return TextEditingValue(
+      text: buffer.toString(),
+      selection: TextSelection.collapsed(offset: buffer.length),
     );
   }
 }

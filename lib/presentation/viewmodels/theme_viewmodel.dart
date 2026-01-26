@@ -2,22 +2,45 @@ import 'package:flutter/material.dart';
 import '../screens/auth_service.dart';
 
 class ThemeViewModel extends ChangeNotifier {
-  bool _isDarkMode = false;
+  int _themeModeIndex = 0; // 0: System, 1: Light, 2: Dark
+  Color _seedColor = Colors.green;
 
-  bool get isDarkMode => _isDarkMode;
+  ThemeMode get themeMode {
+    switch (_themeModeIndex) {
+      case 1:
+        return ThemeMode.light;
+      case 2:
+        return ThemeMode.dark;
+      default:
+        return ThemeMode.system;
+    }
+  }
+
+  int get themeModeIndex => _themeModeIndex;
+  Color get seedColor => _seedColor;
 
   ThemeViewModel() {
     _loadTheme();
   }
 
   Future<void> _loadTheme() async {
-    _isDarkMode = await AuthService.instance.getThemeMode();
+    _themeModeIndex = await AuthService.instance.getThemeMode();
+    final colorValue = await AuthService.instance.getThemeColor();
+    if (colorValue != null) {
+      _seedColor = Color(colorValue);
+    }
     notifyListeners();
   }
 
-  Future<void> toggleTheme(bool isDark) async {
-    _isDarkMode = isDark;
-    await AuthService.instance.updateThemeMode(isDark);
+  Future<void> setThemeMode(int mode) async {
+    _themeModeIndex = mode;
+    await AuthService.instance.updateThemeMode(mode);
+    notifyListeners();
+  }
+
+  Future<void> changeSeedColor(Color color) async {
+    _seedColor = color;
+    await AuthService.instance.updateThemeColor(color.value);
     notifyListeners();
   }
 }
