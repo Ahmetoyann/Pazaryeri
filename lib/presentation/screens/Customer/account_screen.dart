@@ -2,22 +2,17 @@
 
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:image_cropper/image_cropper.dart';
-import 'register_screen.dart'; // register_screen.dart dosyasını import edin
 import 'package:provider/provider.dart';
 
-import 'auth_viewmodel.dart';
-import '../viewmodels/theme_viewmodel.dart';
-import '../viewmodels/language_viewmodel.dart';
-import 'login_screen.dart';
+import '../../viewmodels/auth_viewmodel.dart';
+import '../../viewmodels/language_viewmodel.dart';
 import 'edit_profile_screen.dart';
 import 'favorites_screen.dart';
-import '../viewmodels/favorite_sellers_screen.dart';
+import '../Seller/favorite_sellers_screen.dart';
 import 'my_reviews_screen.dart';
 import 'theme_settings_screen.dart';
-import '../widgets/custom_app_bar.dart';
-import '../widgets/success_dialog.dart';
+import '../../widgets/custom_app_bar.dart';
+import '../../widgets/success_dialog.dart';
 
 class AccountScreen extends StatelessWidget {
   const AccountScreen({super.key});
@@ -101,169 +96,21 @@ class AccountScreen extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              GestureDetector(
-                onTap: () {
-                  showModalBottomSheet(
-                    context: context,
-                    builder: (ctx) {
-                      final lang = context.read<LanguageViewModel>();
-                      return SafeArea(
-                        child: Wrap(
-                          children: [
-                            ListTile(
-                              leading: const Icon(Icons.photo_camera),
-                              title: Text(lang.translate('camera')),
-                              onTap: () async {
-                                Navigator.of(ctx).pop();
-                                final ImagePicker picker = ImagePicker();
-                                final XFile? image = await picker.pickImage(
-                                  source: ImageSource.camera,
-                                );
-                                if (image != null && context.mounted) {
-                                  final croppedFile = await _cropImage(
-                                    image,
-                                    context,
-                                  );
-                                  if (croppedFile != null && context.mounted) {
-                                    try {
-                                      await context
-                                          .read<AuthViewModel>()
-                                          .updateProfilePhoto(croppedFile.path);
-                                    } catch (e) {
-                                      if (context.mounted) {
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
-                                          SnackBar(content: Text('Hata: $e')),
-                                        );
-                                      }
-                                    }
-                                  }
-                                }
-                              },
-                            ),
-                            ListTile(
-                              leading: const Icon(Icons.photo_library),
-                              title: Text(lang.translate('gallery')),
-                              onTap: () async {
-                                Navigator.of(ctx).pop();
-                                final ImagePicker picker = ImagePicker();
-                                final XFile? image = await picker.pickImage(
-                                  source: ImageSource.gallery,
-                                );
-                                if (image != null && context.mounted) {
-                                  final croppedFile = await _cropImage(
-                                    image,
-                                    context,
-                                  );
-                                  if (croppedFile != null && context.mounted) {
-                                    try {
-                                      await context
-                                          .read<AuthViewModel>()
-                                          .updateProfilePhoto(croppedFile.path);
-                                    } catch (e) {
-                                      if (context.mounted) {
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
-                                          SnackBar(content: Text('Hata: $e')),
-                                        );
-                                      }
-                                    }
-                                  }
-                                }
-                              },
-                            ),
-                            if (authVM.currentUser?.profilePicturePath != null)
-                              ListTile(
-                                leading: const Icon(
-                                  Icons.delete,
-                                  color: Colors.red,
-                                ),
-                                title: Text(
-                                  lang.translate('remove_photo'),
-                                  style: const TextStyle(color: Colors.red),
-                                ),
-                                onTap: () async {
-                                  Navigator.of(ctx).pop();
-                                  final bool? confirm = await showDialog<bool>(
-                                    context: context,
-                                    builder: (BuildContext context) {
-                                      return AlertDialog(
-                                        title: Text(
-                                          lang.translate(
-                                              'remove_photo_confirm_title'),
-                                        ),
-                                        content: Text(
-                                          lang.translate(
-                                              'remove_photo_confirm_message'),
-                                        ),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () =>
-                                                Navigator.of(context)
-                                                    .pop(false),
-                                            child: Text(lang.translate('no')),
-                                          ),
-                                          TextButton(
-                                            onPressed: () =>
-                                                Navigator.of(context).pop(true),
-                                            child: Text(
-                                              lang.translate('yes'),
-                                              style: const TextStyle(
-                                                  color: Colors.red),
-                                            ),
-                                          ),
-                                        ],
-                                      );
-                                    },
-                                  );
-
-                                  if (confirm == true && context.mounted) {
-                                    await context
-                                        .read<AuthViewModel>()
-                                        .removeProfilePhoto();
-                                    if (context.mounted) {
-                                      await showSuccessDialog(context,
-                                          message: 'Profil fotoğrafı silindi!');
-                                    }
-                                  }
-                                },
-                              ),
-                          ],
-                        ),
-                      );
-                    },
-                  );
-                },
-                child: CircleAvatar(
-                  radius: 60,
-                  backgroundColor: Colors.grey.shade200,
-                  backgroundImage: userImage != null
-                      ? (userImage.startsWith('http')
-                          ? NetworkImage(userImage)
-                          : FileImage(File(userImage))) as ImageProvider
-                      : null,
-                  child: authVM.isUploadingProfilePhoto
-                      ? Container(
-                          decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.4),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Center(
-                            child: CircularProgressIndicator(
-                              value: authVM.uploadProgress,
-                              backgroundColor: Colors.white24,
-                              color: Colors.white,
-                            ),
-                          ),
-                        )
-                      : (userImage == null
-                          ? const Icon(
-                              Icons.add_a_photo,
-                              size: 40,
-                              color: Colors.grey,
-                            )
-                          : null),
-                ),
+              CircleAvatar(
+                radius: 60,
+                backgroundColor: Colors.grey.shade200,
+                backgroundImage: userImage != null
+                    ? (userImage.startsWith('http')
+                        ? NetworkImage(userImage)
+                        : FileImage(File(userImage))) as ImageProvider
+                    : null,
+                child: userImage == null
+                    ? const Icon(
+                        Icons.person,
+                        size: 60,
+                        color: Colors.grey,
+                      )
+                    : null,
               ),
               const SizedBox(height: 20),
               OutlinedButton.icon(
@@ -524,22 +371,6 @@ class AccountScreen extends StatelessWidget {
     );
   }
 
-  Future<CroppedFile?> _cropImage(XFile imageFile, BuildContext context) async {
-    return await ImageCropper().cropImage(
-      sourcePath: imageFile.path,
-      uiSettings: [
-        AndroidUiSettings(
-          toolbarTitle: 'Fotoğrafı Kırp',
-          toolbarColor: Theme.of(context).primaryColor,
-          toolbarWidgetColor: Colors.white,
-          initAspectRatio: CropAspectRatioPreset.original,
-          lockAspectRatio: false,
-        ),
-        IOSUiSettings(title: 'Fotoğrafı Kırp'),
-      ],
-    );
-  }
-
   /// Misafir kullanıcı veya giriş yapmamış kullanıcı için gösterilecek olan widget.
   Widget _buildGuestView(BuildContext context) {
     final langVM = context.watch<LanguageViewModel>();
@@ -564,46 +395,25 @@ class AccountScreen extends StatelessWidget {
             ),
             const SizedBox(height: 32),
 
-            // Giriş Yap Butonu
-            ElevatedButton(
-              onPressed: () {
-                // Misafir modundan çıkış yapıyoruz.
-                // AuthWrapper durumu algılayıp otomatik olarak LoginScreen'e yönlendirecektir.
-                context.read<AuthViewModel>().exitGuestMode();
+            // Google ile Bağla Butonu
+            ElevatedButton.icon(
+              onPressed: () async {
+                try {
+                  await context.read<AuthViewModel>().loginWithGoogle();
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Hata: $e')),
+                    );
+                  }
+                }
               },
+              icon: const Icon(Icons.g_mobiledata, size: 32),
+              label: Text(langVM.translate('connect_with_google')),
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                side: BorderSide(color: Colors.white),
-              ),
-              child: Text(
-                langVM.translate('login'),
-                style: TextStyle(color: Colors.white),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Kayıt Ol Butonu
-            OutlinedButton(
-              onPressed: () {
-                // Login ekranına değil, doğrudan Register ekranına yönlendirir.
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const RegisterScreen()),
-                );
-              },
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                side: BorderSide(color: Theme.of(context).colorScheme.primary),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(langVM.translate('create_account')),
-                  SizedBox(width: 8),
-                  Icon(
-                    Icons.add_box,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                ],
+                backgroundColor: Colors.white,
+                foregroundColor: Colors.black,
               ),
             ),
           ],

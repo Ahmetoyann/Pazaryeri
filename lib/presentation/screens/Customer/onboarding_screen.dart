@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../viewmodels/language_viewmodel.dart';
-import 'auth_service.dart';
+import '../../viewmodels/language_viewmodel.dart';
+import '../../viewmodels/auth_service.dart';
 
 class OnboardingScreen extends StatefulWidget {
   final void Function(BuildContext) onDone;
@@ -80,7 +80,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         const SizedBox(height: 48),
                         Text(
                           langVM.translate(page['titleKey']),
-                          style: Theme.of(context).textTheme.headlineMedium
+                          style: Theme.of(context)
+                              .textTheme
+                              .headlineMedium
                               ?.copyWith(
                                 fontWeight: FontWeight.bold,
                                 color: colorScheme.onSurface,

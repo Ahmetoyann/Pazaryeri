@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/language_viewmodel.dart';
-import 'login_screen.dart';
-import 'seller_login_screen.dart';
+import '../screens/Customer/login_screen.dart';
+import '../screens/Seller/seller_login_screen.dart';
 
 class UserTypeSelectionScreen extends StatelessWidget {
   final VoidCallback? onLoginSuccess;

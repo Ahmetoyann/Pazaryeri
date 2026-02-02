@@ -2,9 +2,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
-import '../viewmodels/seller_viewmodel.dart';
-import '../viewmodels/language_viewmodel.dart';
-import '../widgets/success_dialog.dart';
+import '../../viewmodels/seller_viewmodel.dart';
+import '../../viewmodels/language_viewmodel.dart';
+import '../../widgets/success_dialog.dart';
 
 class SellerAddProductScreen extends StatefulWidget {
   final SellerProduct? productToEdit;

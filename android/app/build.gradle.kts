@@ -22,7 +22,7 @@ android {
 
     defaultConfig {
         // ÖNEMLİ: Buradaki ID, google-services.json içindeki package_name ile aynı olmalı
-        applicationId = "com.example.flutter_application_1"
+        applicationId = "com.ahmed.pazaryeri"
         minSdk = flutter.minSdkVersion // Firestore için en az 19, önerilen 21
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode

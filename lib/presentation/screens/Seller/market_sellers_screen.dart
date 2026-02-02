@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../viewmodels/language_viewmodel.dart';
-import 'customer_seller_detail_screen.dart';
+import '../../viewmodels/language_viewmodel.dart';
+import '../Customer/customer_seller_detail_screen.dart';
 
 // Mock Seller Model for UI demonstration
 class MockSeller {

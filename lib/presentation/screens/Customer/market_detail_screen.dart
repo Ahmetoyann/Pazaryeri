@@ -7,13 +7,15 @@ import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
-import '../../data/models/market.dart';
-import '../viewmodels/language_viewmodel.dart';
-import '../viewmodels/home_viewmodel.dart';
-import 'auth_viewmodel.dart';
-import 'auth_service.dart';
-import '../widgets/custom_app_bar.dart';
-import '../viewmodels/product_detail_screen.dart';
+import 'package:image_picker/image_picker.dart';
+import '../../../data/models/market.dart';
+import '../../viewmodels/language_viewmodel.dart';
+import '../../viewmodels/home_viewmodel.dart';
+import '../../viewmodels/auth_viewmodel.dart';
+import '../../viewmodels/auth_service.dart';
+import '../../widgets/custom_app_bar.dart';
+import 'product_detail_screen.dart';
+import 'market_sellers_screen.dart';
 
 class MarketDetailScreen extends StatefulWidget {
   final Market market;
@@ -28,6 +30,10 @@ class MarketDetailScreen extends StatefulWidget {
 class _MarketDetailScreenState extends State<MarketDetailScreen> {
   final TextEditingController _commentController = TextEditingController();
   double _userRating = 0;
+  late double _currentOccupancy;
+  bool _hasReportedPresence = false;
+  XFile? _reviewImage;
+  final ImagePicker _picker = ImagePicker();
 
   List<Map<String, dynamic>> _reviews = [];
   late GoogleMapController _mapController;
@@ -36,6 +42,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
   @override
   void initState() {
     super.initState();
+    _currentOccupancy = widget.market.occupancy;
     _requestLocationPermission();
     _loadReviews();
     _markers.add(
@@ -103,6 +110,17 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
       );
     } catch (_) {
       return DateTime(1970);
+    }
+  }
+
+  Future<void> _pickReviewImage() async {
+    try {
+      final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+      if (image != null) {
+        setState(() => _reviewImage = image);
+      }
+    } catch (e) {
+      debugPrint('Resim seçilemedi: $e');
     }
   }
 
@@ -513,7 +531,16 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton.icon(
-                      onPressed: () => _showSellersBottomSheet(context),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => MarketSellersScreen(
+                                marketId: widget.market.id,
+                                marketName: widget.market.name),
+                          ),
+                        );
+                      },
                       icon: const Icon(Icons.people),
                       label: Text(langVM.translate('sellers_title')),
                       style: OutlinedButton.styleFrom(
@@ -560,239 +587,6 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
           ],
         ),
       ),
-    );
-  }
-
-  void _showSellersBottomSheet(BuildContext context) {
-    final langVM = Provider.of<LanguageViewModel>(context, listen: false);
-
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return Container(
-          padding: const EdgeInsets.all(16),
-          height: MediaQuery.of(context).size.height * 0.6,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              Text(
-                langVM.translate('sellers_title'),
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-              const SizedBox(height: 16),
-              Expanded(
-                child: FutureBuilder<List<Map<String, dynamic>>>(
-                  future: AuthService.instance
-                      .fetchSellersForMarket(widget.market.id),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-                    if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                      return Center(
-                        child: Text(
-                          langVM.translate('no_sellers_found'),
-                          style: TextStyle(color: Colors.grey.shade600),
-                        ),
-                      );
-                    }
-
-                    final sellers = snapshot.data!;
-                    return ListView.separated(
-                      itemCount: sellers.length,
-                      separatorBuilder: (ctx, i) => const Divider(),
-                      itemBuilder: (context, index) {
-                        final seller = sellers[index];
-                        final stallName = seller['stallName'] ??
-                            '${seller['firstName']} ${seller['lastName']}';
-                        final stallDesc = seller['stallDescription'] ?? '';
-                        final profilePic = seller['profilePicture'];
-
-                        return ListTile(
-                          leading: CircleAvatar(
-                            backgroundImage:
-                                (profilePic != null && profilePic.isNotEmpty)
-                                    ? NetworkImage(profilePic)
-                                    : null,
-                            child: (profilePic == null || profilePic.isEmpty)
-                                ? const Icon(Icons.person)
-                                : null,
-                          ),
-                          title: Text(
-                            stallName,
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          subtitle: stallDesc.isNotEmpty
-                              ? Text(stallDesc,
-                                  maxLines: 2, overflow: TextOverflow.ellipsis)
-                              : null,
-                          isThreeLine: stallDesc.isNotEmpty,
-                          trailing: const Icon(Icons.chevron_right),
-                          onTap: () {
-                            Navigator.pop(context); // Satıcılar listesini kapat
-                            _showSellerProducts(context, seller); // Ürünleri aç
-                          },
-                        );
-                      },
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  void _showSellerProducts(BuildContext context, Map<String, dynamic> seller) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (context) {
-        return DraggableScrollableSheet(
-          expand: false,
-          initialChildSize: 0.6,
-          minChildSize: 0.4,
-          maxChildSize: 0.9,
-          builder: (context, scrollController) {
-            return Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          '${seller['stallName'] ?? seller['firstName']} Ürünleri',
-                          style: Theme.of(context).textTheme.titleLarge,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                    ],
-                  ),
-                ),
-                const Divider(height: 1),
-                Expanded(
-                  child: FutureBuilder<List<Map<String, dynamic>>>(
-                    future: AuthService.instance
-                        .fetchSellerProductsFromDb(seller['id']),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
-                      } else if (snapshot.hasError) {
-                        return Center(child: Text('Hata: ${snapshot.error}'));
-                      } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                        return const Center(
-                            child: Text('Bu satıcının henüz ürünü yok.'));
-                      }
-
-                      final products = snapshot.data!;
-                      return ListView.separated(
-                        controller: scrollController,
-                        itemCount: products.length,
-                        separatorBuilder: (ctx, i) => const Divider(height: 1),
-                        itemBuilder: (context, index) {
-                          final product = products[index];
-                          return ListTile(
-                            leading: _buildProductImage(product['imagePath']),
-                            title: Text(product['name']),
-                            subtitle: Text(
-                                '${product['price']} ₺ / ${product['unit'] ?? 'Birim'}'),
-                            trailing: product['inStock'] == true
-                                ? const Icon(Icons.check_circle,
-                                    color: Colors.green, size: 16)
-                                : const Icon(Icons.remove_circle,
-                                    color: Colors.red, size: 16),
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => ProductDetailScreen(
-                                    product: product,
-                                    sellerName: seller['stallName'] ??
-                                        '${seller['firstName']} ${seller['lastName']}',
-                                  ),
-                                ),
-                              );
-                            },
-                          );
-                        },
-                      );
-                    },
-                  ),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildProductImage(String? path) {
-    if (path == null || path.isEmpty) {
-      return Container(
-        width: 48,
-        height: 48,
-        decoration: BoxDecoration(
-          color: Colors.grey[200],
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: const Icon(Icons.shopping_basket, color: Colors.grey),
-      );
-    }
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(8),
-      child: path.startsWith('http')
-          ? Image.network(
-              path,
-              width: 48,
-              height: 48,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) => Container(
-                width: 48,
-                height: 48,
-                color: Colors.grey[200],
-                child: const Icon(Icons.error, color: Colors.grey),
-              ),
-            )
-          : Image.file(
-              File(path),
-              width: 48,
-              height: 48,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) => Container(
-                width: 48,
-                height: 48,
-                color: Colors.grey[200],
-                child: const Icon(Icons.error, color: Colors.grey),
-              ),
-            ),
     );
   }
 
@@ -846,6 +640,47 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
               ),
               maxLines: 3,
             ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                TextButton.icon(
+                  onPressed: _pickReviewImage,
+                  icon: const Icon(Icons.add_photo_alternate),
+                  label: const Text('Fotoğraf Ekle'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Theme.of(context).primaryColor,
+                  ),
+                ),
+                if (_reviewImage != null) ...[
+                  const SizedBox(width: 8),
+                  Stack(
+                    alignment: Alignment.topRight,
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.file(
+                          File(_reviewImage!.path),
+                          width: 60,
+                          height: 60,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () => setState(() => _reviewImage = null),
+                        child: Container(
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.cancel,
+                              color: Colors.red, size: 20),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
             const SizedBox(height: 12),
             Align(
               alignment: Alignment.centerRight,
@@ -897,6 +732,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
                     'marketId': widget.market.id,
                     'marketName': widget.market.name,
                     'likes': [],
+                    'imagePath': _reviewImage?.path,
                   };
 
                   AuthService.instance
@@ -906,6 +742,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
                   setState(() {
                     _userRating = 0;
                     _commentController.clear();
+                    _reviewImage = null;
                   });
                   FocusScope.of(context).unfocus();
                 },
@@ -1013,6 +850,45 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(review['comment']),
+                if (review['imagePath'] != null &&
+                    review['imagePath'].toString().isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => Scaffold(
+                            backgroundColor: Colors.black,
+                            appBar: AppBar(
+                              backgroundColor: Colors.black,
+                              iconTheme:
+                                  const IconThemeData(color: Colors.white),
+                            ),
+                            body: Center(
+                              child: InteractiveViewer(
+                                child: Image.file(
+                                  File(review['imagePath']),
+                                  fit: BoxFit.contain,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.file(
+                        File(review['imagePath']),
+                        height: 150,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (c, e, s) => const SizedBox(),
+                      ),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 12),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
@@ -1304,59 +1180,309 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
     );
   }
 
+  void _showHourlyOccupancy(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Saatlik Yoğunluk Tahmini',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Veriler geçmiş ziyaretçi yoğunluğuna göre tahmin edilmiştir.',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Colors.grey[600],
+                    ),
+              ),
+              const SizedBox(height: 32),
+              SizedBox(
+                height: 180,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: List.generate(13, (index) {
+                    final hour = 8 + index; // 08:00 - 20:00
+                    // Mock data generation
+                    double density = 0.2;
+                    if (hour >= 11 && hour <= 14) density = 0.8;
+                    if (hour >= 16 && hour <= 18) density = 0.9;
+                    if (hour == 10 || hour == 15) density = 0.5;
+
+                    final random =
+                        ((widget.market.id.hashCode + hour) % 30) / 100.0;
+                    density = (density + random).clamp(0.1, 1.0);
+
+                    final isCurrentHour = DateTime.now().hour == hour;
+
+                    Color barColor;
+                    if (density < 0.4) {
+                      barColor = Colors.green;
+                    } else if (density < 0.7) {
+                      barColor = Colors.orange;
+                    } else {
+                      barColor = Colors.red;
+                    }
+
+                    return Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          if (isCurrentHour)
+                            Icon(Icons.arrow_drop_down,
+                                size: 20,
+                                color: Theme.of(context).primaryColor),
+                          Container(
+                            width: isCurrentHour ? 16 : 12,
+                            height: 120 * density,
+                            decoration: BoxDecoration(
+                              color: barColor
+                                  .withOpacity(isCurrentHour ? 1.0 : 0.5),
+                              borderRadius: BorderRadius.circular(4),
+                              border: isCurrentHour
+                                  ? Border.all(
+                                      color: Theme.of(context).primaryColor,
+                                      width: 2)
+                                  : null,
+                              boxShadow: isCurrentHour
+                                  ? [
+                                      BoxShadow(
+                                        color: barColor.withOpacity(0.5),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
+                                      )
+                                    ]
+                                  : null,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            '$hour',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: isCurrentHour
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                              color: isCurrentHour
+                                  ? Theme.of(context).primaryColor
+                                  : Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _reportPresence() {
+    if (_hasReportedPresence) return;
+    setState(() {
+      _hasReportedPresence = true;
+      _currentOccupancy = (_currentOccupancy + 0.05).clamp(0.0, 1.0);
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Bildiriminiz alındı, teşekkürler!')),
+    );
+  }
+
   Widget _buildOccupancyBar(BuildContext context) {
-    // Simülasyon: ID'ye göre sabit bir doluluk oranı üret (0.0 - 1.0 arası)
-    final occupancyRate = (widget.market.id.hashCode % 101) / 100.0;
+    // Market modelindeki occupancy değerini kullanıyoruz
+    final occupancyRate = _currentOccupancy;
     final percent = (occupancyRate * 100).toInt();
 
     Color color;
     String label;
-    if (occupancyRate < 0.4) {
+    IconData icon;
+    String description;
+
+    if (occupancyRate <= 0.4) {
       color = Colors.green;
       label = 'Tenha';
-    } else if (occupancyRate < 0.7) {
+      icon = Icons.person_outline;
+      description = 'Alışveriş için en uygun zaman.';
+    } else if (occupancyRate <= 0.7) {
       color = Colors.orange;
       label = 'Normal';
+      icon = Icons.people;
+      description = 'Pazar yeri hareketli.';
     } else {
       color = Colors.red;
       label = 'Kalabalık';
+      icon = Icons.groups;
+      description = 'Pazar yeri oldukça yoğun.';
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Anlık Doluluk',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.grey.shade800,
-                fontSize: 16,
-              ),
+    return GestureDetector(
+      onTap: () => _showHourlyOccupancy(context),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 15,
+              offset: const Offset(0, 5),
             ),
-            Text(
-              '$label (%$percent)',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: color,
-                fontSize: 16,
+          ],
+          border: Border.all(
+              color: Theme.of(context).dividerColor.withOpacity(0.1)),
+        ),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Icon(Icons.bar_chart, color: Theme.of(context).primaryColor),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Anlık Doluluk Durumu',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                ),
+                Icon(Icons.info_outline, size: 20, color: Colors.grey.shade400),
+              ],
+            ),
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Dairesel Grafik
+                SizedBox(
+                  height: 120,
+                  width: 120,
+                  child: Stack(
+                    children: [
+                      // Arka plan halkası
+                      SizedBox.expand(
+                        child: CircularProgressIndicator(
+                          value: 1.0,
+                          strokeWidth: 12,
+                          color: color.withOpacity(0.1),
+                        ),
+                      ),
+                      // Doluluk halkası
+                      SizedBox.expand(
+                        child: CircularProgressIndicator(
+                          value: occupancyRate,
+                          strokeWidth: 12,
+                          color: color,
+                          strokeCap: StrokeCap.round,
+                        ),
+                      ),
+                      // Ortadaki Yüzde ve İkon
+                      Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(icon, color: color, size: 28),
+                            const SizedBox(height: 4),
+                            Text(
+                              '%$percent',
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: color,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 24),
+                // Açıklama Metinleri
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: color.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          label,
+                          style: TextStyle(
+                            color: color,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        description,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color:
+                                  Theme.of(context).textTheme.bodySmall?.color,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _hasReportedPresence ? null : _reportPresence,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).primaryColor,
+                  disabledBackgroundColor: Colors.green,
+                  disabledForegroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                icon: Icon(
+                  _hasReportedPresence
+                      ? Icons.check_circle
+                      : Icons.person_pin_circle,
+                ),
+                label: Text(_hasReportedPresence
+                    ? 'Bildiriminiz Alındı'
+                    : 'Ben Buradayım (Yoğunluk Bildir)'),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 8),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: LinearProgressIndicator(
-            value: occupancyRate,
-            backgroundColor: Colors.grey.shade200,
-            color: color,
-            minHeight: 12,
-          ),
-        ),
-      ],
+      ),
     );
   }
 }

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
-import '../viewmodels/seller_viewmodel.dart';
-import '../viewmodels/language_viewmodel.dart';
+import '../../viewmodels/seller_viewmodel.dart';
+import '../../viewmodels/language_viewmodel.dart';
 
 class SellerStatsScreen extends StatelessWidget {
   const SellerStatsScreen({super.key});

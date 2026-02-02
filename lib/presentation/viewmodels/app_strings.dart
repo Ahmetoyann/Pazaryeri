@@ -59,6 +59,7 @@ class AppStrings {
       'continue_guest': 'Giriş Yapmadan Devam Et',
       'market_open_status': 'Şu an Açık',
       'market_closed_status': 'Şu an Kapalı',
+      'occupancy_rate': 'Doluluk Oranı',
       'address_label': 'Adres',
       'open_days_label': 'Açık Günler',
       'products_label': 'Ürünler',
@@ -232,6 +233,7 @@ class AppStrings {
       'insufficient_stock': 'Yetersiz Stok',
       'insufficient_stock_message': 'Stokta yeterli ürün yok. Mevcut stok:',
       'added_to_cart_success': 'Ürün sepete eklendi.',
+      'connect_with_google': 'Google ile Hesabınızı Bağlayın',
     },
     'en': {
       'home_title': 'MARKETPLACE',
@@ -291,6 +293,7 @@ class AppStrings {
       'continue_guest': 'Continue without Login',
       'market_open_status': 'Open Now',
       'market_closed_status': 'Closed Now',
+      'occupancy_rate': 'Occupancy Rate',
       'address_label': 'Address',
       'open_days_label': 'Open Days',
       'products_label': 'Products',
@@ -463,6 +466,7 @@ class AppStrings {
       'insufficient_stock': 'Insufficient Stock',
       'insufficient_stock_message': 'Not enough stock. Available:',
       'added_to_cart_success': 'Product added to cart.',
+      'connect_with_google': 'Connect your account with Google',
     },
   };
 

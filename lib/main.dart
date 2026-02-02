@@ -4,16 +4,13 @@ import 'package:provider/provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'dart:ui';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
-
-import 'presentation/screens/login_screen.dart';
-import 'presentation/screens/home_screen.dart';
-import 'presentation/screens/search_screen.dart';
-import 'presentation/screens/account_screen.dart';
-import 'presentation/screens/report_list_screen.dart';
+import 'presentation/screens/Customer/home_screen.dart';
+import 'presentation/screens/Customer/search_screen.dart';
+import 'presentation/screens/Customer/account_screen.dart';
+import 'presentation/screens/Customer/report_list_screen.dart';
 import 'presentation/viewmodels/home_viewmodel.dart';
-import 'presentation/screens/auth_viewmodel.dart';
+import 'presentation/viewmodels/auth_viewmodel.dart';
 import 'presentation/viewmodels/theme_viewmodel.dart';
 import 'presentation/viewmodels/language_viewmodel.dart';
 import 'presentation/viewmodels/seller_viewmodel.dart';
@@ -21,12 +18,12 @@ import 'core/location/geolocator_location_service.dart';
 import 'data/repositories/market_repository.dart';
 import 'presentation/screens/splash_screen.dart';
 import 'presentation/viewmodels/notification_service.dart';
-import 'presentation/screens/auth_service.dart';
-import 'presentation/screens/onboarding_screen.dart';
+import 'presentation/viewmodels/auth_service.dart';
+import 'presentation/screens/Customer/onboarding_screen.dart';
 import 'presentation/widgets/connectivity_wrapper.dart';
 import 'presentation/screens/user_type_selection_screen.dart';
-import 'presentation/viewmodels/seller_market_selection_screen.dart';
-import 'presentation/viewmodels/seller_main_screen.dart';
+import 'presentation/screens/Seller/seller_market_selection_screen.dart';
+import 'presentation/screens/Seller/seller_main_screen.dart';
 
 // Global navigasyon anahtarı
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -255,10 +252,6 @@ class _MainScaffoldState extends State<MainScaffold> {
   @override
   void initState() {
     super.initState();
-    // Ekran çizildikten sonra eksik bilgi kontrolü yap
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkMissingPhone();
-    });
 
     // Uygulama kapalıyken gelen bildirim kontrolü (Terminated State)
     final String? initialPayload = NotificationService.instance.launchPayload;
@@ -277,27 +270,6 @@ class _MainScaffoldState extends State<MainScaffold> {
         _navigateToMarketDetail(payload);
       }
     });
-  }
-
-  void _checkMissingPhone() {
-    final authVM = Provider.of<AuthViewModel>(context, listen: false);
-    // Kullanıcı giriş yapmışsa, misafir değilse ve telefon numarası boşsa uyar
-    if (authVM.isAuthenticated &&
-        !authVM.isGuest &&
-        (authVM.currentUser?.phoneNumber.isEmpty ?? true)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text(
-              'Telefon numaranız eksik. Lütfen profilinizi tamamlayın.'),
-          duration: const Duration(seconds: 8),
-          action: SnackBarAction(
-            label: 'Tamamla',
-            onPressed: () => setState(
-                () => _index = 2), // Hesabım sekmesine (index 2) yönlendir
-          ),
-        ),
-      );
-    }
   }
 
   void _navigateToMarketDetail(String marketId) {

@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../viewmodels/seller_viewmodel.dart';
-import '../viewmodels/language_viewmodel.dart';
-import '../screens/auth_viewmodel.dart';
-import '../screens/edit_profile_screen.dart';
+import '../../viewmodels/seller_viewmodel.dart';
+import '../../viewmodels/language_viewmodel.dart';
+import '../../viewmodels/auth_viewmodel.dart';
+import '../Customer/edit_profile_screen.dart';
 
 class SellerSettingsScreen extends StatefulWidget {
   const SellerSettingsScreen({super.key});

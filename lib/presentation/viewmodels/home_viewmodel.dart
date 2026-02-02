@@ -4,7 +4,7 @@ import '../../data/models/address.dart';
 import '../../data/models/market.dart';
 import '../../core/regions/provinces.dart';
 import '../../data/repositories/market_repository.dart';
-import '../screens/auth_service.dart';
+import 'auth_service.dart';
 import 'notification_service.dart';
 
 enum ViewState { idle, busy, error }
@@ -146,12 +146,16 @@ class HomeViewModel extends ChangeNotifier {
 
   List<Market> get filteredNearbyMarkets {
     if (selectedDay == null) return nearbyMarkets;
-    return nearbyMarkets.where((m) => m.openDays.contains(selectedDay)).toList();
+    return nearbyMarkets
+        .where((m) => m.openDays.contains(selectedDay))
+        .toList();
   }
 
   List<Market> get filteredProvinceMarkets {
     if (selectedDay == null) return provinceMarkets;
-    return provinceMarkets.where((m) => m.openDays.contains(selectedDay)).toList();
+    return provinceMarkets
+        .where((m) => m.openDays.contains(selectedDay))
+        .toList();
   }
 
   // --- FAVORİLER ---

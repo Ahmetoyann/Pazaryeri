@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'auth_viewmodel.dart';
-import '../widgets/success_dialog.dart';
+import '../../viewmodels/auth_viewmodel.dart';
+import '../../widgets/success_dialog.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});

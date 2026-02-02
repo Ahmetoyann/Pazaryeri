@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../viewmodels/language_viewmodel.dart';
-import '../screens/auth_service.dart';
-import '../viewmodels/customer_seller_detail_screen.dart';
-import '../viewmodels/market_sellers_screen.dart'; // MockSeller sınıfı için
+import '../../viewmodels/language_viewmodel.dart';
+import '../../viewmodels/auth_service.dart';
+import '../Customer/customer_seller_detail_screen.dart';
+import 'market_sellers_screen.dart'; // MockSeller sınıfı için
 
 class FavoriteSellersScreen extends StatefulWidget {
   const FavoriteSellersScreen({super.key});

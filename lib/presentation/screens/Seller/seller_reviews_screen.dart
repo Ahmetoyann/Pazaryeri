@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../viewmodels/language_viewmodel.dart';
-import '../viewmodels/seller_viewmodel.dart';
-import '../screens/auth_service.dart';
+import '../../viewmodels/language_viewmodel.dart';
+import '../../viewmodels/seller_viewmodel.dart';
+import '../../viewmodels/auth_service.dart';
 
 class SellerReviewsScreen extends StatefulWidget {
   const SellerReviewsScreen({super.key});

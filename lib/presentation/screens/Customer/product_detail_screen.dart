@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../viewmodels/language_viewmodel.dart';
-import '../screens/auth_viewmodel.dart';
-import '../screens/auth_service.dart';
-import 'status_message_widget.dart';
+import '../../viewmodels/language_viewmodel.dart';
+import '../../viewmodels/auth_viewmodel.dart';
+import '../../viewmodels/auth_service.dart';
+import '../../widgets/status_message_widget.dart';
+import 'seller_products_view_screen.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final Map<String, dynamic> product;
@@ -215,101 +216,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             trailing: const Icon(Icons.chevron_right),
                             onTap: () {
                               Navigator.pop(context);
-                              _showSellerProducts(seller);
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      SellerProductsViewScreen(seller: seller),
+                                ),
+                              );
                             },
-                          );
-                        },
-                      );
-                    },
-                  ),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  void _showSellerProducts(Map<String, dynamic> seller) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (context) {
-        return DraggableScrollableSheet(
-          expand: false,
-          initialChildSize: 0.6,
-          minChildSize: 0.4,
-          maxChildSize: 0.9,
-          builder: (context, scrollController) {
-            return Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        '${seller['name']} Ürünleri',
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                    ],
-                  ),
-                ),
-                const Divider(height: 1),
-                Expanded(
-                  child: FutureBuilder<List<Map<String, dynamic>>>(
-                    future:
-                        AuthService.instance.getSellerProducts(seller['id']),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
-                      } else if (snapshot.hasError) {
-                        return Center(child: Text('Hata: ${snapshot.error}'));
-                      } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                        return const Center(child: Text('Ürün bulunamadı.'));
-                      }
-
-                      final products = snapshot.data!;
-                      return ListView.builder(
-                        controller: scrollController,
-                        itemCount: products.length,
-                        itemBuilder: (context, index) {
-                          final product = products[index];
-                          return ListTile(
-                            leading: Container(
-                              width: 48,
-                              height: 48,
-                              decoration: BoxDecoration(
-                                color: Colors.grey[200],
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Icon(Icons.shopping_basket,
-                                  color: Colors.grey),
-                            ),
-                            title: Text(product['name']),
-                            subtitle: Text(
-                                '${product['price']} ₺ / ${product['unit']}'),
-                            trailing: ElevatedButton(
-                              onPressed: () {
-                                Navigator.pop(context);
-                                setState(() =>
-                                    _successMessage = 'Ürün sepete eklendi');
-                              },
-                              style: ElevatedButton.styleFrom(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 16),
-                                visualDensity: VisualDensity.compact,
-                              ),
-                              child: const Text('Ekle'),
-                            ),
                           );
                         },
                       );

@@ -8,6 +8,7 @@ class MarketCard extends StatelessWidget {
   final bool isHorizontal;
   final VoidCallback? onTap;
   final String? heroTag;
+  final bool showOccupancy;
 
   const MarketCard({
     super.key,
@@ -15,7 +16,14 @@ class MarketCard extends StatelessWidget {
     this.onTap,
     this.isHorizontal = true,
     this.heroTag,
+    this.showOccupancy = false,
   });
+
+  Color _getOccupancyColor(double occupancy) {
+    if (occupancy <= 0.4) return Colors.green;
+    if (occupancy <= 0.7) return Colors.orange;
+    return Colors.red;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -137,6 +145,41 @@ class MarketCard extends StatelessWidget {
                   ),
                 ],
               ),
+
+              if (showOccupancy) ...[
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Icon(Icons.people_alt_outlined,
+                        size: 16, color: theme.hintColor),
+                    const SizedBox(width: 6),
+                    Text(
+                      langVM.translate('occupancy_rate'),
+                      style: theme.textTheme.bodySmall,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: LinearProgressIndicator(
+                          value: market.occupancy,
+                          backgroundColor: theme.dividerColor.withOpacity(0.1),
+                          color: _getOccupancyColor(market.occupancy),
+                          minHeight: 6,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '%${(market.occupancy * 100).toInt()}',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: _getOccupancyColor(market.occupancy),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
 
               if (isHorizontal) const Spacer() else const SizedBox(height: 12),
 

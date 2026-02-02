@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../data/models/market.dart';
-import '../viewmodels/home_viewmodel.dart';
-import '../viewmodels/language_viewmodel.dart';
-import '../widgets/market_card.dart';
+import '../../../data/models/market.dart';
+import '../../viewmodels/home_viewmodel.dart';
+import '../../viewmodels/language_viewmodel.dart';
+import '../../widgets/market_card.dart';
 import 'market_detail_screen.dart';
-import 'auth_service.dart';
-import '../widgets/custom_app_bar.dart';
+import '../../viewmodels/auth_service.dart';
+import '../../widgets/custom_app_bar.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});

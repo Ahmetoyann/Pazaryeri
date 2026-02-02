@@ -1,10 +1,10 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../viewmodels/language_viewmodel.dart';
-import '../viewmodels/seller_viewmodel.dart';
-import '../screens/auth_viewmodel.dart';
-import '../screens/auth_service.dart';
+import '../../viewmodels/language_viewmodel.dart';
+import '../../viewmodels/seller_viewmodel.dart';
+import '../../viewmodels/auth_viewmodel.dart';
+import '../../viewmodels/auth_service.dart';
 import 'seller_add_product_screen.dart';
 import 'seller_reviews_screen.dart';
 import 'seller_products_screen.dart';

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/language_viewmodel.dart';
-import 'auth_viewmodel.dart';
+import '../viewmodels/auth_viewmodel.dart';
 
 class PhoneVerificationScreen extends StatefulWidget {
   final String phoneNumber;

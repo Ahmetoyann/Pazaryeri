@@ -31,6 +31,7 @@ dependencies:
   google_sign_in: ^6.2.1
   google_maps_flutter: ^2.5.3
   fl_chart: ^1.1.1
+  flutter_svg: ^2.2.3
 
 dev_dependencies:
   flutter_test:
@@ -43,6 +44,7 @@ flutter:
   assets:
     - assets/data/markets.json
     - assets/images/
+    - assets/images/google_logo.svg.png
 
 flutter_icons:
   android: true

@@ -10,6 +10,7 @@ class Market {
   final double distanceInMeters;
   final List<String> products;
   final List<String> openDays; // e.g., ['Pazartesi', 'Cuma']
+  final double occupancy;
 
   Market({
     required this.id,
@@ -19,5 +20,8 @@ class Market {
     required this.distanceInMeters,
     this.products = const [],
     this.openDays = const [],
-  });
+    double? occupancy,
+  }) : occupancy = occupancy ??
+            (0.3 +
+                (id.hashCode.abs() % 61) / 100.0); // Varsayılan: %30-%90 arası
 }

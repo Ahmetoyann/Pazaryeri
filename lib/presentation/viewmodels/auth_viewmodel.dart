@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart' hide User;
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../viewmodels/notification_service.dart';
 import 'user_model.dart'; // Bu dosyanın projenizde olduğundan emin olun
 import 'auth_service.dart';
@@ -20,7 +19,6 @@ class AuthViewModel extends ChangeNotifier {
   bool _isSeller = false;
   String? _sellerMarketId;
   String? _verificationId;
-  StreamSubscription<QuerySnapshot>? _productSubscription;
 
   // Constructor'da otomatik giriş kontrolü yap
   AuthViewModel() {
@@ -124,46 +122,14 @@ class AuthViewModel extends ChangeNotifier {
 
   // --- METOTLAR (Durumları değiştirmek için) ---
 
-  /// Bir kullanıcıyı e-posta ve şifre ile sisteme dahil eder.
-  Future<bool> login(String email, String password,
+  /// Satıcı girişi yapar.
+  Future<bool> loginAsSeller(String email, String password,
       {bool rememberMe = true}) async {
     try {
       final userData = await AuthService.instance.loginWithFirebase(
         email,
         password,
         rememberMe: rememberMe,
-      );
-
-      if (userData != null) {
-        // Beni hatırla seçili olmasa bile o anlık oturum için kullanıcıyı set et
-        _setUserFromData(userData);
-        _isRemembered = rememberMe;
-      } else if (rememberMe) {
-        // Veri dönmediyse ama beni hatırla açıksa SP'den okumayı dene
-        await _checkAutoLogin();
-      }
-
-      // Giriş başarılı olduğunda misafir modunu kapat
-      await AuthService.instance.setIsSeller(false);
-      _isSeller = false;
-      _isGuest = false;
-      notifyListeners();
-
-      // Giriş başarılı, bildirimleri dinle
-      _startListeningToFavorites();
-      return true;
-    } catch (e) {
-      rethrow; // Hatayı UI'a fırlat
-    }
-  }
-
-  /// Satıcı girişi yapar.
-  Future<bool> loginAsSeller(String email, String password) async {
-    try {
-      final userData = await AuthService.instance.loginWithFirebase(
-        email,
-        password,
-        rememberMe: true,
       );
 
       if (userData != null) {
@@ -176,7 +142,9 @@ class AuthViewModel extends ChangeNotifier {
       }
       return false;
     } catch (e) {
-      rethrow;
+      // Hata mesajını temizle (Exception: ... kısmını kaldır)
+      final message = e.toString().replaceAll('Exception: ', '');
+      throw message;
     }
   }
 
@@ -184,15 +152,17 @@ class AuthViewModel extends ChangeNotifier {
   Future<bool> loginWithGoogle() async {
     try {
       _isNewUser = false;
-      final isNewUser = await AuthService.instance.signInWithGoogle();
-      if (isNewUser == null) return false; // İptal edildi
+      final userCredential = await AuthService.instance.signInWithGoogle();
+      if (userCredential == null) return false; // İptal edildi
 
       // Google ile gelen kullanıcı yeni kayıt olsa bile direkt giriş yapsın.
       // Profil tamamlama ekranına yönlendirmemek için false set ediyoruz.
       _isNewUser = false;
-      await _checkAutoLogin();
+      // Yerel hafıza gecikmesini önlemek için doğrudan oturumu kurtar
+      final userData = await AuthService.instance.restoreSession();
 
-      if (_currentUser != null) {
+      if (userData != null) {
+        _setUserFromData(userData);
         await AuthService.instance.setIsSeller(false);
         _isSeller = false;
         _isGuest = false;
@@ -201,85 +171,15 @@ class AuthViewModel extends ChangeNotifier {
       }
       return false;
     } catch (e) {
-      rethrow;
-    }
-  }
-
-  /// Yeni bir kullanıcı kaydı oluşturur.
-  Future<bool> register({
-    required String firstName,
-    required String lastName,
-    required DateTime dateOfBirth,
-    required String phoneNumber,
-    required String email,
-    required String password,
-    String? profilePicturePath,
-    bool isSeller = false,
-  }) async {
-    try {
-      await AuthService.instance.registerUserInDb(
-        email: email,
-        password: password,
-        firstName: firstName,
-        lastName: lastName,
-        phoneNumber: phoneNumber,
-        dateOfBirth: dateOfBirth.toIso8601String(),
-        profilePicturePath: profilePicturePath,
-        isSeller: isSeller,
-      );
-
-      // Otomatik giriş yapıldığı için state'i güncelle
-      final uid = FirebaseAuth.instance.currentUser?.uid;
-      if (uid != null) {
-        _currentUser = User(
-          id: uid,
-          firstName: firstName,
-          lastName: lastName,
-          dateOfBirth: dateOfBirth,
-          phoneNumber: phoneNumber,
-          email: email,
-          profilePicturePath: profilePicturePath,
-        );
-        _isSeller = isSeller;
-        _isGuest = false;
-        _isRemembered = true;
-      }
-      notifyListeners();
-      return true;
-    } catch (e) {
-      rethrow;
-    }
-  }
-
-  /// Şifre sıfırlama bağlantısı gönderir.
-  Future<bool> sendVerificationCode(String email) async {
-    try {
-      // Firebase'in kendi şifre sıfırlama mekanizmasını kullanıyoruz
-      await AuthService.instance.sendPasswordResetEmail(email);
-      return true;
-    } on FirebaseAuthException catch (e) {
-      if (e.code == 'user-not-found') {
-        throw Exception('user_not_found');
-      }
-      throw Exception(e.message);
-    } catch (e) {
-      throw Exception('E-posta gönderilemedi: $e');
-    }
-  }
-
-  /// Doğrulama e-postasını tekrar gönderir.
-  Future<void> resendVerificationEmail(String email, String password) async {
-    try {
-      await AuthService.instance.resendVerificationEmail(email, password);
-    } catch (e) {
-      rethrow;
+      // Hata mesajını temizle (Exception: ... kısmını kaldır) ve sadece mesajı fırlat
+      final message = e.toString().replaceAll('Exception: ', '');
+      throw message;
     }
   }
 
   /// Kullanıcının oturumunu kapatır.
   void logout() {
     // Normal çıkışta favorileri temizle (Gizlilik için)
-    _productSubscription?.cancel(); // Dinleyiciyi durdur
     AuthService.instance.logout(clearFavorites: true);
     _currentUser = null;
     _isGuest = false; // Çıkış yaparken misafir modu da kapatılır.
@@ -292,7 +192,6 @@ class AuthViewModel extends ChangeNotifier {
   /// Misafir modundan çıkış yapar ve kullanıcıyı giriş ekranına yönlendirir.
   void exitGuestMode() {
     // Misafir çıkışında favorileri SİLME, böylece giriş yapınca birleştirilebilir.
-    _productSubscription?.cancel();
     AuthService.instance.logout(clearFavorites: false);
     _currentUser = null;
     _isSeller = false;
@@ -306,7 +205,6 @@ class AuthViewModel extends ChangeNotifier {
   /// Misafir modunu başlatır ve durumu günceller.
   void enterAsGuest() {
     // Kullanıcı ve misafir durumlarını sıfırla
-    _productSubscription?.cancel();
     _currentUser = null;
     _isSeller = false;
     _isGuest = true;
@@ -514,44 +412,6 @@ class AuthViewModel extends ChangeNotifier {
 
   /// Favori pazarlara yeni ürün eklendiğinde bildirim gönderir.
   Future<void> _startListeningToFavorites() async {
-    await _productSubscription?.cancel();
-
-    // Favorileri al
-    final favorites = await AuthService.instance.getFavorites();
-    if (favorites.isEmpty) return;
-
-    // Firestore 'whereIn' limiti 10'dur. İlk 10 favoriyi dinliyoruz.
-    final limitedFavorites = favorites.take(10).toList();
-
-    // Sadece şu andan sonra eklenenleri dinle
-    final now = Timestamp.now();
-
-    try {
-      _productSubscription = FirebaseFirestore.instance
-          .collection('products')
-          .where('sellerMarketId', whereIn: limitedFavorites)
-          .where('createdAt', isGreaterThan: now)
-          .snapshots()
-          .listen((snapshot) {
-        for (final change in snapshot.docChanges) {
-          if (change.type == DocumentChangeType.added) {
-            final data = change.doc.data();
-            if (data != null) {
-              final productName = data['name'] ?? 'Ürün';
-              final marketId = data['sellerMarketId'];
-              // Bildirim gönder
-              NotificationService.instance.showNotification(
-                id: DateTime.now().millisecondsSinceEpoch % 100000,
-                title: 'Favori Pazarında Yeni Ürün!',
-                body: '$productName tezgahta yerini aldı. Hemen incele!',
-                payload: marketId, // Pazar ID'sini bildirime ekle
-              );
-            }
-          }
-        }
-      });
-    } catch (e) {
-      debugPrint('Bildirim dinleyicisi başlatılamadı (Index gerekebilir): $e');
-    }
+    // Firestore kaldırıldığı için bildirim dinleme iptal edildi.
   }
 }

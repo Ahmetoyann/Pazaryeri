@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../screens/auth_service.dart';
+import 'auth_service.dart';
 import 'app_strings.dart';
 
 class LanguageViewModel extends ChangeNotifier {

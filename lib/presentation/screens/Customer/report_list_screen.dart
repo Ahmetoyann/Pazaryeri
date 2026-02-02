@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../presentation/viewmodels/home_viewmodel.dart';
+import '../../viewmodels/home_viewmodel.dart';
 import 'report_form_screen.dart';
-import '../viewmodels/language_viewmodel.dart';
-import '../widgets/custom_app_bar.dart';
+import '../../viewmodels/language_viewmodel.dart';
+import '../../widgets/custom_app_bar.dart';
 
 class ReportListScreen extends StatelessWidget {
   const ReportListScreen({super.key});

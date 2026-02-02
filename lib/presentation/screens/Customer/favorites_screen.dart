@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../viewmodels/home_viewmodel.dart';
-import '../viewmodels/language_viewmodel.dart';
-import '../widgets/market_card.dart';
+import '../../viewmodels/home_viewmodel.dart';
+import '../../viewmodels/language_viewmodel.dart';
+import '../../widgets/market_card.dart';
 import 'market_detail_screen.dart';
 
 class FavoritesScreen extends StatefulWidget {

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../viewmodels/language_viewmodel.dart';
+import '../../viewmodels/language_viewmodel.dart';
 import 'product_detail_screen.dart';
-import '../screens/auth_service.dart';
+import '../../viewmodels/auth_service.dart';
 
 class CustomerSellerDetailScreen extends StatefulWidget {
   final String sellerId;

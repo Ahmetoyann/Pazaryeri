@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../viewmodels/seller_viewmodel.dart';
-import '../viewmodels/language_viewmodel.dart';
-import '../screens/auth_viewmodel.dart';
-import '../screens/auth_service.dart';
-import '../../data/models/market.dart';
+import '../../viewmodels/seller_viewmodel.dart';
+import '../../viewmodels/language_viewmodel.dart';
+import '../../viewmodels/auth_viewmodel.dart';
+import '../../viewmodels/auth_service.dart';
+import '../../../data/models/market.dart';
 
 class SellerMarketSelectionScreen extends StatefulWidget {
   const SellerMarketSelectionScreen({super.key});

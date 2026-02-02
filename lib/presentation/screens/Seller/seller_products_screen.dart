@@ -1,8 +1,7 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../viewmodels/seller_viewmodel.dart';
-import '../viewmodels/language_viewmodel.dart';
+import '../../viewmodels/seller_viewmodel.dart';
+import '../../viewmodels/language_viewmodel.dart';
 import 'seller_add_product_screen.dart';
 
 class SellerProductsScreen extends StatefulWidget {

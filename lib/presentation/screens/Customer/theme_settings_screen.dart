@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../viewmodels/theme_viewmodel.dart';
-import '../viewmodels/language_viewmodel.dart';
+import '../../viewmodels/theme_viewmodel.dart';
+import '../../viewmodels/language_viewmodel.dart';
 
 class ThemeSettingsScreen extends StatelessWidget {
   const ThemeSettingsScreen({super.key});

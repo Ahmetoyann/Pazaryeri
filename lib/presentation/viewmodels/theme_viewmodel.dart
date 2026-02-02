@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../screens/auth_service.dart';
+import 'auth_service.dart';
 
 class ThemeViewModel extends ChangeNotifier {
   int _themeModeIndex = 0; // 0: System, 1: Light, 2: Dark

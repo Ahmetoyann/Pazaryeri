@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
-import 'dart:math';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as path;
 import '../../data/repositories/market_repository.dart';
 import '../../data/models/market.dart';
 import 'notification_service.dart';
-import '../screens/auth_service.dart';
+import 'auth_service.dart';
 import 'app_strings.dart';
 
 class SellerViewModel extends ChangeNotifier {
   final MarketRepository _marketRepository;
 
-  SellerViewModel(this._marketRepository);
+  SellerViewModel(this._marketRepository) {
+    _loadMockData();
+  }
 
   Market? _selectedMarket;
   Market? get selectedMarket => _selectedMarket;
@@ -39,12 +43,102 @@ class SellerViewModel extends ChangeNotifier {
   String? _categoryFilter;
   String? get categoryFilter => _categoryFilter;
 
-  DocumentSnapshot? _lastDocument;
   bool _hasMoreProducts = true;
   bool _isLoadingMore = false;
   bool get hasMoreProducts => _hasMoreProducts;
   bool get isLoadingMore => _isLoadingMore;
   static const int _productsLimit = 10;
+
+  static const String _keyMockProducts = 'mock_products_data';
+
+  // --- MOCK VERİ (GEÇİCİ VERİTABANI) ---
+  // Firestore yerine bu listeyi kullanıyoruz.
+  final List<SellerProduct> _mockDatabase = [
+    SellerProduct(
+      id: '101',
+      name: 'Domates (Salkım)',
+      description: 'Mis kokulu yerli domates.',
+      price: 35.0,
+      category: 'Sebze',
+      stockQuantity: 50,
+      unit: 'kg',
+      inStock: true,
+      imagePath:
+          'https://post.healthline.com/wp-content/uploads/2020/09/tomatoes-1200x628-facebook-1200x628.jpg',
+    ),
+    SellerProduct(
+      id: '102',
+      name: 'Salatalık',
+      description: 'Çıtır çıtır Çengelköy.',
+      price: 20.0,
+      category: 'Sebze',
+      stockQuantity: 30,
+      unit: 'kg',
+      inStock: true,
+    ),
+    SellerProduct(
+      id: '103',
+      name: 'Amasya Elması',
+      description: 'Kütür kütür kırmızı elma.',
+      price: 25.0,
+      category: 'Meyve',
+      stockQuantity: 100,
+      unit: 'kg',
+      inStock: true,
+    ),
+    SellerProduct(
+      id: '104',
+      name: 'Köy Yumurtası',
+      description: 'Günlük taze yumurta (15\'li).',
+      price: 60.0,
+      category: 'Şarküteri',
+      stockQuantity: 20,
+      unit: 'adet',
+      inStock: true,
+    ),
+  ];
+  // -------------------------------------
+
+  Future<void> _loadMockData() async {
+    final prefs = await SharedPreferences.getInstance();
+    final String? jsonString = prefs.getString(_keyMockProducts);
+    if (jsonString != null) {
+      final List<dynamic> jsonList = json.decode(jsonString);
+      _mockDatabase.clear();
+      for (var item in jsonList) {
+        var product = SellerProduct.fromMap(item);
+        // Yerel resim dosyası kontrolü: Dosya silinmişse path'i temizle
+        if (product.imagePath != null &&
+            !product.imagePath!.startsWith('http')) {
+          if (!await File(product.imagePath!).exists()) {
+            product = SellerProduct(
+              id: product.id,
+              name: product.name,
+              description: product.description,
+              price: product.price,
+              category: product.category,
+              imagePath: null, // Resim bulunamadı, null set et
+              inStock: product.inStock,
+              viewCount: product.viewCount,
+              stockQuantity: product.stockQuantity,
+              unit: product.unit,
+            );
+          }
+        }
+        _mockDatabase.add(product);
+      }
+      notifyListeners();
+    } else {
+      await _saveMockData();
+    }
+  }
+
+  Future<void> _saveMockData() async {
+    final prefs = await SharedPreferences.getInstance();
+    final String jsonString =
+        json.encode(_mockDatabase.map((e) => e.toMap()).toList());
+    await prefs.setString(_keyMockProducts, jsonString);
+  }
 
   // Pazar Seçimi
   void selectMarket(Market market) {
@@ -88,7 +182,6 @@ class SellerViewModel extends ChangeNotifier {
     if (_isLoading) return;
     _isLoading = true;
     _hasMoreProducts = true;
-    _lastDocument = null;
     _myProducts = []; // Listeyi sıfırla
     notifyListeners();
 
@@ -120,41 +213,19 @@ class SellerViewModel extends ChangeNotifier {
   // Yardımcı Metod: Sayfa Çekme Mantığı
   Future<void> _fetchProductsPage(String userId) async {
     try {
-      final snapshot = await AuthService.instance.fetchSellerProductsPaginated(
-        userId,
-        limit: _productsLimit,
-        startAfter: _lastDocument,
-        category: _categoryFilter,
-      );
+      // Ağ gecikmesi simülasyonu
+      await Future.delayed(const Duration(milliseconds: 800));
 
-      if (snapshot.docs.isNotEmpty) {
-        _lastDocument = snapshot.docs.last;
-
-        final newProducts = snapshot.docs.map((doc) {
-          final data = doc.data();
-          return SellerProduct(
-            id: doc.id,
-            name: data['name'] ?? '',
-            description: data['description'] ?? '',
-            price: (data['price'] as num?)?.toDouble() ?? 0.0,
-            category: data['category'] ?? '',
-            imagePath: data['imagePath'],
-            inStock: data['inStock'] ?? true,
-            viewCount: data['viewCount'] ?? 0,
-            stockQuantity: (data['stockQuantity'] as num?)?.toDouble() ?? 0.0,
-            unit: data['unit'] ?? 'unit_kg',
-          );
-        }).toList();
-
-        _myProducts.addAll(newProducts);
-
-        // Eğer gelen veri limiti doldurmuyorsa, daha fazla veri yok demektir
-        if (snapshot.docs.length < _productsLimit) {
-          _hasMoreProducts = false;
-        }
-      } else {
-        _hasMoreProducts = false;
+      // Mock veriden filtreleme yap
+      List<SellerProduct> filtered = _mockDatabase;
+      if (_categoryFilter != null && _categoryFilter!.isNotEmpty) {
+        filtered =
+            filtered.where((p) => p.category == _categoryFilter).toList();
       }
+
+      // Pagination simülasyonu (Basitçe hepsini getiriyoruz)
+      _myProducts = List.from(filtered);
+      _hasMoreProducts = false; // Mock veride sayfalama yapmıyoruz
     } catch (e) {
       debugPrint('Ürünler sayfalanırken hata: $e');
       _hasMoreProducts = false;
@@ -166,6 +237,21 @@ class SellerViewModel extends ChangeNotifier {
     if (_categoryFilter == category) return;
     _categoryFilter = category;
     await loadProducts(); // Filtre değiştiğinde ürünleri baştan yükle
+  }
+
+  // Resmi kalıcı dizine kopyalayan yardımcı metod
+  Future<String?> _saveImageLocally(String sourcePath) async {
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final fileName =
+          '${DateTime.now().millisecondsSinceEpoch}${path.extension(sourcePath)}';
+      final savedImage =
+          await File(sourcePath).copy('${directory.path}/$fileName');
+      return savedImage.path;
+    } catch (e) {
+      debugPrint('Resim yerel olarak kaydedilemedi: $e');
+      return null;
+    }
   }
 
   Future<bool> addProduct({
@@ -185,28 +271,15 @@ class SellerViewModel extends ChangeNotifier {
     // Eğer resim seçildiyse yükle
     if (_selectedImages.isNotEmpty) {
       try {
-        imageUrl = await AuthService.instance
-            .uploadProductImage(File(_selectedImages.first.path));
+        // Firebase yerine yerel depolamaya kaydet
+        imageUrl = await _saveImageLocally(_selectedImages.first.path);
       } catch (e) {
         debugPrint('Resim yükleme hatası: $e');
       }
     }
 
-    final productData = {
-      'sellerId': AuthService.instance.currentUserId,
-      'name': name,
-      'description': description,
-      'price': price,
-      'category': category,
-      'imagePath': imageUrl,
-      'inStock': inStock,
-      'stockQuantity': stockQuantity,
-      'unit': unit,
-      'viewCount': 0,
-      'createdAt': DateTime.now().toIso8601String(),
-    };
-
-    final id = await AuthService.instance.addProductToDb(productData);
+    // Benzersiz ID oluştur
+    final id = DateTime.now().millisecondsSinceEpoch.toString();
 
     final newProduct = SellerProduct(
       id: id,
@@ -220,7 +293,10 @@ class SellerViewModel extends ChangeNotifier {
       unit: unit,
       viewCount: 0,
     );
+
+    _mockDatabase.add(newProduct); // Mock DB'ye ekle
     _myProducts.add(newProduct);
+    await _saveMockData();
 
     _isLoading = false;
     _checkLowStock(newProduct);
@@ -230,8 +306,26 @@ class SellerViewModel extends ChangeNotifier {
   }
 
   Future<void> removeProduct(String productId) async {
-    await AuthService.instance.deleteProductFromDb(productId);
+    // Silinecek ürünü bul
+    final index = _mockDatabase.indexWhere((p) => p.id == productId);
+    if (index != -1) {
+      final product = _mockDatabase[index];
+      // Eğer yerel bir resim dosyası varsa (URL değilse) sil
+      if (product.imagePath != null && !product.imagePath!.startsWith('http')) {
+        try {
+          final file = File(product.imagePath!);
+          if (await file.exists()) {
+            await file.delete();
+          }
+        } catch (e) {
+          debugPrint('Resim silinemedi: $e');
+        }
+      }
+      _mockDatabase.removeAt(index); // Mock DB'den sil
+    }
+
     _myProducts.removeWhere((p) => p.id == productId);
+    await _saveMockData();
     notifyListeners();
   }
 
@@ -254,26 +348,33 @@ class SellerViewModel extends ChangeNotifier {
     // Eğer yeni resim seçildiyse yükle
     if (_selectedImages.isNotEmpty) {
       try {
-        imageUrl = await AuthService.instance
-            .uploadProductImage(File(_selectedImages.first.path));
+        // Firebase yerine yerel depolamaya kaydet
+        imageUrl = await _saveImageLocally(_selectedImages.first.path);
       } catch (e) {
         debugPrint('Resim yükleme hatası: $e');
       }
     }
 
-    final data = {
-      'name': name,
-      'description': description,
-      'price': price,
-      'stockQuantity': stockQuantity,
-      'unit': unit,
-      'category': category,
-      'inStock': inStock,
-      'imagePath': imageUrl,
-    };
+    // Mock DB güncelle
+    final dbIndex = _mockDatabase.indexWhere((p) => p.id == id);
+    if (dbIndex != -1) {
+      final old = _mockDatabase[dbIndex];
+      _mockDatabase[dbIndex] = SellerProduct(
+        id: id,
+        name: name,
+        description: description,
+        price: price,
+        category: category,
+        imagePath: imageUrl ?? old.imagePath,
+        inStock: inStock,
+        viewCount: old.viewCount,
+        stockQuantity: stockQuantity,
+        unit: unit,
+      );
+    }
+    await _saveMockData();
 
-    await AuthService.instance.updateProductInDb(id, data);
-
+    // UI Listesini güncelle
     final index = _myProducts.indexWhere((p) => p.id == id);
     if (index != -1) {
       final oldProduct = _myProducts[index];
@@ -303,8 +404,25 @@ class SellerViewModel extends ChangeNotifier {
       final p = _myProducts[index];
       final newStatus = !p.inStock;
 
-      await AuthService.instance
-          .updateProductInDb(productId, {'inStock': newStatus});
+      // Mock DB güncelle
+      final dbIndex = _mockDatabase.indexWhere((item) => item.id == productId);
+      if (dbIndex != -1) {
+        // Basitçe yeniden oluşturuyoruz, gerçekte copyWith daha iyi olurdu
+        final old = _mockDatabase[dbIndex];
+        _mockDatabase[dbIndex] = SellerProduct(
+          id: old.id,
+          name: old.name,
+          description: old.description,
+          price: old.price,
+          category: old.category,
+          imagePath: old.imagePath,
+          inStock: newStatus,
+          viewCount: old.viewCount,
+          stockQuantity: old.stockQuantity,
+          unit: old.unit,
+        );
+        await _saveMockData();
+      }
 
       _myProducts[index] = SellerProduct(
         id: p.id,
@@ -390,4 +508,34 @@ class SellerProduct {
     this.stockQuantity = 0,
     this.unit = 'unit_kg',
   });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'description': description,
+      'price': price,
+      'category': category,
+      'imagePath': imagePath,
+      'inStock': inStock,
+      'viewCount': viewCount,
+      'stockQuantity': stockQuantity,
+      'unit': unit,
+    };
+  }
+
+  factory SellerProduct.fromMap(Map<String, dynamic> map) {
+    return SellerProduct(
+      id: map['id'],
+      name: map['name'],
+      description: map['description'],
+      price: (map['price'] as num).toDouble(),
+      category: map['category'],
+      imagePath: map['imagePath'],
+      inStock: map['inStock'] ?? true,
+      viewCount: map['viewCount'] ?? 0,
+      stockQuantity: (map['stockQuantity'] as num).toDouble(),
+      unit: map['unit'] ?? 'unit_kg',
+    );
+  }
 }

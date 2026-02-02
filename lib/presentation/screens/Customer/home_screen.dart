@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../presentation/viewmodels/home_viewmodel.dart';
-import '../../core/regions/provinces.dart';
-import '../../data/models/market.dart';
+import '../../viewmodels/home_viewmodel.dart';
+import '../../../core/regions/provinces.dart';
 import 'package:geolocator/geolocator.dart';
-import '../widgets/market_card.dart';
-import '../widgets/location_chip.dart';
-import 'auth_viewmodel.dart';
+import '../../widgets/market_card.dart';
+import '../../widgets/location_chip.dart';
 import 'market_detail_screen.dart';
-import '../viewmodels/language_viewmodel.dart';
-import '../widgets/custom_app_bar.dart';
+import '../../viewmodels/language_viewmodel.dart';
+import '../../widgets/custom_app_bar.dart';
 
 // A simple Levenshtein distance implementation for fuzzy matching
 int _levenshtein(String s, String t) {
@@ -109,6 +107,7 @@ class _HomeScreenState extends State<HomeScreen> {
           return MarketCard(
             market: m,
             isHorizontal: false,
+            showOccupancy: true,
             onTap: () {
               Navigator.push(
                 context,
@@ -180,6 +179,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 return MarketCard(
                   market: market,
                   heroTag: tag,
+                  showOccupancy: true,
                   onTap: () {
                     Navigator.push(
                       context,
@@ -211,6 +211,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   market: market,
                   heroTag: tag,
                   isHorizontal: false,
+                  showOccupancy: true,
                   onTap: () {
                     Navigator.push(
                       context,
