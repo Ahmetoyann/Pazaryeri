@@ -89,7 +89,7 @@ class _SellerAddProductScreenState extends State<SellerAddProductScreen> {
                 child: Row(
                   children: [
                     ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(24),
                       child: Image.network(
                         widget.productToEdit!.imagePath!,
                         height: 80,
@@ -121,9 +121,12 @@ class _SellerAddProductScreenState extends State<SellerAddProductScreen> {
                         width: 100,
                         margin: const EdgeInsets.only(right: 8),
                         decoration: BoxDecoration(
-                          color: Colors.grey[200],
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.grey[400]!),
+                          color: Theme.of(context).cardColor,
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(
+                              color: Theme.of(context)
+                                  .dividerColor
+                                  .withOpacity(0.1)),
                         ),
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -144,7 +147,7 @@ class _SellerAddProductScreenState extends State<SellerAddProductScreen> {
                         width: 100,
                         margin: const EdgeInsets.only(right: 8),
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(24),
                           image: DecorationImage(
                             image: FileImage(File(image.path)),
                             fit: BoxFit.cover,
@@ -174,7 +177,6 @@ class _SellerAddProductScreenState extends State<SellerAddProductScreen> {
               controller: _nameController,
               decoration: InputDecoration(
                 labelText: langVM.translate('product_name_label'),
-                border: const OutlineInputBorder(),
               ),
               validator: (v) =>
                   v!.isEmpty ? langVM.translate('error_prefix') : null,
@@ -220,15 +222,28 @@ class _SellerAddProductScreenState extends State<SellerAddProductScreen> {
                               color: isSelected
                                   ? Theme.of(context)
                                       .colorScheme
-                                      .primaryContainer
+                                      .primary
+                                      .withOpacity(0.05)
                                   : Theme.of(context).cardColor,
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(24),
                               border: Border.all(
                                 color: isSelected
                                     ? Theme.of(context).colorScheme.primary
                                     : Colors.grey.shade300,
-                                width: isSelected ? 2 : 1,
+                                width: 2,
                               ),
+                              boxShadow: isSelected
+                                  ? [
+                                      BoxShadow(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary
+                                            .withOpacity(0.1),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
+                                      )
+                                    ]
+                                  : null,
                             ),
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -284,7 +299,6 @@ class _SellerAddProductScreenState extends State<SellerAddProductScreen> {
                     keyboardType: TextInputType.number,
                     decoration: InputDecoration(
                       labelText: langVM.translate('product_price_label'),
-                      border: const OutlineInputBorder(),
                     ),
                   ),
                 ),
@@ -295,7 +309,6 @@ class _SellerAddProductScreenState extends State<SellerAddProductScreen> {
                     keyboardType: TextInputType.number,
                     decoration: InputDecoration(
                       labelText: langVM.translate('stock_quantity_label'),
-                      border: const OutlineInputBorder(),
                     ),
                   ),
                 ),
@@ -306,9 +319,6 @@ class _SellerAddProductScreenState extends State<SellerAddProductScreen> {
               value: _selectedUnit,
               decoration: InputDecoration(
                 labelText: langVM.translate('unit_label'),
-                border: const OutlineInputBorder(),
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 15),
               ),
               items: _units
                   .map((u) => DropdownMenuItem(
@@ -323,12 +333,14 @@ class _SellerAddProductScreenState extends State<SellerAddProductScreen> {
               decoration: InputDecoration(
                 labelText: langVM.translate('stall_location_label'),
                 hintText: langVM.translate('stall_location_hint'),
-                border: const OutlineInputBorder(),
                 prefixIcon: const Icon(Icons.location_on_outlined),
               ),
             ),
             const SizedBox(height: 16),
             SwitchListTile(
+              tileColor: Theme.of(context).cardColor,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30)),
               title: Text(langVM.translate('stock_status_label')),
               subtitle: Text(
                   langVM.translate(_inStock ? 'in_stock' : 'out_of_stock')),

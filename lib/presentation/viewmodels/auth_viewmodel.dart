@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart' hide User;
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../viewmodels/notification_service.dart';
 import 'user_model.dart'; // Bu dosyanın projenizde olduğundan emin olun
 import 'auth_service.dart';
@@ -143,6 +144,46 @@ class AuthViewModel extends ChangeNotifier {
       return false;
     } catch (e) {
       // Hata mesajını temizle (Exception: ... kısmını kaldır)
+      final message = e.toString().replaceAll('Exception: ', '');
+      throw message;
+    }
+  }
+
+  /// Satıcı kaydı oluşturur.
+  Future<void> registerSeller({
+    required String email,
+    required String password,
+    required String firstName,
+    required String lastName,
+    required String phoneNumber,
+    required String marketId,
+  }) async {
+    try {
+      // 1. Firebase Auth ile kullanıcı oluştur
+      final userCredential = await AuthService.instance
+          .registerWithEmailAndPassword(email, password);
+      final user = userCredential.user;
+
+      if (user != null) {
+        // 2. Kullanıcı bilgilerini güncelle (DisplayName)
+        await user.updateDisplayName('$firstName $lastName');
+
+        // 3. Firestore'a satıcı detaylarını kaydet
+        await AuthService.instance.updateUserInDb({
+          'firstName': firstName,
+          'lastName': lastName,
+          'email': email,
+          'phoneNumber': phoneNumber,
+          'isSeller': true, // Satıcı olarak işaretle
+          'sellerMarketId': marketId, // Pazar yerini kaydet
+          'dateOfBirth': DateTime.now().toIso8601String(),
+          'createdAt': FieldValue.serverTimestamp(),
+        }, email);
+
+        // 4. Oturumu kapat (Kullanıcı giriş sayfasına yönlendirilecek)
+        await AuthService.instance.logout(clearFavorites: true);
+      }
+    } catch (e) {
       final message = e.toString().replaceAll('Exception: ', '');
       throw message;
     }

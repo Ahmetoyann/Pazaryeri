@@ -10,6 +10,7 @@ import 'seller_reviews_screen.dart';
 import 'seller_products_screen.dart';
 import 'seller_settings_screen.dart';
 import 'seller_stats_screen.dart';
+import '../../widgets/custom_app_bar.dart';
 
 class SellerMainScreen extends StatefulWidget {
   final int initialIndex;
@@ -56,7 +57,8 @@ class _SellerMainScreenState extends State<SellerMainScreen> {
     final sellerVM = Provider.of<SellerViewModel>(context);
 
     return Scaffold(
-      appBar: AppBar(
+      extendBodyBehindAppBar: true,
+      appBar: CustomAppBar(
         title: Text(sellerVM.selectedMarket?.name ??
             langVM.translate('seller_panel_title')),
         actions: [
@@ -101,9 +103,12 @@ class _SellerMainScreenState extends State<SellerMainScreen> {
         ],
       ),
       extendBody: true,
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _pages,
+      body: Padding(
+        padding: const EdgeInsets.only(top: 110),
+        child: IndexedStack(
+          index: _currentIndex,
+          children: _pages,
+        ),
       ),
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.only(left: 32, right: 32, bottom: 32),
@@ -113,7 +118,9 @@ class _SellerMainScreenState extends State<SellerMainScreen> {
             filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.black.withOpacity(0.2)
+                    : Colors.white.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(24),
               ),
               child: BottomNavigationBar(

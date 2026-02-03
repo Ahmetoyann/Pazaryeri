@@ -59,11 +59,12 @@ class MyApp extends StatelessWidget {
           create: (_) => SellerViewModel(marketRepository),
         ),
       ],
-      child: Consumer2<ThemeViewModel, LanguageViewModel>(
-        builder: (context, themeVM, languageVM, child) {
+      child: Consumer3<ThemeViewModel, LanguageViewModel, AuthViewModel>(
+        builder: (context, themeVM, languageVM, authVM, child) {
           return LifecycleManager(
             child: MaterialApp(
               navigatorKey: navigatorKey, // Key'i tanımla
+              navigatorObservers: [KeyboardDismissObserver()],
               debugShowCheckedModeBanner: false,
               title: languageVM.translate('home_title'),
               themeMode: themeVM.themeMode,
@@ -73,6 +74,78 @@ class MyApp extends StatelessWidget {
                   brightness: Brightness.light,
                 ),
                 useMaterial3: true,
+                scaffoldBackgroundColor: Colors.transparent,
+                cardColor: Colors.white.withOpacity(0.9),
+                pageTransitionsTheme: const PageTransitionsTheme(
+                  builders: {
+                    TargetPlatform.android: CustomScaleTransitionBuilder(),
+                    TargetPlatform.iOS: CustomScaleTransitionBuilder(),
+                  },
+                ),
+                chipTheme: ChipThemeData(
+                  backgroundColor: Colors.white.withOpacity(0.5),
+                  side: BorderSide.none,
+                  shape: const StadiumBorder(),
+                ),
+                elevatedButtonTheme: ElevatedButtonThemeData(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: themeVM.seedColor.withOpacity(0.85),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: const StadiumBorder(), // Hap şeklinde buton
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 16, horizontal: 32),
+                  ),
+                ),
+                outlinedButtonTheme: OutlinedButtonThemeData(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: themeVM.seedColor,
+                    backgroundColor: Colors.white.withOpacity(0.3),
+                    side: BorderSide(color: themeVM.seedColor.withOpacity(0.7)),
+                    shape: const StadiumBorder(), // Hap şeklinde buton
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 16, horizontal: 32),
+                  ),
+                ),
+                textButtonTheme: TextButtonThemeData(
+                  style: TextButton.styleFrom(
+                    foregroundColor: themeVM.seedColor,
+                    shape: const StadiumBorder(),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 12,
+                      horizontal: 24,
+                    ),
+                  ),
+                ),
+                inputDecorationTheme: InputDecorationTheme(
+                  filled: true,
+                  fillColor: Colors.white.withOpacity(0.9),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide:
+                        BorderSide(color: themeVM.seedColor, width: 1.5),
+                  ),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                ),
+                textTheme: _buildTextTheme(
+                    ThemeData.light().textTheme, Colors.black.withOpacity(0.2)),
+                iconTheme: IconThemeData(
+                  shadows: [
+                    Shadow(
+                        offset: const Offset(1, 1),
+                        blurRadius: 2,
+                        color: Colors.black.withOpacity(0.2))
+                  ],
+                ),
               ),
               darkTheme: ThemeData(
                 colorScheme: ColorScheme.fromSeed(
@@ -80,6 +153,78 @@ class MyApp extends StatelessWidget {
                   brightness: Brightness.dark,
                 ),
                 useMaterial3: true,
+                scaffoldBackgroundColor: Colors.transparent,
+                cardColor: Colors.black.withOpacity(0.8),
+                pageTransitionsTheme: const PageTransitionsTheme(
+                  builders: {
+                    TargetPlatform.android: CustomScaleTransitionBuilder(),
+                    TargetPlatform.iOS: CustomScaleTransitionBuilder(),
+                  },
+                ),
+                chipTheme: ChipThemeData(
+                  backgroundColor: Colors.grey.withOpacity(0.2),
+                  side: BorderSide.none,
+                  shape: const StadiumBorder(),
+                ),
+                elevatedButtonTheme: ElevatedButtonThemeData(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: themeVM.seedColor.withOpacity(0.85),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: const StadiumBorder(), // Hap şeklinde buton
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 16, horizontal: 32),
+                  ),
+                ),
+                outlinedButtonTheme: OutlinedButtonThemeData(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: themeVM.seedColor,
+                    backgroundColor: Colors.black.withOpacity(0.3),
+                    side: BorderSide(color: themeVM.seedColor.withOpacity(0.7)),
+                    shape: const StadiumBorder(), // Hap şeklinde buton
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 16, horizontal: 32),
+                  ),
+                ),
+                textButtonTheme: TextButtonThemeData(
+                  style: TextButton.styleFrom(
+                    foregroundColor: themeVM.seedColor,
+                    shape: const StadiumBorder(),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 12,
+                      horizontal: 24,
+                    ),
+                  ),
+                ),
+                inputDecorationTheme: InputDecorationTheme(
+                  filled: true,
+                  fillColor: Colors.grey.withOpacity(0.8),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide:
+                        BorderSide(color: themeVM.seedColor, width: 1.5),
+                  ),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                ),
+                textTheme: _buildTextTheme(
+                    ThemeData.dark().textTheme, Colors.black.withOpacity(0.5)),
+                iconTheme: IconThemeData(
+                  shadows: [
+                    Shadow(
+                        offset: const Offset(1, 1),
+                        blurRadius: 2,
+                        color: Colors.black.withOpacity(0.5))
+                  ],
+                ),
               ),
               locale: Locale(languageVM.currentLanguage),
               supportedLocales: const [Locale('tr', 'TR'), Locale('en', 'US')],
@@ -88,6 +233,68 @@ class MyApp extends StatelessWidget {
                 GlobalWidgetsLocalizations.delegate,
                 GlobalCupertinoLocalizations.delegate,
               ],
+              builder: (context, child) {
+                final theme = Theme.of(context);
+                final isDark = theme.brightness == Brightness.dark;
+
+                return Stack(
+                  children: [
+                    Positioned.fill(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: isDark
+                                ? [
+                                    const Color(0xFF121212), // Koyu gri
+                                    Colors.black,
+                                  ]
+                                : [
+                                    theme.colorScheme.primary.withOpacity(0.05),
+                                    const Color(0xFFFAFAFA), // Kırık beyaz
+                                  ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    // Modern ve yumuşak bir arka plan efekti için bulanık daireler
+                    Positioned(
+                      top: -100,
+                      right: -100,
+                      child: ImageFiltered(
+                        imageFilter: ImageFilter.blur(sigmaX: 60, sigmaY: 60),
+                        child: Container(
+                          width: 300,
+                          height: 300,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: theme.colorScheme.primary
+                                .withOpacity(isDark ? 0.15 : 0.08),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      bottom: -50,
+                      left: -50,
+                      child: ImageFiltered(
+                        imageFilter: ImageFilter.blur(sigmaX: 60, sigmaY: 60),
+                        child: Container(
+                          width: 250,
+                          height: 250,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: theme.colorScheme.secondary
+                                .withOpacity(isDark ? 0.15 : 0.08),
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (child != null) child,
+                  ],
+                );
+              },
               home: SplashScreen(
                 nextScreen: showOnboarding
                     ? OnboardingScreen(
@@ -103,6 +310,123 @@ class MyApp extends StatelessWidget {
         },
       ),
     );
+  }
+}
+
+TextTheme _buildTextTheme(TextTheme base, Color shadowColor) {
+  return base.copyWith(
+    displayLarge: base.displayLarge?.copyWith(
+      shadows: [
+        Shadow(offset: const Offset(1, 1), blurRadius: 2, color: shadowColor)
+      ],
+    ),
+    displayMedium: base.displayMedium?.copyWith(
+      shadows: [
+        Shadow(offset: const Offset(1, 1), blurRadius: 2, color: shadowColor)
+      ],
+    ),
+    displaySmall: base.displaySmall?.copyWith(
+      shadows: [
+        Shadow(offset: const Offset(1, 1), blurRadius: 2, color: shadowColor)
+      ],
+    ),
+    headlineLarge: base.headlineLarge?.copyWith(
+      shadows: [
+        Shadow(offset: const Offset(1, 1), blurRadius: 2, color: shadowColor)
+      ],
+    ),
+    headlineMedium: base.headlineMedium?.copyWith(
+      shadows: [
+        Shadow(offset: const Offset(1, 1), blurRadius: 2, color: shadowColor)
+      ],
+    ),
+    headlineSmall: base.headlineSmall?.copyWith(
+      shadows: [
+        Shadow(offset: const Offset(1, 1), blurRadius: 2, color: shadowColor)
+      ],
+    ),
+    titleLarge: base.titleLarge?.copyWith(
+      shadows: [
+        Shadow(offset: const Offset(1, 1), blurRadius: 2, color: shadowColor)
+      ],
+    ),
+    titleMedium: base.titleMedium?.copyWith(
+      shadows: [
+        Shadow(offset: const Offset(1, 1), blurRadius: 2, color: shadowColor)
+      ],
+    ),
+    titleSmall: base.titleSmall?.copyWith(
+      shadows: [
+        Shadow(offset: const Offset(1, 1), blurRadius: 2, color: shadowColor)
+      ],
+    ),
+    bodyLarge: base.bodyLarge?.copyWith(
+      shadows: [
+        Shadow(
+            offset: const Offset(0.5, 0.5), blurRadius: 1, color: shadowColor)
+      ],
+    ),
+    bodyMedium: base.bodyMedium?.copyWith(
+      shadows: [
+        Shadow(
+            offset: const Offset(0.5, 0.5), blurRadius: 1, color: shadowColor)
+      ],
+    ),
+    bodySmall: base.bodySmall?.copyWith(
+      shadows: [
+        Shadow(
+            offset: const Offset(0.5, 0.5), blurRadius: 1, color: shadowColor)
+      ],
+    ),
+    labelLarge: base.labelLarge?.copyWith(
+      shadows: [
+        Shadow(
+            offset: const Offset(0.5, 0.5), blurRadius: 1, color: shadowColor)
+      ],
+    ),
+  );
+}
+
+class CustomScaleTransitionBuilder extends PageTransitionsBuilder {
+  const CustomScaleTransitionBuilder();
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    return FadeTransition(
+      opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
+      child: ScaleTransition(
+        scale: Tween<double>(begin: 0.92, end: 1.0).animate(
+          CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+        ),
+        child: child,
+      ),
+    );
+  }
+}
+
+class KeyboardDismissObserver extends NavigatorObserver {
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    super.didPush(route, previousRoute);
+    FocusManager.instance.primaryFocus?.unfocus();
+  }
+
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    super.didPop(route, previousRoute);
+    FocusManager.instance.primaryFocus?.unfocus();
+  }
+
+  @override
+  void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
+    super.didReplace(newRoute: newRoute, oldRoute: oldRoute);
+    FocusManager.instance.primaryFocus?.unfocus();
   }
 }
 
@@ -315,7 +639,9 @@ class _MainScaffoldState extends State<MainScaffold> {
             filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.black.withOpacity(0.2)
+                    : Colors.white.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(24),
               ),
               child: BottomNavigationBar(

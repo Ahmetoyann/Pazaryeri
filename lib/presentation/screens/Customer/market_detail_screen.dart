@@ -1,9 +1,5 @@
 import 'dart:io';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
@@ -36,52 +32,12 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
   final ImagePicker _picker = ImagePicker();
 
   List<Map<String, dynamic>> _reviews = [];
-  late GoogleMapController _mapController;
-  final Set<Marker> _markers = {};
 
   @override
   void initState() {
     super.initState();
     _currentOccupancy = widget.market.occupancy;
-    _requestLocationPermission();
     _loadReviews();
-    _markers.add(
-      Marker(
-        markerId: MarkerId(widget.market.id),
-        position: LatLng(
-            widget.market.address.latitude, widget.market.address.longitude),
-        infoWindow: InfoWindow(title: widget.market.name),
-      ),
-    );
-  }
-
-  Future<void> _requestLocationPermission() async {
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-    }
-    if (mounted) setState(() {});
-  }
-
-  Future<void> _moveToUserLocation() async {
-    try {
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-
-      if (permission == LocationPermission.whileInUse ||
-          permission == LocationPermission.always) {
-        final position = await Geolocator.getCurrentPosition();
-        _mapController.animateCamera(
-          CameraUpdate.newLatLng(
-            LatLng(position.latitude, position.longitude),
-          ),
-        );
-      }
-    } catch (e) {
-      debugPrint('Konuma gidilemedi: $e');
-    }
   }
 
   Future<void> _loadReviews() async {
@@ -165,179 +121,6 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
     await Share.share(text);
   }
 
-  void _setMapStyle(GoogleMapController controller) {
-    // https://mapstyle.withgoogle.com/ adresinden alınan örnek koyu tema stili
-    const String darkMapStyle = '''
-[
-  {
-    "elementType": "geometry",
-    "stylers": [
-      {
-        "color": "#242f3e"
-      }
-    ]
-  },
-  {
-    "elementType": "labels.text.fill",
-    "stylers": [
-      {
-        "color": "#746855"
-      }
-    ]
-  },
-  {
-    "elementType": "labels.text.stroke",
-    "stylers": [
-      {
-        "color": "#242f3e"
-      }
-    ]
-  },
-  {
-    "featureType": "administrative.locality",
-    "elementType": "labels.text.fill",
-    "stylers": [
-      {
-        "color": "#d59563"
-      }
-    ]
-  },
-  {
-    "featureType": "poi",
-    "elementType": "labels.text.fill",
-    "stylers": [
-      {
-        "color": "#d59563"
-      }
-    ]
-  },
-  {
-    "featureType": "poi.park",
-    "elementType": "geometry",
-    "stylers": [
-      {
-        "color": "#263c3f"
-      }
-    ]
-  },
-  {
-    "featureType": "poi.park",
-    "elementType": "labels.text.fill",
-    "stylers": [
-      {
-        "color": "#6b9a76"
-      }
-    ]
-  },
-  {
-    "featureType": "road",
-    "elementType": "geometry",
-    "stylers": [
-      {
-        "color": "#38414e"
-      }
-    ]
-  },
-  {
-    "featureType": "road",
-    "elementType": "geometry.stroke",
-    "stylers": [
-      {
-        "color": "#212a37"
-      }
-    ]
-  },
-  {
-    "featureType": "road",
-    "elementType": "labels.text.fill",
-    "stylers": [
-      {
-        "color": "#9ca5b3"
-      }
-    ]
-  },
-  {
-    "featureType": "road.highway",
-    "elementType": "geometry",
-    "stylers": [
-      {
-        "color": "#746855"
-      }
-    ]
-  },
-  {
-    "featureType": "road.highway",
-    "elementType": "geometry.stroke",
-    "stylers": [
-      {
-        "color": "#1f2835"
-      }
-    ]
-  },
-  {
-    "featureType": "road.highway",
-    "elementType": "labels.text.fill",
-    "stylers": [
-      {
-        "color": "#f3d19c"
-      }
-    ]
-  },
-  {
-    "featureType": "transit",
-    "elementType": "geometry",
-    "stylers": [
-      {
-        "color": "#2f3948"
-      }
-    ]
-  },
-  {
-    "featureType": "transit.station",
-    "elementType": "labels.text.fill",
-    "stylers": [
-      {
-        "color": "#d59563"
-      }
-    ]
-  },
-  {
-    "featureType": "water",
-    "elementType": "geometry",
-    "stylers": [
-      {
-        "color": "#17263c"
-      }
-    ]
-  },
-  {
-    "featureType": "water",
-    "elementType": "labels.text.fill",
-    "stylers": [
-      {
-        "color": "#515c6d"
-      }
-    ]
-  },
-  {
-    "featureType": "water",
-    "elementType": "labels.text.stroke",
-    "stylers": [
-      {
-        "color": "#17263c"
-      }
-    ]
-  }
-]
-    ''';
-
-    if (Theme.of(context).brightness == Brightness.dark) {
-      controller.setMapStyle(darkMapStyle);
-    } else {
-      controller.setMapStyle(null); // Varsayılan stil
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final langVM = Provider.of<LanguageViewModel>(context);
@@ -398,33 +181,6 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Pazar Konumu (Statik Harita Görseli)
-            SizedBox(
-              height: MediaQuery.of(context).size.height * 0.3,
-              width: double.infinity,
-              child: GoogleMap(
-                initialCameraPosition: CameraPosition(
-                  target: LatLng(
-                    widget.market.address.latitude,
-                    widget.market.address.longitude,
-                  ),
-                  zoom: 15,
-                ),
-                markers: _markers,
-                myLocationEnabled: true,
-                myLocationButtonEnabled: true,
-                onMapCreated: (controller) {
-                  _mapController = controller;
-                  _setMapStyle(controller);
-                  _moveToUserLocation();
-                },
-                gestureRecognizers: {
-                  Factory<OneSequenceGestureRecognizer>(
-                    () => EagerGestureRecognizer(),
-                  ),
-                },
-              ),
-            ),
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
@@ -505,6 +261,45 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
                           ],
                         ),
                       ),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).cardColor,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color:
+                                Theme.of(context).dividerColor.withOpacity(0.5),
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.near_me,
+                              size: 16,
+                              color: Theme.of(context).primaryColor,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              '${(widget.market.distanceInMeters / 1000).toStringAsFixed(1)} km',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 24),
@@ -557,13 +352,23 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
                     width: double.infinity,
                     child: ElevatedButton.icon(
                       onPressed: _openMap,
-                      icon: const Icon(Icons.map),
+                      icon: const Icon(Icons.directions),
                       label: Text(langVM.translate('get_directions')),
                       style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        foregroundColor: Colors.white,
+                        elevation: 6,
+                        shadowColor: Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withOpacity(0.4),
+                        padding: const EdgeInsets.symmetric(vertical: 18),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16)),
                         textStyle: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
+                          letterSpacing: 1.1,
                         ),
                       ),
                     ),

@@ -114,16 +114,12 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
               maxLength: 6,
               style: const TextStyle(fontSize: 24, letterSpacing: 8),
               decoration: const InputDecoration(
-                border: OutlineInputBorder(),
                 counterText: '',
               ),
             ),
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: _isLoading ? null : _verifyCode,
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-              ),
               child: _isLoading
                   ? const SizedBox(
                       height: 20,

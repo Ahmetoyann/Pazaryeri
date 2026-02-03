@@ -30,9 +30,9 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
             ), // daha az blur, daha şeffaf
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(
-                  0.1,
-                ), // daha belirgin ve okunabilir arka plan
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.black.withOpacity(0.2)
+                    : Colors.white.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: AppBar(
@@ -40,13 +40,20 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                 actions: actions,
                 leading: leading,
                 backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-                iconTheme: IconThemeData(
-                  color: Theme.of(context).colorScheme.primary,
-                ),
+                iconTheme: Theme.of(context).iconTheme.copyWith(
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
                 titleTextStyle: TextStyle(
                   color: Theme.of(context).colorScheme.primary,
                   fontWeight: FontWeight.bold,
                   fontSize: 20,
+                  shadows: [
+                    Shadow(
+                      offset: const Offset(0, 1),
+                      blurRadius: 2,
+                      color: Colors.black.withOpacity(0.2),
+                    ),
+                  ],
                 ),
               ),
             ),

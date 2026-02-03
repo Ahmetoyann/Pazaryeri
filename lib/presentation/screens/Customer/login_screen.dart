@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../viewmodels/auth_viewmodel.dart';
@@ -82,14 +83,16 @@ class _LoginScreenState extends State<LoginScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Container(
-                  height: MediaQuery.of(context).size.width * 0.35,
-                  width: MediaQuery.of(context).size.width * 0.35,
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    image: DecorationImage(
-                      image: AssetImage('assets/images/copilot_ikon.png'),
+                Center(
+                  child: Container(
+                    height: MediaQuery.of(context).size.width * 0.35,
+                    width: MediaQuery.of(context).size.width * 0.35,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Theme.of(context).cardColor,
                     ),
+                    child: Image.asset('assets/images/copilot_ikon.png'),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -127,9 +130,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     elevation: 3,
                     shadowColor: Colors.black12,
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
+                    shape: const StadiumBorder(),
                   ),
                   icon: _isLoading
                       ? const SizedBox(
@@ -154,38 +155,13 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 24),
                 Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        Theme.of(context).colorScheme.primary,
-                        Theme.of(context).colorScheme.primary.withOpacity(0.8),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(30),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .primary
-                            .withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
                   child: ElevatedButton(
                     onPressed:
                         (_isLoading || _isGuestLoading) ? () {} : _loginAsGuest,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.transparent,
-                      shadowColor: Colors.transparent,
-                      elevation: 0,
+                      backgroundColor: Theme.of(context).colorScheme.primary,
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
-                      ),
+                      shape: const StadiumBorder(),
                     ),
                     child: _isGuestLoading
                         ? const SizedBox(

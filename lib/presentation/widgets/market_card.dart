@@ -53,29 +53,29 @@ class MarketCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: isHorizontal ? size.width * 0.75 : null,
-        height: isHorizontal ? 210 : null,
+        width: isHorizontal ? size.width * 0.6 : null,
+        height: isHorizontal ? 170 : null,
         margin: EdgeInsets.symmetric(
           horizontal: isHorizontal ? 12 : 0,
           vertical: 8,
         ),
         decoration: BoxDecoration(
           color: theme.cardColor,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
-              blurRadius: 15,
-              offset: const Offset(0, 5),
+              color: Colors.black.withOpacity(isDark ? 0.3 : 0.04),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
             ),
           ],
           border: Border.all(
-            color: theme.dividerColor.withOpacity(0.1),
+            color: theme.dividerColor.withOpacity(0.05),
             width: 1,
           ),
         ),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(isHorizontal ? 12 : 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
@@ -87,7 +87,7 @@ class MarketCard extends StatelessWidget {
                   Hero(
                     tag: 'market_icon_$baseTag',
                     child: Container(
-                      padding: const EdgeInsets.all(10),
+                      padding: EdgeInsets.all(isHorizontal ? 8 : 10),
                       decoration: BoxDecoration(
                         color: theme.primaryColor.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
@@ -95,7 +95,7 @@ class MarketCard extends StatelessWidget {
                       child: Icon(
                         Icons.storefront_rounded,
                         color: theme.colorScheme.primary,
-                        size: 24,
+                        size: isHorizontal ? 20 : 24,
                       ),
                     ),
                   ),

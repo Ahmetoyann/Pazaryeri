@@ -5,6 +5,7 @@ import '../../viewmodels/language_viewmodel.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 import '../../viewmodels/auth_service.dart';
 import '../../../data/models/market.dart';
+import '../../widgets/custom_app_bar.dart';
 
 class SellerMarketSelectionScreen extends StatefulWidget {
   const SellerMarketSelectionScreen({super.key});
@@ -59,7 +60,8 @@ class _SellerMarketSelectionScreenState
     }
 
     return Scaffold(
-      appBar: AppBar(
+      extendBodyBehindAppBar: true,
+      appBar: CustomAppBar(
         title: Text(langVM.translate('select_market_title')),
       ),
       body: FutureBuilder<List<Market>>(
@@ -77,11 +79,13 @@ class _SellerMarketSelectionScreenState
 
           return Column(
             children: [
+              const SizedBox(height: 110), // AppBar için boşluk
               Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Text(
                   langVM.translate('select_market_instruction'),
                   style: Theme.of(context).textTheme.titleMedium,
+                  textAlign: TextAlign.center,
                 ),
               ),
               Expanded(

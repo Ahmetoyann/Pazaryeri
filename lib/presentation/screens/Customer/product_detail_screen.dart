@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../viewmodels/language_viewmodel.dart';
@@ -5,6 +6,8 @@ import '../../viewmodels/auth_viewmodel.dart';
 import '../../viewmodels/auth_service.dart';
 import '../../widgets/status_message_widget.dart';
 import 'seller_products_view_screen.dart';
+import '../../widgets/custom_app_bar.dart';
+import 'customer_seller_detail_screen.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final Map<String, dynamic> product;
@@ -23,13 +26,14 @@ class ProductDetailScreen extends StatefulWidget {
 class _ProductDetailScreenState extends State<ProductDetailScreen> {
   List<Map<String, dynamic>> _reviews = [];
   bool _isLoading = true;
-  double _quantity = 1.0;
   String? _successMessage;
+  List<Map<String, dynamic>> _otherSellers = [];
 
   @override
   void initState() {
     super.initState();
     _loadReviews();
+    _loadOtherSellers();
   }
 
   Future<void> _loadReviews() async {
@@ -39,6 +43,18 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       setState(() {
         _reviews = reviews;
         _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _loadOtherSellers() async {
+    final sellers = await AuthService.instance.getSellersSellingProduct(
+      widget.product['name'],
+      widget.product['sellerId'],
+    );
+    if (mounted) {
+      setState(() {
+        _otherSellers = sellers;
       });
     }
   }
@@ -101,6 +117,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     final newReview = {
                       'id': DateTime.now().millisecondsSinceEpoch.toString(),
                       'productId': widget.product['id'],
+                      'sellerId': widget.product['sellerId'],
                       'userId': authVM.currentUser?.id ?? 'guest',
                       'userName':
                           '${authVM.currentUser?.firstName} ${authVM.currentUser?.lastName}',
@@ -126,27 +143,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         );
       },
     );
-  }
-
-  void _addToCart() {
-    final langVM = Provider.of<LanguageViewModel>(context, listen: false);
-    final double stock =
-        (widget.product['stockQuantity'] as num?)?.toDouble() ?? 0.0;
-
-    if (_quantity > stock) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-              '${langVM.translate('insufficient_stock_message')} $stock ${widget.product['unit']}'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    } else {
-      // Sepete ekleme işlemi burada yapılacak (şimdilik sadece görsel)
-      setState(() {
-        _successMessage = langVM.translate('added_to_cart_success');
-      });
-    }
   }
 
   void _showMarketSellers() {
@@ -196,21 +192,27 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             const Divider(height: 1),
                         itemBuilder: (context, index) {
                           final seller = sellers[index];
+                          final displayName = seller['stallName'] ??
+                              '${seller['firstName'] ?? ''} ${seller['lastName'] ?? ''}'
+                                  .trim();
+                          final rating = seller['rating'] ?? 0.0;
+
                           return ListTile(
                             leading: CircleAvatar(
                               backgroundColor: Theme.of(context)
                                   .primaryColor
                                   .withOpacity(0.1),
-                              child: Text(seller['name'][0],
+                              child: Text(
+                                  displayName.isNotEmpty ? displayName[0] : '?',
                                   style: TextStyle(
                                       color: Theme.of(context).primaryColor)),
                             ),
-                            title: Text(seller['name']),
+                            title: Text(displayName),
                             subtitle: Row(
                               children: [
                                 const Icon(Icons.star,
                                     size: 16, color: Colors.amber),
-                                Text(' ${seller['rating']}'),
+                                Text(' $rating'),
                               ],
                             ),
                             trailing: const Icon(Icons.chevron_right),
@@ -238,6 +240,83 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     );
   }
 
+  void _showOtherSellers() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                'Bu Ürünü Satan Diğer Satıcılar',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+            ),
+            const Divider(height: 1),
+            Flexible(
+              child: ListView.separated(
+                shrinkWrap: true,
+                itemCount: _otherSellers.length,
+                separatorBuilder: (ctx, i) => const Divider(height: 1),
+                itemBuilder: (context, index) {
+                  final seller = _otherSellers[index];
+                  final displayName = seller['stallName'] ??
+                      '${seller['firstName']} ${seller['lastName']}';
+                  final price = seller['productPrice'];
+                  final unit = seller['productUnit'];
+
+                  return ListTile(
+                    leading: CircleAvatar(
+                      backgroundImage: (seller['profilePicture'] != null &&
+                              seller['profilePicture'].isNotEmpty)
+                          ? NetworkImage(seller['profilePicture'])
+                          : null,
+                      child: (seller['profilePicture'] == null ||
+                              seller['profilePicture'].isEmpty)
+                          ? Text(displayName.isNotEmpty
+                              ? displayName[0].toUpperCase()
+                              : '?')
+                          : null,
+                    ),
+                    title: Text(displayName),
+                    subtitle: Text(
+                      'Fiyat: $price ₺ / $unit',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      Navigator.pop(context); // Sheet'i kapat
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => CustomerSellerDetailScreen(
+                            sellerId: seller['id'],
+                            sellerName: displayName,
+                            sellerDescription: seller['stallDescription'] ?? '',
+                            stallLocation: seller['stallLocation'] ?? '',
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final langVM = Provider.of<LanguageViewModel>(context);
@@ -245,13 +324,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     final bool inStock = product['inStock'];
 
     return Scaffold(
-      appBar: AppBar(
+      extendBodyBehindAppBar: true,
+      appBar: CustomAppBar(
         title: Text(product['name']),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.fromLTRB(16, 110, 16, 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -264,15 +344,75 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     ),
                   // Product Header
                   Center(
-                    child: Container(
-                      height: 150,
-                      width: 150,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[200],
-                        borderRadius: BorderRadius.circular(12),
+                    child: GestureDetector(
+                      onTap: () {
+                        if (product['imagePath'] != null &&
+                            product['imagePath'].toString().isNotEmpty) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => Scaffold(
+                                backgroundColor: Colors.black,
+                                appBar: AppBar(
+                                  backgroundColor: Colors.black,
+                                  iconTheme:
+                                      const IconThemeData(color: Colors.white),
+                                ),
+                                body: Center(
+                                  child: InteractiveViewer(
+                                    child: product['imagePath']
+                                            .toString()
+                                            .startsWith('http')
+                                        ? Image.network(
+                                            product['imagePath'],
+                                            fit: BoxFit.contain,
+                                          )
+                                        : Image.file(
+                                            File(product['imagePath']),
+                                            fit: BoxFit.contain,
+                                          ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        }
+                      },
+                      child: Hero(
+                        tag: 'product_image_${product['id']}',
+                        child: Container(
+                          height: 200,
+                          width: 200,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[200],
+                            borderRadius: BorderRadius.circular(24),
+                            image: (product['imagePath'] != null &&
+                                    product['imagePath'].toString().isNotEmpty)
+                                ? DecorationImage(
+                                    image: product['imagePath']
+                                            .toString()
+                                            .startsWith('http')
+                                        ? NetworkImage(product['imagePath'])
+                                        : FileImage(File(product['imagePath']))
+                                            as ImageProvider,
+                                    fit: BoxFit.cover,
+                                  )
+                                : null,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 10,
+                                offset: const Offset(0, 5),
+                              ),
+                            ],
+                          ),
+                          child: (product['imagePath'] == null ||
+                                  product['imagePath'].toString().isEmpty)
+                              ? const Icon(Icons.shopping_basket,
+                                  size: 64, color: Colors.grey)
+                              : null,
+                        ),
                       ),
-                      child: const Icon(Icons.shopping_basket,
-                          size: 64, color: Colors.grey),
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -343,6 +483,22 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       ),
                     ),
                   ),
+                  if (_otherSellers.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: _showOtherSellers,
+                        icon: const Icon(Icons.compare_arrows),
+                        label: Text(
+                            '${_otherSellers.length} Satıcıda Daha Var - Fiyatları Gör'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange.shade600,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
+                    ),
+                  ],
                   const Divider(height: 32),
 
                   // Reviews Section
@@ -428,64 +584,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 ],
               ),
             ),
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.all(16.0),
-        decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, -5),
-            ),
-          ],
-        ),
-        child: SafeArea(
-          child: Row(
-            children: [
-              // Miktar Seçici
-              Container(
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade300),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.remove),
-                      onPressed: _quantity > 1
-                          ? () => setState(() => _quantity--)
-                          : null,
-                    ),
-                    Text(
-                      '${_quantity.toInt()}',
-                      style: const TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.add),
-                      onPressed: () => setState(() => _quantity++),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 16),
-              // Sepete Ekle Butonu
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: inStock ? _addToCart : null,
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: Theme.of(context).primaryColor,
-                    foregroundColor: Colors.white,
-                  ),
-                  child: Text(langVM.translate('add_to_cart')),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddReviewDialog,
         tooltip: langVM.translate('add_review'),

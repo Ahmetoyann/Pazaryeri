@@ -4,6 +4,7 @@ import '../../viewmodels/home_viewmodel.dart';
 import '../../viewmodels/language_viewmodel.dart';
 import '../../widgets/market_card.dart';
 import 'market_detail_screen.dart';
+import '../../widgets/custom_app_bar.dart';
 
 class FavoritesScreen extends StatefulWidget {
   const FavoritesScreen({super.key});
@@ -27,11 +28,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     final langVM = context.watch<LanguageViewModel>();
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(langVM.translate('favorites_title')),
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
-      ),
+      extendBodyBehindAppBar: true,
+      appBar: CustomAppBar(title: Text(langVM.translate('favorites_title'))),
       body: Consumer<HomeViewModel>(
         builder: (context, homeVM, child) {
           if (homeVM.state == ViewState.busy) {
@@ -59,10 +57,11 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
           }
 
           return ListView.builder(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.fromLTRB(12, 110, 12, 12),
             itemCount: homeVM.favoriteMarkets.length,
             itemBuilder: (context, index) {
               final market = homeVM.favoriteMarkets[index];
+              final tag = '${market.id}_fav';
               return Dismissible(
                 key: Key(market.id),
                 direction: DismissDirection.endToStart,
@@ -96,13 +95,14 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                   children: [
                     MarketCard(
                       market: market,
+                      heroTag: tag,
                       isHorizontal: false,
                       onTap: () {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) =>
-                                MarketDetailScreen(market: market),
+                            builder: (context) => MarketDetailScreen(
+                                market: market, heroTag: tag),
                           ),
                         );
                       },

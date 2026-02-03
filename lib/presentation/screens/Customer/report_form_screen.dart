@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../data/models/market.dart';
+import '../../widgets/custom_app_bar.dart';
 
 class ReportFormScreen extends StatefulWidget {
   final Market market;
@@ -123,72 +124,75 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
   Widget build(BuildContext context) {
     final m = widget.market;
     return Scaffold(
-      appBar: AppBar(title: Text('Bildir: ${m.name}')),
+      extendBodyBehindAppBar: true,
+      appBar: CustomAppBar(title: Text('Bildir: ${m.name}')),
       body: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.fromLTRB(16, 110, 16, 16),
         child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('Pazar: ${m.name}'),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                value: _selectedSubject,
-                hint: const Text('Konu Seçiniz'),
-                items: _subjects.map((s) {
-                  return DropdownMenuItem(value: s, child: Text(s));
-                }).toList(),
-                onChanged: (val) => setState(() => _selectedSubject = val),
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 12,
+              _buildNormalContainer(
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: DropdownButtonFormField<String>(
+                    value: _selectedSubject,
+                    hint: const Text('Konu Seçiniz'),
+                    items: _subjects.map((s) {
+                      return DropdownMenuItem(value: s, child: Text(s));
+                    }).toList(),
+                    onChanged: (val) => setState(() => _selectedSubject = val),
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 12,
+                      ),
+                    ),
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _controller,
-                maxLines: 6,
-                decoration: const InputDecoration(
-                  hintText: 'Sorunuzu/yorumunuzu yazın',
-                  border: OutlineInputBorder(),
+              _buildNormalContainer(
+                TextField(
+                  controller: _controller,
+                  maxLines: 6,
+                  decoration: const InputDecoration(
+                    hintText: 'Sorunuzu/yorumunuzu yazın',
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.all(16),
+                  ),
                 ),
               ),
-              const SizedBox(height: 12),
-              GestureDetector(
-                onTap: _pickImage,
-                child: Container(
-                  height: 150,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.shade400),
-                  ),
-                  child: _selectedImage != null
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: Image.file(
-                            File(_selectedImage!.path),
-                            fit: BoxFit.cover,
+              _buildNormalContainer(
+                GestureDetector(
+                  onTap: _pickImage,
+                  child: Container(
+                    height: 150,
+                    width: double.infinity,
+                    child: _selectedImage != null
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: Image.file(
+                              File(_selectedImage!.path),
+                              fit: BoxFit.cover,
+                            ),
+                          )
+                        : Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: const [
+                              Icon(
+                                Icons.add_a_photo,
+                                size: 40,
+                                color: Colors.grey,
+                              ),
+                              SizedBox(height: 8),
+                              Text(
+                                'Fotoğraf Ekle (İsteğe Bağlı)',
+                                style: TextStyle(color: Colors.grey),
+                              ),
+                            ],
                           ),
-                        )
-                      : Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
-                            Icon(
-                              Icons.add_a_photo,
-                              size: 40,
-                              color: Colors.grey,
-                            ),
-                            SizedBox(height: 8),
-                            Text(
-                              'Fotoğraf Ekle (İsteğe Bağlı)',
-                              style: TextStyle(color: Colors.grey),
-                            ),
-                          ],
-                        ),
+                  ),
                 ),
               ),
               if (_selectedImage != null)
@@ -215,6 +219,15 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildNormalContainer(Widget child) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 2,
+      child: child,
     );
   }
 }

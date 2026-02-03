@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../../viewmodels/language_viewmodel.dart';
 import '../../viewmodels/auth_service.dart';
 import '../Customer/customer_seller_detail_screen.dart';
-import 'market_sellers_screen.dart'; // MockSeller sınıfı için
+import '../../widgets/custom_app_bar.dart';
 
 class FavoriteSellersScreen extends StatefulWidget {
   const FavoriteSellersScreen({super.key});
@@ -13,7 +13,7 @@ class FavoriteSellersScreen extends StatefulWidget {
 }
 
 class _FavoriteSellersScreenState extends State<FavoriteSellersScreen> {
-  List<String> _favoriteSellerIds = [];
+  List<Map<String, dynamic>> _favoriteSellers = [];
   bool _isLoading = true;
 
   @override
@@ -23,57 +23,26 @@ class _FavoriteSellersScreenState extends State<FavoriteSellersScreen> {
   }
 
   Future<void> _loadFavorites() async {
-    final favorites = await AuthService.instance.getFavoriteSellers();
+    final sellers = await AuthService.instance.fetchFavoriteSellersDetails();
     if (mounted) {
       setState(() {
-        _favoriteSellerIds = favorites;
+        _favoriteSellers = sellers;
         _isLoading = false;
       });
     }
   }
 
-  // Mock veri tabanı (MarketSellersScreen'deki verilerle eşleşmeli)
-  List<MockSeller> _getAllMockSellers() {
-    return [
-      MockSeller(
-        id: 's1',
-        name: 'Ahmet Amca\'nın Yeri',
-        description: 'Taze mevsim sebzeleri, kendi bahçemizden.',
-        stallLocation: 'Girişten sağa dönünce 3. tezgah',
-        rating: 4.8,
-      ),
-      MockSeller(
-        id: 's2',
-        name: 'Organik Köy Ürünleri',
-        description: 'Köy yumurtası, peynir ve tereyağı.',
-        stallLocation: 'Orta koridor, 12 numara',
-        rating: 4.5,
-      ),
-      MockSeller(
-        id: 's3',
-        name: 'Fatma Teyze Meyveleri',
-        description: 'En tatlı elmalar ve armutlar burada.',
-        stallLocation: 'Sebzecilerin karşısı',
-        rating: 4.9,
-      ),
-    ];
-  }
-
   @override
   Widget build(BuildContext context) {
     final langVM = Provider.of<LanguageViewModel>(context);
-    final allSellers = _getAllMockSellers();
-    final favoriteSellers = allSellers
-        .where((seller) => _favoriteSellerIds.contains(seller.id))
-        .toList();
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(langVM.translate('favorite_sellers_title')),
-      ),
+      extendBodyBehindAppBar: true,
+      appBar:
+          CustomAppBar(title: Text(langVM.translate('favorite_sellers_title'))),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : favoriteSellers.isEmpty
+          : _favoriteSellers.isEmpty
               ? Center(
                   child: Text(
                     langVM.translate('no_favorite_sellers'),
@@ -81,34 +50,64 @@ class _FavoriteSellersScreenState extends State<FavoriteSellersScreen> {
                   ),
                 )
               : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: favoriteSellers.length,
+                  padding: const EdgeInsets.fromLTRB(16, 110, 16, 16),
+                  itemCount: _favoriteSellers.length,
                   itemBuilder: (context, index) {
-                    final seller = favoriteSellers[index];
+                    final seller = _favoriteSellers[index];
+                    // İsim oluşturma (Ad Soyad veya Tezgah Adı)
+                    String displayName = seller['stallName'] ?? '';
+                    if (displayName.isEmpty) {
+                      displayName =
+                          '${seller['firstName'] ?? ''} ${seller['lastName'] ?? ''}'
+                              .trim();
+                    }
+                    if (displayName.isEmpty) displayName = 'Satıcı';
+
+                    final description =
+                        seller['stallDescription'] ?? 'Açıklama yok';
+                    final stallLocation = seller['stallLocation'] ?? '';
+
                     return Card(
                       margin: const EdgeInsets.only(bottom: 12),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16)),
                       child: ListTile(
                         leading: CircleAvatar(
                           backgroundColor:
                               Theme.of(context).colorScheme.primaryContainer,
-                          child: Text(
-                            seller.name.substring(0, 1).toUpperCase(),
-                            style: TextStyle(
-                                color: Theme.of(context).colorScheme.primary),
-                          ),
+                          backgroundImage: (seller['profilePicture'] != null &&
+                                  seller['profilePicture'].isNotEmpty)
+                              ? NetworkImage(seller['profilePicture'])
+                              : null,
+                          child: (seller['profilePicture'] == null ||
+                                  seller['profilePicture'].isEmpty)
+                              ? Text(
+                                  displayName.substring(0, 1).toUpperCase(),
+                                  style: TextStyle(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .primary),
+                                )
+                              : null,
                         ),
-                        title: Text(seller.name),
-                        subtitle: Text(seller.description),
+                        title: Text(displayName,
+                            style:
+                                const TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: Text(
+                          description,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                         trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                         onTap: () async {
                           await Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder: (_) => CustomerSellerDetailScreen(
-                                sellerId: seller.id,
-                                sellerName: seller.name,
-                                sellerDescription: seller.description,
-                                stallLocation: seller.stallLocation,
+                                sellerId: seller['id'],
+                                sellerName: displayName,
+                                sellerDescription: description,
+                                stallLocation: stallLocation,
                               ),
                             ),
                           );

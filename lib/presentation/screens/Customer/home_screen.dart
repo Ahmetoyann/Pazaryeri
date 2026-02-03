@@ -1,49 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../viewmodels/home_viewmodel.dart';
-import '../../../core/regions/provinces.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../widgets/market_card.dart';
 import '../../widgets/location_chip.dart';
 import 'market_detail_screen.dart';
 import '../../viewmodels/language_viewmodel.dart';
 import '../../widgets/custom_app_bar.dart';
-
-// A simple Levenshtein distance implementation for fuzzy matching
-int _levenshtein(String s, String t) {
-  final lenS = s.length;
-  final lenT = t.length;
-  if (lenS == 0) return lenT;
-  if (lenT == 0) return lenS;
-  final v0 = List<int>.generate(lenT + 1, (i) => i);
-  final v1 = List<int>.filled(lenT + 1, 0);
-  for (var i = 0; i < lenS; i++) {
-    v1[0] = i + 1;
-    for (var j = 0; j < lenT; j++) {
-      final cost = s[i] == t[j] ? 0 : 1;
-      v1[j + 1] = [
-        v1[j] + 1,
-        v0[j + 1] + 1,
-        v0[j] + cost,
-      ].reduce((a, b) => a < b ? a : b);
-    }
-    for (var j = 0; j <= lenT; j++) {
-      v0[j] = v1[j];
-    }
-  }
-  return v1[lenT];
-}
-
-double _similarity(String a, String b) {
-  if (a == b) return 1.0;
-  if (a.startsWith(b)) return 0.95;
-  if (a.contains(b)) return 0.8;
-  final dist = _levenshtein(a, b);
-  final maxLen = a.length > b.length ? a.length : b.length;
-  if (maxLen == 0) return 0.0;
-  final score = 1.0 - (dist / maxLen);
-  return score.clamp(0.0, 1.0);
-}
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -104,15 +67,18 @@ class _HomeScreenState extends State<HomeScreen> {
         separatorBuilder: (c, i) => const SizedBox(height: 12),
         itemBuilder: (context, index) {
           final m = filteredList[index];
+          final tag = '${m.id}_prov';
           return MarketCard(
             market: m,
+            heroTag: tag,
             isHorizontal: false,
             showOccupancy: true,
             onTap: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => MarketDetailScreen(market: m),
+                  builder: (context) =>
+                      MarketDetailScreen(market: m, heroTag: tag),
                 ),
               );
             },
@@ -169,7 +135,7 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 12),
           SizedBox(
             height:
-                240, // MarketCard yüksekliğine göre ayarlandı (gölgeler için pay bırakıldı)
+                200, // MarketCard yüksekliğine göre ayarlandı (gölgeler için pay bırakıldı)
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               itemCount: horizontalList.length,
@@ -319,14 +285,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                   },
                                   icon: const Icon(Icons.settings),
                                   label: Text(langVM.translate('settings')),
-                                  style: OutlinedButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 14,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                  ),
                                 ),
                               ),
                               const SizedBox(width: 8),
@@ -353,18 +311,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                   label: Text(
                                     langVM.translate('location_refresh'),
                                   ),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Theme.of(
-                                      context,
-                                    ).colorScheme.primary,
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 14,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                  ),
                                 ),
                               ),
                             ],
@@ -384,98 +330,68 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (vm.selectedProvince != null) ...[
-              Text(
-                '${langVM.translate('selected_province')}: ${vm.selectedProvince}',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-            ],
-            // Province filter (Autocomplete)
-            Row(
-              children: [
-                Expanded(
-                  child: Autocomplete<String>(
-                    optionsBuilder: (TextEditingValue textEditingValue) {
-                      final query = textEditingValue.text.trim();
-                      if (query.isEmpty) {
-                        return const Iterable<String>.empty();
-                      }
-                      // Score provinces using a simple fuzzy similarity
-                      final q = query.toLowerCase();
-                      final scored = kTurkishProvinces
-                          .map(
-                            (p) => MapEntry(p, _similarity(p.toLowerCase(), q)),
-                          )
-                          .where((e) => e.value > 0.2)
-                          .toList();
-                      // Sort by score descending and return top 12 suggestions
-                      scored.sort((a, b) => b.value.compareTo(a.value));
-                      return scored.take(12).map((e) => e.key);
-                    },
-                    onSelected: (selection) async {
-                      await vm.loadMarketsForProvince(selection);
-                    },
-                    fieldViewBuilder: (
-                      context,
-                      textEditingController,
-                      focusNode,
-                      onFieldSubmitted,
-                    ) {
-                      return TextField(
-                        controller: textEditingController,
-                        focusNode: focusNode,
-                        decoration: InputDecoration(
-                          labelText: langVM.translate(
-                            'search_province_hint',
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                            borderRadius: BorderRadius.circular(36),
-                          ),
-                          prefixIcon: Icon(Icons.search),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(36),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(width: 8),
-                if (vm.selectedProvince != null)
-                  ElevatedButton(
-                    onPressed: () async {
-                      vm.clearProvinceSelection();
-                      await vm.loadData();
-                    },
-                    child: Text(langVM.translate('clear_selection')),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 12),
             // Gün Filtreleri
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: _days.map((day) {
+            SizedBox(
+              height: 50,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: _days.length,
+                itemBuilder: (context, index) {
+                  final day = _days[index];
                   final isSelected = vm.selectedDay == day;
                   return Padding(
-                    padding: const EdgeInsets.only(right: 8.0),
-                    child: FilterChip(
-                      label: Text(day),
-                      selected: isSelected,
-                      onSelected: (selected) {
-                        vm.updateDayFilter(selected ? day : null);
+                    padding: const EdgeInsets.only(right: 12.0),
+                    child: GestureDetector(
+                      onTap: () {
+                        vm.updateDayFilter(isSelected ? null : day);
                       },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? Theme.of(context).colorScheme.primary
+                              : Theme.of(context).cardColor,
+                          borderRadius: BorderRadius.circular(30),
+                          border: isSelected
+                              ? null
+                              : Border.all(
+                                  color: Theme.of(context)
+                                      .dividerColor
+                                      .withOpacity(0.1),
+                                ),
+                          boxShadow: isSelected
+                              ? [
+                                  BoxShadow(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .primary
+                                        .withOpacity(0.3),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ]
+                              : null,
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          day,
+                          style: TextStyle(
+                            color: isSelected
+                                ? Colors.white
+                                : Theme.of(context).textTheme.bodyMedium?.color,
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                          ),
+                        ),
+                      ),
                     ),
                   );
-                }).toList(),
+                },
               ),
             ),
             const SizedBox(height: 12),

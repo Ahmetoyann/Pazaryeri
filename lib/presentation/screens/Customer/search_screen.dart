@@ -151,8 +151,9 @@ class _SearchScreenState extends State<SearchScreen> {
                   focusedBorder: OutlineInputBorder(
                     borderSide: BorderSide(
                       color: Theme.of(context).colorScheme.primary,
+                      width: 2,
                     ),
-                    borderRadius: BorderRadius.circular(36),
+                    borderRadius: BorderRadius.circular(24),
                   ),
                   prefixIcon: const Icon(Icons.search),
                   suffixIcon: _query.isNotEmpty
@@ -167,10 +168,13 @@ class _SearchScreenState extends State<SearchScreen> {
                         )
                       : null,
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(36),
+                    borderRadius: BorderRadius.circular(24),
+                    borderSide: BorderSide.none,
                   ),
                   filled: true,
-                  fillColor: const Color.fromARGB(129, 255, 255, 255),
+                  fillColor: Theme.of(context).cardColor,
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 ),
               ),
             ),
@@ -217,6 +221,7 @@ class _SearchScreenState extends State<SearchScreen> {
                               const SizedBox(height: 12),
                           itemBuilder: (context, index) {
                             final market = results[index];
+                            final tag = '${market.id}_search';
 
                             // Doluluk oranı simülasyonu (Gerçek veride API'den gelmeli)
                             final occupancyLevel = market.id.hashCode % 3;
@@ -247,13 +252,15 @@ class _SearchScreenState extends State<SearchScreen> {
                               children: [
                                 MarketCard(
                                   market: market,
+                                  heroTag: tag,
                                   isHorizontal: false,
                                   onTap: () {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
                                         builder: (context) =>
-                                            MarketDetailScreen(market: market),
+                                            MarketDetailScreen(
+                                                market: market, heroTag: tag),
                                       ),
                                     );
                                   },

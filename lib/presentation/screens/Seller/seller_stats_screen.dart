@@ -17,8 +17,10 @@ class SellerStatsScreen extends StatelessWidget {
     final products = sellerVM.myProducts;
     final totalViews =
         products.fold<int>(0, (sum, item) => sum + item.viewCount);
-    final totalStock =
-        products.fold<double>(0, (sum, item) => sum + item.stockQuantity);
+    final totalSales =
+        products.fold<int>(0, (sum, item) => sum + item.salesCount);
+    final totalRevenue = products.fold<double>(
+        0, (sum, item) => sum + (item.salesCount * item.price));
 
     // En çok görüntülenen 5 ürünü al
     final topProducts = List<SellerProduct>.from(products)
@@ -47,10 +49,34 @@ class SellerStatsScreen extends StatelessWidget {
                 Expanded(
                   child: _buildStatCard(
                     context,
+                    title: langVM.translate('total_sales'),
+                    value: totalSales.toString(),
+                    icon: Icons.shopping_cart,
+                    color: Colors.green,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildStatCard(
+                    context,
                     title: langVM.translate('total_products'),
                     value: products.length.toString(),
                     icon: Icons.inventory_2,
                     color: Colors.orange,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _buildStatCard(
+                    context,
+                    title: langVM.translate('total_revenue'),
+                    value: '${totalRevenue.toStringAsFixed(2)} ₺',
+                    icon: Icons.monetization_on,
+                    color: Colors.purple,
                   ),
                 ),
               ],
@@ -185,22 +211,30 @@ class SellerStatsScreen extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: color.withOpacity(0.1)),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4)),
+              color: color.withOpacity(0.05),
+              blurRadius: 15,
+              offset: const Offset(0, 5)),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: color, size: 32),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: color, size: 24),
+          ),
           const SizedBox(height: 12),
           Text(value,
               style:
-                  const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                  const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
           const SizedBox(height: 4),
           Text(title, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
         ],

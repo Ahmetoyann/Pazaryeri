@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../viewmodels/language_viewmodel.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 import '../../widgets/status_message_widget.dart';
+import 'seller_register_screen.dart';
 
 class SellerLoginScreen extends StatefulWidget {
   const SellerLoginScreen({super.key});
@@ -173,6 +174,31 @@ class _SellerLoginScreenState extends State<SellerLoginScreen> {
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text("Hesabınız yok mu? "),
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const SellerRegisterScreen(),
+                              ),
+                            );
+                          },
+                          child: Text(
+                            "Satıcı Olun",
+                            style: TextStyle(
+                              color: Colors.orange.shade800,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),

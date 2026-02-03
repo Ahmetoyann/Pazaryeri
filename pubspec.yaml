@@ -45,6 +45,7 @@ flutter:
     - assets/data/markets.json
     - assets/images/
     - assets/images/google_logo.svg.png
+    - assets/images/istockphoto-1177382633-612x612.jpg
 
 flutter_icons:
   android: true

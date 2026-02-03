@@ -1,8 +1,10 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 import '../../widgets/success_dialog.dart';
+import '../../widgets/custom_app_bar.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -99,96 +101,135 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Profili Düzenle')),
+      extendBodyBehindAppBar: true,
+      appBar: const CustomAppBar(title: Text('Profili Düzenle')),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        padding:
+            const EdgeInsets.only(top: 110, left: 16, right: 16, bottom: 16),
         child: Form(
           key: _formKey,
           child: Column(
             children: [
-              TextFormField(
-                controller: _firstNameController,
-                decoration: const InputDecoration(
-                  labelText: 'İsim',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.person),
-                ),
-                validator: (v) => v!.isEmpty ? 'İsim boş olamaz' : null,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _lastNameController,
-                decoration: const InputDecoration(
-                  labelText: 'Soyisim',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.person_outline),
-                ),
-                validator: (v) => v!.isEmpty ? 'Soyisim boş olamaz' : null,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _phoneController,
-                decoration: const InputDecoration(
-                  labelText: 'Telefon Numarası',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.phone),
-                ),
-                keyboardType: TextInputType.phone,
-                inputFormatters: [_PhoneInputFormatter()],
-                validator: (v) =>
-                    v!.isEmpty ? 'Telefon numarası boş olamaz' : null,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _emailController,
-                decoration: const InputDecoration(
-                  labelText: 'E-posta',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.email),
-                ),
-                keyboardType: TextInputType.emailAddress,
-                validator: (v) => v!.isEmpty ? 'E-posta boş olamaz' : null,
-              ),
-              const SizedBox(height: 16),
-              ListTile(
-                contentPadding: EdgeInsets.only(),
-                title: Text(
-                  _selectedDate == null
-                      ? 'Doğum Tarihi Seçin'
-                      : 'Doğum Tarihi: ${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}',
-                ),
-                leading: const Icon(Icons.calendar_today),
-                onTap: () => _selectDate(context),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(4),
-                  side: BorderSide(color: Colors.grey.shade400),
+              _buildNormalContainer(
+                context,
+                TextFormField(
+                  controller: _firstNameController,
+                  decoration: const InputDecoration(
+                    labelText: 'İsim',
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    filled: false,
+                    prefixIcon: Icon(Icons.person),
+                  ),
+                  validator: (v) => v!.isEmpty ? 'İsim boş olamaz' : null,
                 ),
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _passwordController,
-                decoration: const InputDecoration(
-                  labelText: 'Yeni Şifre (İsteğe Bağlı)',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.lock),
-                  helperText:
-                      'Şifrenizi değiştirmek istemiyorsanız boş bırakın.',
+              _buildNormalContainer(
+                context,
+                TextFormField(
+                  controller: _lastNameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Soyisim',
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    filled: false,
+                    prefixIcon: Icon(Icons.person_outline),
+                  ),
+                  validator: (v) => v!.isEmpty ? 'Soyisim boş olamaz' : null,
                 ),
-                obscureText: true,
+              ),
+              _buildNormalContainer(
+                context,
+                TextFormField(
+                  controller: _phoneController,
+                  decoration: const InputDecoration(
+                    labelText: 'Telefon Numarası',
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    filled: false,
+                    prefixIcon: Icon(Icons.phone),
+                  ),
+                  keyboardType: TextInputType.phone,
+                  inputFormatters: [_PhoneInputFormatter()],
+                  validator: (v) =>
+                      v!.isEmpty ? 'Telefon numarası boş olamaz' : null,
+                ),
+              ),
+              _buildNormalContainer(
+                context,
+                TextFormField(
+                  controller: _emailController,
+                  decoration: const InputDecoration(
+                    labelText: 'E-posta',
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    filled: false,
+                    prefixIcon: Icon(Icons.email),
+                  ),
+                  keyboardType: TextInputType.emailAddress,
+                  validator: (v) => v!.isEmpty ? 'E-posta boş olamaz' : null,
+                ),
+              ),
+              _buildNormalContainer(
+                context,
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                  title: Text(
+                    _selectedDate == null
+                        ? 'Doğum Tarihi Seçin'
+                        : 'Doğum Tarihi: ${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}',
+                  ),
+                  leading: const Icon(Icons.calendar_today),
+                  onTap: () => _selectDate(context),
+                ),
+              ),
+              _buildNormalContainer(
+                context,
+                TextFormField(
+                  controller: _passwordController,
+                  decoration: const InputDecoration(
+                    labelText: 'Yeni Şifre (İsteğe Bağlı)',
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    filled: false,
+                    prefixIcon: Icon(Icons.lock),
+                    helperText:
+                        'Şifrenizi değiştirmek istemiyorsanız boş bırakın.',
+                  ),
+                  obscureText: true,
+                ),
               ),
               const SizedBox(height: 24),
-              SizedBox(
+              Container(
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _saveProfile,
                   style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
                     padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: const StadiumBorder(),
                   ),
                   child: _isLoading
-                      ? const CircularProgressIndicator(color: Colors.white)
+                      ? const SizedBox(
+                          height: 24,
+                          width: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: Colors.white,
+                          ),
+                        )
                       : const Text(
                           'Kaydet',
-                          style: TextStyle(color: Colors.green),
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
                         ),
                 ),
               ),
@@ -196,6 +237,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildNormalContainer(BuildContext context, Widget child) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: child,
     );
   }
 }

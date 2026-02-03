@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../viewmodels/theme_viewmodel.dart';
 import '../../viewmodels/language_viewmodel.dart';
+import '../../widgets/custom_app_bar.dart';
 
 class ThemeSettingsScreen extends StatelessWidget {
   const ThemeSettingsScreen({super.key});
@@ -23,9 +24,10 @@ class ThemeSettingsScreen extends StatelessWidget {
     final langVM = context.watch<LanguageViewModel>();
 
     return Scaffold(
-      appBar: AppBar(title: Text(langVM.translate('theme_settings'))),
+      extendBodyBehindAppBar: true,
+      appBar: CustomAppBar(title: Text(langVM.translate('theme_settings'))),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 110, 16, 16),
         children: [
           Text(
             langVM.translate('theme_mode'),

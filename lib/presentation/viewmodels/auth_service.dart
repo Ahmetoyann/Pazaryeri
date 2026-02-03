@@ -100,6 +100,20 @@ class AuthService {
     return userDataMap;
   }
 
+  /// E-posta ve şifre ile yeni kullanıcı oluşturur.
+  Future<UserCredential> registerWithEmailAndPassword(
+      String email, String password) async {
+    try {
+      return await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+    } on FirebaseAuthException catch (e) {
+      // Hata yönetimi ViewModel tarafında veya burada detaylandırılabilir
+      throw Exception(e.message ?? 'Kayıt oluşturulamadı.');
+    }
+  }
+
   /// Google ile giriş yap
   Future<UserCredential?> signInWithGoogle() async {
     try {
@@ -588,6 +602,32 @@ class AuthService {
     }
   }
 
+  /// Favori satıcıların detaylarını Firestore'dan çeker
+  Future<List<Map<String, dynamic>>> fetchFavoriteSellersDetails() async {
+    final favoriteIds = await getFavoriteSellers();
+    if (favoriteIds.isEmpty) return [];
+
+    try {
+      // Firestore 'in' sorgusu en fazla 10 eleman kabul eder, bu yüzden chunk'lara bölmek gerekebilir.
+      // Şimdilik basitlik adına ilk 10 tanesini veya döngü ile çekmeyi tercih edebiliriz.
+      // Burada döngü ile tek tek çekmek daha güvenli (az sayıda favori varsayımıyla).
+      List<Map<String, dynamic>> sellers = [];
+      for (String id in favoriteIds) {
+        final doc =
+            await FirebaseFirestore.instance.collection('users').doc(id).get();
+        if (doc.exists) {
+          final data = doc.data()!;
+          data['id'] = doc.id;
+          sellers.add(data);
+        }
+      }
+      return sellers;
+    } catch (e) {
+      debugPrint('Favori satıcı detayları çekilemedi: $e');
+      return [];
+    }
+  }
+
   // --- YORUMLAR İŞLEMLERİ ---
 
   Future<List<Map<String, dynamic>>> getReviews() async {
@@ -669,50 +709,72 @@ class AuthService {
   // --- ÜRÜN YORUMLARI İŞLEMLERİ ---
 
   Future<List<Map<String, dynamic>>> getProductReviews(String productId) async {
-    final prefs = await SharedPreferences.getInstance();
-    final String? jsonString = prefs.getString(_keyProductReviews);
-    if (jsonString == null) return [];
-    final List<dynamic> list = json.decode(jsonString);
-    final allReviews = list.cast<Map<String, dynamic>>();
-    return allReviews.where((r) => r['productId'] == productId).toList();
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('product_reviews')
+          .where('productId', isEqualTo: productId)
+          .get();
+
+      final reviews = snapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        return data;
+      }).toList();
+
+      // Tarihe göre sırala (Yeniden eskiye)
+      reviews.sort((a, b) {
+        final dateA = a['date'] ?? '';
+        final dateB = b['date'] ?? '';
+        return dateB.compareTo(dateA);
+      });
+
+      return reviews;
+    } catch (e) {
+      debugPrint('Ürün yorumları çekilirken hata: $e');
+      return [];
+    }
   }
 
   Future<List<Map<String, dynamic>>> getAllProductReviews() async {
-    final prefs = await SharedPreferences.getInstance();
-    final String? jsonString = prefs.getString(_keyProductReviews);
-    if (jsonString == null) return [];
-    final List<dynamic> list = json.decode(jsonString);
-    return list.cast<Map<String, dynamic>>();
+    try {
+      final snapshot =
+          await FirebaseFirestore.instance.collection('product_reviews').get();
+
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        return data;
+      }).toList();
+    } catch (e) {
+      debugPrint('Tüm ürün yorumları çekilirken hata: $e');
+      return [];
+    }
   }
 
   Future<void> addProductReview(Map<String, dynamic> review) async {
-    final prefs = await SharedPreferences.getInstance();
-    final String? jsonString = prefs.getString(_keyProductReviews);
-    List<Map<String, dynamic>> reviews = [];
-    if (jsonString != null) {
-      reviews = json.decode(jsonString).cast<Map<String, dynamic>>();
+    try {
+      // ID varsa onu kullan, yoksa Firestore oluştursun
+      if (review.containsKey('id') && review['id'] != null) {
+        await FirebaseFirestore.instance
+            .collection('product_reviews')
+            .doc(review['id'])
+            .set(review);
+      } else {
+        await FirebaseFirestore.instance
+            .collection('product_reviews')
+            .add(review);
+      }
+    } catch (e) {
+      debugPrint('Ürün yorumu eklenirken hata: $e');
+      throw e;
     }
-    reviews.insert(0, review);
-    await prefs.setString(_keyProductReviews, json.encode(reviews));
   }
 
   // --- PAZAR VE SATICI İŞLEMLERİ (MOCK) ---
 
   // Belirli bir pazarın satıcılarını getirir
   Future<List<Map<String, dynamic>>> getMarketSellers(String marketId) async {
-    // Simüle edilmiş ağ gecikmesi
-    await Future.delayed(const Duration(seconds: 1));
-
-    // Gerçek API entegrasyonunda burası şöyle olabilir:
-    // final response = await http.get(Uri.parse('$baseUrl/markets/$marketId/sellers'));
-    // return List<Map<String, dynamic>>.from(json.decode(response.body));
-
-    return [
-      {'id': '1', 'name': 'Ahmet Yılmaz', 'rating': 4.5},
-      {'id': '2', 'name': 'Ayşe Demir', 'rating': 4.8},
-      {'id': '3', 'name': 'Mehmet Öztürk', 'rating': 4.2},
-      {'id': '4', 'name': 'Fatma Kaya', 'rating': 4.6},
-    ];
+    return await fetchSellersForMarket(marketId);
   }
 
   /// Belirli bir pazara kayıtlı satıcıları Firestore'dan getirir
@@ -785,6 +847,53 @@ class AuthService {
     }
   }
 
+  /// Aynı isme sahip ürünü satan diğer satıcıları bulur
+  Future<List<Map<String, dynamic>>> getSellersSellingProduct(
+      String productName, String excludeSellerId) async {
+    try {
+      // 1. Aynı isme sahip diğer ürünleri bul
+      final snapshot = await FirebaseFirestore.instance
+          .collection('products')
+          .where('name', isEqualTo: productName)
+          .get();
+
+      final otherProducts = snapshot.docs
+          .map((doc) => doc.data())
+          .where((data) => data['sellerId'] != excludeSellerId)
+          .toList();
+
+      if (otherProducts.isEmpty) return [];
+
+      // 2. Bu ürünlerin satıcı ID'lerini topla
+      final sellerIds =
+          otherProducts.map((p) => p['sellerId'] as String).toSet();
+
+      // 3. Satıcı detaylarını çek
+      List<Map<String, dynamic>> sellers = [];
+      for (var id in sellerIds) {
+        final userDoc =
+            await FirebaseFirestore.instance.collection('users').doc(id).get();
+        if (userDoc.exists) {
+          final userData = userDoc.data()!;
+          userData['id'] = userDoc.id;
+
+          // İlgili ürünün detaylarını (fiyat, birim, konum) al
+          final productEntry =
+              otherProducts.firstWhere((p) => p['sellerId'] == id);
+          userData['productPrice'] = productEntry['price'];
+          userData['productUnit'] = productEntry['unit'];
+          userData['stallLocation'] = productEntry['stallLocation'];
+
+          sellers.add(userData);
+        }
+      }
+      return sellers;
+    } catch (e) {
+      debugPrint('Diğer satıcılar bulunurken hata: $e');
+      return [];
+    }
+  }
+
   // --- ÜRÜN YÖNETİMİ (FIRESTORE) ---
 
   /// Ürün görselini Storage'a yükler
@@ -803,8 +912,21 @@ class AuthService {
   /// Satıcının ürünlerini veritabanından çeker
   Future<List<Map<String, dynamic>>> fetchSellerProductsFromDb(
       String sellerId) async {
-    // Firestore kaldırıldı
-    return [];
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('products')
+          .where('sellerId', isEqualTo: sellerId)
+          .get();
+
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        return data;
+      }).toList();
+    } catch (e) {
+      debugPrint('Ürünler çekilirken hata: $e');
+      return [];
+    }
   }
 
   /// Satıcının ürünlerini sayfalama ile çeker (Pagination)
@@ -822,19 +944,42 @@ class AuthService {
 
   /// Yeni ürün ekler
   Future<String> addProductToDb(Map<String, dynamic> productData) async {
-    // Firestore kaldırıldı
-    return "mock_id";
+    try {
+      final docRef = await FirebaseFirestore.instance
+          .collection('products')
+          .add(productData);
+      return docRef.id;
+    } catch (e) {
+      debugPrint('Ürün eklenirken hata: $e');
+      throw e;
+    }
   }
 
   /// Ürünü siler
   Future<void> deleteProductFromDb(String productId) async {
-    // Firestore kaldırıldı
+    try {
+      await FirebaseFirestore.instance
+          .collection('products')
+          .doc(productId)
+          .delete();
+    } catch (e) {
+      debugPrint('Ürün silinirken hata: $e');
+      throw e;
+    }
   }
 
   /// Ürünü günceller
   Future<void> updateProductInDb(
       String productId, Map<String, dynamic> data) async {
-    // Firestore kaldırıldı
+    try {
+      await FirebaseFirestore.instance
+          .collection('products')
+          .doc(productId)
+          .update(data);
+    } catch (e) {
+      debugPrint('Ürün güncellenirken hata: $e');
+      throw e;
+    }
   }
 
   // --- TELEFON DOĞRULAMA İŞLEMLERİ ---

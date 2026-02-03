@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../viewmodels/language_viewmodel.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 import '../../viewmodels/auth_service.dart';
+import '../../widgets/custom_app_bar.dart';
 
 class MyReviewsScreen extends StatefulWidget {
   const MyReviewsScreen({super.key});
@@ -70,11 +71,8 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
     final langVM = context.watch<LanguageViewModel>();
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(langVM.translate('my_reviews')),
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
-      ),
+      extendBodyBehindAppBar: true,
+      appBar: CustomAppBar(title: Text(langVM.translate('my_reviews'))),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _reviews.isEmpty
@@ -98,7 +96,7 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
                 )
               : ListView.builder(
                   itemCount: _reviews.length,
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.fromLTRB(12, 110, 12, 12),
                   itemBuilder: (context, index) {
                     final review = _reviews[index];
                     return Card(
