@@ -3,7 +3,7 @@ import 'auth_service.dart';
 
 class ThemeViewModel extends ChangeNotifier {
   int _themeModeIndex = 0; // 0: System, 1: Light, 2: Dark
-  Color _seedColor = Colors.green;
+  Color _seedColor = Colors.orange;
 
   ThemeMode get themeMode {
     switch (_themeModeIndex) {

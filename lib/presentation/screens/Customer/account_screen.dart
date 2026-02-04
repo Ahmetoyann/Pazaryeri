@@ -42,6 +42,49 @@ class _AccountScreenState extends State<AccountScreen>
     super.dispose();
   }
 
+  Future<void> _showLogoutConfirmation() async {
+    final langVM = Provider.of<LanguageViewModel>(context, listen: false);
+
+    final bool confirm = await DialogService.showConfirmation(
+      context,
+      title: langVM.translate('logout_confirmation_title'),
+      message: langVM.translate('logout_confirmation_message'),
+      confirmText: langVM.translate('yes'),
+      cancelText: langVM.translate('no'),
+      icon: Icons.logout,
+    );
+
+    if (confirm == true && mounted) {
+      context.read<AuthViewModel>().logout();
+    }
+  }
+
+  Future<void> _showDeleteAccountConfirmation() async {
+    final langVM = Provider.of<LanguageViewModel>(context, listen: false);
+
+    final bool confirm = await DialogService.showConfirmation(
+      context,
+      title: langVM.translate('delete_account_confirm_title'),
+      message: langVM.translate('delete_account_confirm_message'),
+      confirmText: langVM.translate('yes'),
+      cancelText: langVM.translate('no'),
+      icon: Icons.delete_forever,
+    );
+
+    if (confirm == true && mounted) {
+      try {
+        await context.read<AuthViewModel>().deleteAccount();
+        if (mounted) {
+          await DialogService.showFarewell(context);
+        }
+      } catch (e) {
+        if (mounted) {
+          await DialogService.showError(context, message: 'Hata: $e');
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // ViewModel'deki değişiklikleri dinlemek için 'watch' kullanıyoruz.
@@ -58,35 +101,7 @@ class _AccountScreenState extends State<AccountScreen>
             IconButton(
               icon: const Icon(Icons.logout),
               tooltip: 'Çıkış Yap',
-              onPressed: () async {
-                final bool? confirm = await showDialog<bool>(
-                  context: context,
-                  builder: (BuildContext context) {
-                    return AlertDialog(
-                      title: Text(
-                        langVM.translate('logout_confirmation_title'),
-                      ),
-                      content: Text(
-                        langVM.translate('logout_confirmation_message'),
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(false),
-                          child: Text(langVM.translate('no')),
-                        ),
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(true),
-                          child: Text(langVM.translate('yes')),
-                        ),
-                      ],
-                    );
-                  },
-                );
-
-                if (confirm == true && context.mounted) {
-                  context.read<AuthViewModel>().logout();
-                }
-              },
+              onPressed: _showLogoutConfirmation,
             ),
         ],
       ),
@@ -129,6 +144,8 @@ class _AccountScreenState extends State<AccountScreen>
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: Theme.of(context).cardColor,
+                        border:
+                            Border.all(color: Colors.white.withOpacity(0.3)),
                       ),
                       child: CircleAvatar(
                         radius: 65,
@@ -359,39 +376,8 @@ class _AccountScreenState extends State<AccountScreen>
                         context,
                         label: langVM.translate('logout'),
                         icon: Icons.logout,
-                        color: Colors.orange.shade700,
-                        onPressed: () async {
-                          final bool? confirm = await showDialog<bool>(
-                            context: context,
-                            builder: (BuildContext context) {
-                              return AlertDialog(
-                                title: Text(
-                                  langVM.translate('logout_confirmation_title'),
-                                ),
-                                content: Text(
-                                  langVM
-                                      .translate('logout_confirmation_message'),
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () =>
-                                        Navigator.of(context).pop(false),
-                                    child: Text(langVM.translate('no')),
-                                  ),
-                                  TextButton(
-                                    onPressed: () =>
-                                        Navigator.of(context).pop(true),
-                                    child: Text(langVM.translate('yes')),
-                                  ),
-                                ],
-                              );
-                            },
-                          );
-
-                          if (confirm == true && context.mounted) {
-                            context.read<AuthViewModel>().logout();
-                          }
-                        },
+                        color: Theme.of(context).colorScheme.secondary,
+                        onPressed: _showLogoutConfirmation,
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -400,55 +386,8 @@ class _AccountScreenState extends State<AccountScreen>
                         context,
                         label: langVM.translate('delete_account'),
                         icon: Icons.delete_forever,
-                        color: Colors.red,
-                        onPressed: () async {
-                          final bool? confirm = await showDialog<bool>(
-                            context: context,
-                            builder: (BuildContext context) {
-                              return AlertDialog(
-                                title: Text(
-                                  langVM.translate(
-                                      'delete_account_confirm_title'),
-                                ),
-                                content: Text(
-                                  langVM.translate(
-                                      'delete_account_confirm_message'),
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () =>
-                                        Navigator.of(context).pop(false),
-                                    child: Text(langVM.translate('no')),
-                                  ),
-                                  TextButton(
-                                    onPressed: () =>
-                                        Navigator.of(context).pop(true),
-                                    child: Text(
-                                      langVM.translate('yes'),
-                                      style: const TextStyle(color: Colors.red),
-                                    ),
-                                  ),
-                                ],
-                              );
-                            },
-                          );
-
-                          if (confirm == true && context.mounted) {
-                            try {
-                              await context
-                                  .read<AuthViewModel>()
-                                  .deleteAccount();
-                              if (context.mounted) {
-                                await showFarewellDialog(context);
-                              }
-                            } catch (e) {
-                              if (context.mounted) {
-                                await showErrorDialog(context,
-                                    message: 'Hata: $e');
-                              }
-                            }
-                          }
-                        },
+                        color: Theme.of(context).colorScheme.error,
+                        onPressed: _showDeleteAccountConfirmation,
                       ),
                     ),
                   ],
@@ -477,7 +416,7 @@ class _AccountScreenState extends State<AccountScreen>
             ),
           ],
           border: Border.all(
-            color: Theme.of(context).dividerColor.withOpacity(0.05),
+            color: Colors.white.withOpacity(0.3),
           ),
         ),
         child: child,
@@ -509,7 +448,10 @@ class _AccountScreenState extends State<AccountScreen>
         style: ElevatedButton.styleFrom(
           backgroundColor: color,
           padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: const StadiumBorder(),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(color: Colors.white.withOpacity(0.3)),
+          ),
         ),
       ),
     );
@@ -576,9 +518,13 @@ class _AccountScreenState extends State<AccountScreen>
               icon: const Icon(Icons.g_mobiledata, size: 32),
               label: Text(langVM.translate('connect_with_google')),
               style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
                 backgroundColor: Colors.white,
                 foregroundColor: Colors.black,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
+                  side: BorderSide(color: Colors.white.withOpacity(0.3)),
+                ),
               ),
             ),
           ],

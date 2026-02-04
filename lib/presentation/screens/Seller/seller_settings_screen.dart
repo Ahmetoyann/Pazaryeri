@@ -2,11 +2,13 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../viewmodels/seller_viewmodel.dart';
 import '../../viewmodels/language_viewmodel.dart';
 import '../../viewmodels/auth_viewmodel.dart';
+import '../../viewmodels/auth_service.dart';
 import '../Customer/edit_profile_screen.dart';
+import '../../widgets/custom_app_bar.dart';
+import '../../widgets/success_dialog.dart';
 
 class SellerSettingsScreen extends StatefulWidget {
   const SellerSettingsScreen({super.key});
@@ -19,23 +21,81 @@ class _SellerSettingsScreenState extends State<SellerSettingsScreen> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameController;
   late TextEditingController _descController;
+  late TextEditingController _hoursController;
+  late TextEditingController _instagramController;
+  late TextEditingController _facebookController;
+  String _initialName = '';
+  String _initialDesc = '';
+  String _initialHours = '';
+  String _initialInstagram = '';
+  String _initialFacebook = '';
+  bool _isChanged = false;
 
   @override
   void initState() {
     super.initState();
     final sellerVM = Provider.of<SellerViewModel>(context, listen: false);
-    _nameController = TextEditingController(text: sellerVM.stallName);
-    _descController = TextEditingController(text: sellerVM.stallDescription);
-    _loadSavedSettings();
+    _initialName = sellerVM.stallName ?? '';
+    _initialDesc = sellerVM.stallDescription ?? '';
+    // SellerViewModel'de henüz hours yoksa boş başlar, _loadSellerData ile güncellenir
+
+    _nameController = TextEditingController(text: _initialName);
+    _descController = TextEditingController(text: _initialDesc);
+    _hoursController = TextEditingController(text: _initialHours);
+    _instagramController = TextEditingController(text: _initialInstagram);
+    _facebookController = TextEditingController(text: _initialFacebook);
+
+    _nameController.addListener(_checkForChanges);
+    _descController.addListener(_checkForChanges);
+    _hoursController.addListener(_checkForChanges);
+    _instagramController.addListener(_checkForChanges);
+    _facebookController.addListener(_checkForChanges);
+
+    _loadSellerData();
   }
 
-  Future<void> _loadSavedSettings() async {
-    final prefs = await SharedPreferences.getInstance();
-    final savedName = prefs.getString('saved_stall_name');
-    final savedDesc = prefs.getString('saved_stall_desc');
-    if (mounted) {
-      if (savedName != null) _nameController.text = savedName;
-      if (savedDesc != null) _descController.text = savedDesc;
+  void _checkForChanges() {
+    final hasChanges = _nameController.text != _initialName ||
+        _descController.text != _initialDesc ||
+        _hoursController.text != _initialHours ||
+        _instagramController.text != _initialInstagram ||
+        _facebookController.text != _initialFacebook;
+    if (_isChanged != hasChanges) {
+      setState(() => _isChanged = hasChanges);
+    }
+  }
+
+  Future<void> _loadSellerData() async {
+    final authVM = Provider.of<AuthViewModel>(context, listen: false);
+    if (authVM.currentUser != null) {
+      // Firebase'den güncel verileri çek
+      final data =
+          await AuthService.instance.refreshUserData(authVM.currentUser!.id);
+      if (data != null && mounted) {
+        setState(() {
+          if (data['stallName'] != null) {
+            _initialName = data['stallName']!;
+            _nameController.text = _initialName;
+          }
+          if (data['stallDescription'] != null) {
+            _initialDesc = data['stallDescription']!;
+            _descController.text = _initialDesc;
+          }
+          if (data['stallHours'] != null) {
+            _initialHours = data['stallHours']!;
+            _hoursController.text = _initialHours;
+          }
+          if (data['instagramLink'] != null) {
+            _initialInstagram = data['instagramLink']!;
+            _instagramController.text = _initialInstagram;
+          }
+          if (data['facebookLink'] != null) {
+            _initialFacebook = data['facebookLink']!;
+            _facebookController.text = _initialFacebook;
+          }
+          _isChanged = false;
+        });
+      }
     }
   }
 
@@ -43,6 +103,9 @@ class _SellerSettingsScreenState extends State<SellerSettingsScreen> {
   void dispose() {
     _nameController.dispose();
     _descController.dispose();
+    _hoursController.dispose();
+    _instagramController.dispose();
+    _facebookController.dispose();
     super.dispose();
   }
 
@@ -91,10 +154,11 @@ class _SellerSettingsScreenState extends State<SellerSettingsScreen> {
             ),
             if (authVM.currentUser?.profilePicturePath != null)
               ListTile(
-                leading: const Icon(Icons.delete, color: Colors.red),
+                leading: Icon(Icons.delete,
+                    color: Theme.of(context).colorScheme.error),
                 title: Text(
                   langVM.translate('remove_photo'),
-                  style: const TextStyle(color: Colors.red),
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
                 onTap: () {
                   Navigator.pop(ctx);
@@ -110,7 +174,9 @@ class _SellerSettingsScreenState extends State<SellerSettingsScreen> {
   Widget _buildInfoRow(IconData icon, String text) {
     return Row(
       children: [
-        Icon(icon, color: Colors.grey.shade600, size: 20),
+        Icon(icon,
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+            size: 20),
         const SizedBox(width: 12),
         Expanded(
           child: Text(
@@ -122,6 +188,43 @@ class _SellerSettingsScreenState extends State<SellerSettingsScreen> {
     );
   }
 
+  Future<void> _showLogoutConfirmation() async {
+    final langVM = Provider.of<LanguageViewModel>(context, listen: false);
+
+    final bool confirm = await DialogService.showConfirmation(
+      context,
+      title: langVM.translate('logout_confirmation_title'),
+      message: langVM.translate('logout_confirmation_message'),
+      confirmText: langVM.translate('yes'),
+      cancelText: langVM.translate('no'),
+      icon: Icons.logout,
+    );
+
+    if (confirm == true && mounted) {
+      Provider.of<AuthViewModel>(context, listen: false).logout();
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    }
+  }
+
+  InputDecoration _buildInputDecoration(String label, IconData icon,
+      {String? hintText}) {
+    return InputDecoration(
+      labelText: label,
+      hintText: hintText,
+      prefixIcon: Icon(icon),
+      border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(30),
+          borderSide: BorderSide(color: Colors.white.withOpacity(0.3))),
+      enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(30),
+          borderSide: BorderSide(color: Colors.white.withOpacity(0.3))),
+      focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(30),
+          borderSide:
+              BorderSide(color: Colors.white.withOpacity(0.5), width: 2)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final langVM = Provider.of<LanguageViewModel>(context);
@@ -130,11 +233,12 @@ class _SellerSettingsScreenState extends State<SellerSettingsScreen> {
     final userImage = authVM.currentUser?.profilePicturePath;
 
     return Scaffold(
-      appBar: AppBar(
+      extendBodyBehindAppBar: true,
+      appBar: CustomAppBar(
         title: Text(langVM.translate('seller_settings_title')),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.fromLTRB(16, 110, 16, 16),
         child: Form(
           key: _formKey,
           child: Column(
@@ -146,7 +250,7 @@ class _SellerSettingsScreenState extends State<SellerSettingsScreen> {
                   children: [
                     CircleAvatar(
                       radius: 50,
-                      backgroundColor: Colors.grey.shade200,
+                      backgroundColor: Colors.white,
                       backgroundImage: userImage != null
                           ? (userImage.startsWith('http')
                               ? NetworkImage(userImage)
@@ -154,7 +258,11 @@ class _SellerSettingsScreenState extends State<SellerSettingsScreen> {
                           : null,
                       child: userImage == null
                           ? Icon(Icons.store,
-                              size: 50, color: Colors.grey.shade400)
+                              size: 50,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withOpacity(0.4))
                           : null,
                     ),
                     if (authVM.isUploadingProfilePhoto)
@@ -184,7 +292,7 @@ class _SellerSettingsScreenState extends State<SellerSettingsScreen> {
                   decoration: BoxDecoration(
                     color: Theme.of(context).cardColor,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.shade200),
+                    border: Border.all(color: Colors.white.withOpacity(0.3)),
                   ),
                   child: Column(
                     children: [
@@ -223,40 +331,78 @@ class _SellerSettingsScreenState extends State<SellerSettingsScreen> {
               ],
               TextFormField(
                 controller: _nameController,
-                decoration: InputDecoration(
-                  labelText: langVM.translate('stall_name_label'),
-                  border: const OutlineInputBorder(),
-                  prefixIcon: const Icon(Icons.store),
-                ),
+                decoration: _buildInputDecoration(
+                    langVM.translate('stall_name_label'), Icons.store),
                 validator: (v) =>
                     v!.isEmpty ? langVM.translate('error_prefix') : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
+                controller: _hoursController,
+                decoration: _buildInputDecoration(
+                    langVM.translate('stall_hours_label'), Icons.access_time,
+                    hintText: langVM.translate('stall_hours_hint')),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
                 controller: _descController,
                 maxLines: 3,
-                decoration: InputDecoration(
-                  labelText: langVM.translate('stall_desc_label'),
-                  border: const OutlineInputBorder(),
-                  prefixIcon: const Icon(Icons.description),
-                ),
+                decoration: _buildInputDecoration(
+                    langVM.translate('stall_desc_label'), Icons.description),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                langVM.translate('social_media_title'),
+                style:
+                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _instagramController,
+                decoration: _buildInputDecoration(
+                    langVM.translate('instagram_label'),
+                    Icons.camera_alt_outlined),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _facebookController,
+                decoration: _buildInputDecoration(
+                    langVM.translate('facebook_label'), Icons.facebook),
               ),
               const SizedBox(height: 24),
               ElevatedButton(
-                onPressed: sellerVM.isLoading
+                onPressed: (sellerVM.isLoading || !_isChanged)
                     ? null
                     : () async {
                         if (_formKey.currentState!.validate()) {
-                          final prefs = await SharedPreferences.getInstance();
-                          await prefs.setString(
-                              'saved_stall_name', _nameController.text);
-                          await prefs.setString(
-                              'saved_stall_desc', _descController.text);
                           await sellerVM.updateSellerProfile(
                             name: _nameController.text,
                             description: _descController.text,
                           );
+
+                          // Firebase'e kaydet
+                          final authVM = Provider.of<AuthViewModel>(context,
+                              listen: false);
+                          if (authVM.currentUser != null) {
+                            await AuthService.instance.updateUserInDb({
+                              'stallName': _nameController.text,
+                              'stallDescription': _descController.text,
+                              'stallHours': _hoursController.text,
+                              'instagramLink': _instagramController.text,
+                              'facebookLink': _facebookController.text,
+                            }, authVM.currentUser!.email);
+                          }
+
                           if (mounted) {
+                            setState(() {
+                              _initialName = _nameController.text;
+                              _initialDesc = _descController.text;
+                              _initialHours = _hoursController.text;
+                              _initialInstagram = _instagramController.text;
+                              _initialFacebook = _facebookController.text;
+                              _isChanged = false;
+                            });
+
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text(langVM
@@ -267,13 +413,70 @@ class _SellerSettingsScreenState extends State<SellerSettingsScreen> {
                           }
                         }
                       },
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
                 child: sellerVM.isLoading
                     ? const CircularProgressIndicator()
                     : Text(langVM.translate('save_changes')),
               ),
+              const SizedBox(height: 32),
+              // Pazarı Değiştir Butonu
+              TextButton.icon(
+                onPressed: () async {
+                  final bool confirm = await DialogService.showConfirmation(
+                    context,
+                    title: langVM.translate('change_market_confirm_title'),
+                    message: langVM.translate('change_market_confirm_message'),
+                    confirmText: langVM.translate('yes'),
+                    cancelText: langVM.translate('no'),
+                    icon: Icons.swap_horiz,
+                    confirmColor: Colors.orange,
+                  );
+
+                  if (confirm && mounted) {
+                    final authVM =
+                        Provider.of<AuthViewModel>(context, listen: false);
+                    // Mevcut pazar seçimini yerel hafızadan temizle
+                    await AuthService.instance.updateSellerMarketId('');
+                    authVM.setSellerMarketId('');
+                    if (mounted) {
+                      Navigator.of(context).popUntil((route) => route.isFirst);
+                    }
+                  }
+                },
+                icon: const Icon(Icons.swap_horiz, color: Colors.orange),
+                label: Text(
+                  langVM.translate('change_market'),
+                  style: const TextStyle(
+                      color: Colors.orange, fontWeight: FontWeight.bold),
+                ),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  backgroundColor: Colors.orange.withOpacity(0.1),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(color: Colors.white.withOpacity(0.3)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Çıkış Yap Butonu
+              TextButton.icon(
+                onPressed: _showLogoutConfirmation,
+                icon: const Icon(Icons.logout, color: Colors.red),
+                label: Text(
+                  langVM.translate('logout'),
+                  style: const TextStyle(
+                      color: Colors.red, fontWeight: FontWeight.bold),
+                ),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  backgroundColor: Colors.red.withOpacity(0.1),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(color: Colors.white.withOpacity(0.3)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 32),
             ],
           ),
         ),

@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../viewmodels/language_viewmodel.dart';
@@ -143,10 +144,6 @@ class _CustomerSellerDetailScreenState
                           delegate: _SliverAppBarDelegate(
                             TabBar(
                               isScrollable: true,
-                              labelColor: Theme.of(context).colorScheme.primary,
-                              unselectedLabelColor: Colors.grey,
-                              indicatorColor:
-                                  Theme.of(context).colorScheme.primary,
                               tabs: _categories
                                   .map((c) => Tab(text: langVM.translate(c)))
                                   .toList(),
@@ -176,72 +173,70 @@ class _CustomerSellerDetailScreenState
   }
 
   Widget _buildSellerInfo(BuildContext context, LanguageViewModel langVM) {
-    return Container(
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.white.withOpacity(0.3)),
       ),
-      padding: const EdgeInsets.all(24.0),
-      child: Column(
-        children: [
-          CircleAvatar(
-            radius: 40,
-            backgroundColor: Theme.of(context).colorScheme.primary,
-            child: Text(
-              widget.sellerName.substring(0, 1).toUpperCase(),
-              style: const TextStyle(fontSize: 32, color: Colors.white),
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          children: [
+            CircleAvatar(
+              radius: 40,
+              backgroundColor: colorScheme.primary,
+              child: Text(
+                widget.sellerName.substring(0, 1).toUpperCase(),
+                style: const TextStyle(fontSize: 32, color: Colors.white),
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            widget.sellerName,
-            style: Theme.of(context).textTheme.headlineSmall,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            widget.sellerDescription,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey[600],
-                ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.orange.shade50,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.orange.shade200),
+            const SizedBox(height: 16),
+            Text(
+              widget.sellerName,
+              style: Theme.of(context).textTheme.headlineSmall,
+              textAlign: TextAlign.center,
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.location_on,
-                    size: 16, color: Colors.orange.shade800),
-                const SizedBox(width: 8),
-                Flexible(
-                  child: Text(
-                    '${langVM.translate('stall_location')}: ${widget.stallLocation}',
-                    style: TextStyle(
-                      color: Colors.orange.shade900,
-                      fontWeight: FontWeight.w500,
+            const SizedBox(height: 8),
+            Text(
+              widget.sellerDescription,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onSurface.withOpacity(0.6),
+                  ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: colorScheme.secondary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border:
+                    Border.all(color: colorScheme.secondary.withOpacity(0.3)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.location_on,
+                      size: 16, color: colorScheme.secondary),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      '${langVM.translate('stall_location')}: ${widget.stallLocation}',
+                      style: TextStyle(
+                        color: colorScheme.secondary,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -250,9 +245,15 @@ class _CustomerSellerDetailScreenState
       LanguageViewModel langVM) {
     final bool inStock = product['inStock'] ?? false;
     final String? imagePath = product['imagePath'];
+    final colorScheme = Theme.of(context).colorScheme;
+    final statusColor = inStock ? colorScheme.primary : colorScheme.error;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.white.withOpacity(0.3)),
+      ),
       child: ListTile(
         onTap: () {
           Navigator.push(
@@ -271,16 +272,25 @@ class _CustomerSellerDetailScreenState
           decoration: BoxDecoration(
             color: Colors.grey[200],
             borderRadius: BorderRadius.circular(8),
-            image: (imagePath != null && imagePath.isNotEmpty)
-                ? DecorationImage(
-                    image: NetworkImage(imagePath),
-                    fit: BoxFit.cover,
-                  )
-                : null,
           ),
-          child: (imagePath == null || imagePath.isEmpty)
-              ? const Icon(Icons.shopping_basket, color: Colors.grey)
-              : null,
+          child: (imagePath != null && imagePath.isNotEmpty)
+              ? ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: imagePath.startsWith('http')
+                      ? Image.network(
+                          imagePath,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Icon(Icons.error, color: Colors.grey),
+                        )
+                      : Image.file(
+                          File(imagePath),
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Icon(Icons.error, color: Colors.grey),
+                        ),
+                )
+              : const Icon(Icons.shopping_basket, color: Colors.grey),
         ),
         title: Text(product['name']),
         subtitle: Text(
@@ -296,17 +306,17 @@ class _CustomerSellerDetailScreenState
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: inStock ? Colors.green.shade50 : Colors.red.shade50,
+                color: statusColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(4),
                 border: Border.all(
-                  color: inStock ? Colors.green.shade200 : Colors.red.shade200,
+                  color: statusColor.withOpacity(0.3),
                 ),
               ),
               child: Text(
                 langVM.translate(inStock ? 'in_stock' : 'out_of_stock'),
                 style: TextStyle(
                   fontSize: 12,
-                  color: inStock ? Colors.green.shade700 : Colors.red.shade700,
+                  color: statusColor,
                 ),
               ),
             ),

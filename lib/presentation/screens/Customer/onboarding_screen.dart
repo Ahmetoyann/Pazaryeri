@@ -70,6 +70,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           decoration: BoxDecoration(
                             color: colorScheme.primary.withOpacity(0.1),
                             shape: BoxShape.circle,
+                            border: Border.all(
+                                color: Colors.white.withOpacity(0.3)),
                           ),
                           child: Icon(
                             page['icon'],
@@ -94,7 +96,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           langVM.translate(page['descKey']),
                           style: Theme.of(
                             context,
-                          ).textTheme.bodyLarge?.copyWith(color: Colors.grey),
+                          ).textTheme.bodyLarge?.copyWith(
+                                color: colorScheme.onSurface.withOpacity(0.6),
+                              ),
                           textAlign: TextAlign.center,
                         ),
                       ],
@@ -120,7 +124,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         decoration: BoxDecoration(
                           color: _currentPage == index
                               ? colorScheme.primary
-                              : Colors.grey.shade300,
+                              : colorScheme.onSurface.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(4),
                         ),
                       ),
@@ -134,7 +138,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           onPressed: _finishOnboarding,
                           child: Text(
                             langVM.translate('skip'),
-                            style: const TextStyle(color: Colors.grey),
+                            style: TextStyle(
+                              color: colorScheme.onSurface.withOpacity(0.6),
+                            ),
                           ),
                         ),
                       const SizedBox(width: 8),
@@ -150,13 +156,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           }
                         },
                         style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 12,
-                          ),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(24),
+                            borderRadius: BorderRadius.circular(30),
+                            side: BorderSide(
+                                color: Colors.white.withOpacity(0.3)),
                           ),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 12),
                         ),
                         child: Text(
                           _currentPage == _pages.length - 1

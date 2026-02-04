@@ -57,12 +57,22 @@ class _MarketSellersScreenState extends State<MarketSellersScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.store_mall_directory_outlined,
-                          size: 64, color: Colors.grey),
+                      Icon(
+                        Icons.store_mall_directory_outlined,
+                        size: 64,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withOpacity(0.2),
+                      ),
                       const SizedBox(height: 16),
                       Text(
                         langVM.translate('no_sellers_found'),
-                        style: const TextStyle(color: Colors.grey),
+                        style: TextStyle(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withOpacity(0.6)),
                       ),
                     ],
                   ),
@@ -84,16 +94,20 @@ class _MarketSellersScreenState extends State<MarketSellersScreen> {
                     final description =
                         seller['stallDescription'] ?? 'Açıklama yok';
                     final stallLocation = seller['stallLocation'] ?? '';
+                    final stallHours = seller['stallHours'];
 
                     return Card(
                       margin: const EdgeInsets.only(bottom: 12),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(color: Colors.white.withOpacity(0.3)),
                       ),
                       child: ListTile(
                         leading: CircleAvatar(
-                          backgroundColor:
-                              Theme.of(context).colorScheme.primaryContainer,
+                          backgroundColor: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withOpacity(0.1),
                           backgroundImage: (seller['profilePicture'] != null &&
                                   seller['profilePicture'].isNotEmpty)
                               ? NetworkImage(seller['profilePicture'])
@@ -112,10 +126,28 @@ class _MarketSellersScreenState extends State<MarketSellersScreen> {
                         title: Text(displayName,
                             style:
                                 const TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: Text(
-                          description,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              description,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            if (stallHours != null && stallHours.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 4.0),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.access_time,
+                                        size: 12, color: Colors.grey),
+                                    const SizedBox(width: 4),
+                                    Text(stallHours,
+                                        style: const TextStyle(fontSize: 12)),
+                                  ],
+                                ),
+                              ),
+                          ],
                         ),
                         trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                         onTap: () {

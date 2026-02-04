@@ -271,7 +271,6 @@ class SellerViewModel extends ChangeNotifier {
     required String name,
     required String description,
     required double price,
-    required String stallLocation,
     required String category,
     required double stockQuantity,
     required String unit,

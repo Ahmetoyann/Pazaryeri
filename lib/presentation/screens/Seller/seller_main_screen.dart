@@ -24,13 +24,6 @@ class SellerMainScreen extends StatefulWidget {
 class _SellerMainScreenState extends State<SellerMainScreen> {
   late int _currentIndex;
 
-  final List<Widget> _pages = const [
-    SellerAddProductScreen(),
-    SellerProductsScreen(),
-    SellerStatsScreen(),
-    SellerReviewsScreen(),
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -51,10 +44,31 @@ class _SellerMainScreenState extends State<SellerMainScreen> {
     });
   }
 
+  Widget _buildActiveIcon(BuildContext context, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.primary.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withOpacity(0.6)),
+      ),
+      child: Icon(icon, size: 30),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final langVM = Provider.of<LanguageViewModel>(context);
     final sellerVM = Provider.of<SellerViewModel>(context);
+
+    final List<Widget> pages = [
+      SellerAddProductScreen(onProductAdded: () {
+        setState(() => _currentIndex = 1);
+      }),
+      const SellerProductsScreen(),
+      const SellerStatsScreen(),
+      const SellerReviewsScreen(),
+    ];
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -62,28 +76,6 @@ class _SellerMainScreenState extends State<SellerMainScreen> {
         title: Text(sellerVM.selectedMarket?.name ??
             langVM.translate('seller_panel_title')),
         actions: [
-          Tooltip(
-            message: sellerVM.isStallOpen
-                ? langVM.translate('stall_open')
-                : langVM.translate('stall_closed'),
-            child: Switch(
-              value: sellerVM.isStallOpen,
-              onChanged: (val) => sellerVM.toggleStallStatus(val),
-              activeColor: Colors.green,
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.swap_horiz),
-            tooltip: langVM.translate('change_market'),
-            onPressed: () async {
-              final authVM = Provider.of<AuthViewModel>(context, listen: false);
-              // Mevcut pazar seçimini yerel hafızadan temizle
-              await AuthService.instance.updateSellerMarketId('');
-              authVM.setSellerMarketId('');
-
-              // AuthWrapper durumu dinlediği için otomatik yönlendirme yapacaktır.
-            },
-          ),
           IconButton(
             icon: const Icon(Icons.settings),
             tooltip: langVM.translate('seller_settings_title'),
@@ -92,14 +84,6 @@ class _SellerMainScreenState extends State<SellerMainScreen> {
               MaterialPageRoute(builder: (_) => const SellerSettingsScreen()),
             ),
           ),
-          IconButton(
-            icon: const Icon(Icons.exit_to_app),
-            tooltip: langVM.translate('exit_seller_panel'),
-            onPressed: () {
-              Provider.of<AuthViewModel>(context, listen: false).logout();
-              Navigator.of(context).popUntil((route) => route.isFirst);
-            },
-          ),
         ],
       ),
       extendBody: true,
@@ -107,7 +91,7 @@ class _SellerMainScreenState extends State<SellerMainScreen> {
         padding: const EdgeInsets.only(top: 110),
         child: IndexedStack(
           index: _currentIndex,
-          children: _pages,
+          children: pages,
         ),
       ),
       bottomNavigationBar: Padding(
@@ -117,6 +101,7 @@ class _SellerMainScreenState extends State<SellerMainScreen> {
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
             child: Container(
+              padding: EdgeInsets.zero,
               decoration: BoxDecoration(
                 color: Theme.of(context).brightness == Brightness.dark
                     ? Colors.black.withOpacity(0.2)
@@ -126,27 +111,30 @@ class _SellerMainScreenState extends State<SellerMainScreen> {
               child: BottomNavigationBar(
                 currentIndex: _currentIndex,
                 onTap: (index) => setState(() => _currentIndex = index),
-                selectedItemColor: Theme.of(context).colorScheme.primary,
-                unselectedItemColor: Colors.grey,
-                showUnselectedLabels: true,
-                type: BottomNavigationBarType.fixed,
-                backgroundColor: Colors.transparent,
-                elevation: 0,
+                showSelectedLabels: false,
+                showUnselectedLabels: false,
+                selectedFontSize: 3,
+                unselectedFontSize: 0,
+                iconSize: 30,
                 items: [
                   BottomNavigationBarItem(
                     icon: const Icon(Icons.add_circle_outline),
+                    activeIcon: _buildActiveIcon(context, Icons.add_circle),
                     label: langVM.translate('add_product_tab'),
                   ),
                   BottomNavigationBarItem(
                     icon: const Icon(Icons.list_alt),
+                    activeIcon: _buildActiveIcon(context, Icons.list_alt),
                     label: langVM.translate('my_products_tab'),
                   ),
                   BottomNavigationBarItem(
                     icon: const Icon(Icons.bar_chart),
+                    activeIcon: _buildActiveIcon(context, Icons.bar_chart),
                     label: langVM.translate('statistics_tab'),
                   ),
                   BottomNavigationBarItem(
                     icon: const Icon(Icons.star_outline),
+                    activeIcon: _buildActiveIcon(context, Icons.star),
                     label: langVM.translate('reviews_tab'),
                   ),
                 ],

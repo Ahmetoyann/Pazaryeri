@@ -83,13 +83,20 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
                       Icon(
                         Icons.comment_bank_outlined,
                         size: 80,
-                        color: Colors.grey.shade300,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withOpacity(0.2),
                       ),
                       const SizedBox(height: 16),
                       Text(
                         langVM.translate('no_reviews_yet'),
                         style: TextStyle(
-                            fontSize: 18, color: Colors.grey.shade600),
+                            fontSize: 18,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withOpacity(0.6)),
                       ),
                     ],
                   ),
@@ -101,9 +108,9 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
                     final review = _reviews[index];
                     return Card(
                       margin: const EdgeInsets.only(bottom: 12),
-                      elevation: 2,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(color: Colors.white.withOpacity(0.3)),
                       ),
                       child: Padding(
                         padding: const EdgeInsets.all(16),
@@ -125,14 +132,18 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
                                     Text(
                                       review['date'] as String,
                                       style: TextStyle(
-                                        color: Colors.grey.shade600,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withOpacity(0.6),
                                         fontSize: 12,
                                       ),
                                     ),
                                     IconButton(
-                                      icon: const Icon(
+                                      icon: Icon(
                                         Icons.delete_outline,
-                                        color: Colors.red,
+                                        color:
+                                            Theme.of(context).colorScheme.error,
                                         size: 20,
                                       ),
                                       padding: EdgeInsets.zero,
@@ -148,7 +159,7 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
                             Row(
                               children: List.generate(5, (starIndex) {
                                 return Icon(
-                                  starIndex < (review['rating'] as int)
+                                  starIndex < (review['rating'] as num)
                                       ? Icons.star
                                       : Icons.star_border,
                                   color: Colors.amber,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/language_viewmodel.dart';
 import '../viewmodels/auth_viewmodel.dart';
+import '../widgets/custom_app_bar.dart';
 
 class PhoneVerificationScreen extends StatefulWidget {
   final String phoneNumber;
@@ -92,11 +93,12 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
     final langVM = Provider.of<LanguageViewModel>(context);
 
     return Scaffold(
-      appBar: AppBar(
+      extendBodyBehindAppBar: true,
+      appBar: CustomAppBar(
         title: Text(langVM.translate('phone_verification_title')),
       ),
       body: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: const EdgeInsets.fromLTRB(24, 110, 24, 24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -104,7 +106,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
             Text(
               '${widget.phoneNumber}\n${langVM.translate('enter_sms_code')}',
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 16),
+              style: Theme.of(context).textTheme.bodyLarge,
             ),
             const SizedBox(height: 24),
             TextField(
@@ -124,7 +126,10 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
                   ? const SizedBox(
                       height: 20,
                       width: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
                     )
                   : Text(langVM.translate('verify_button')),
             ),

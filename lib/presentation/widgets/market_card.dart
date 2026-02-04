@@ -19,9 +19,13 @@ class MarketCard extends StatelessWidget {
     this.showOccupancy = false,
   });
 
-  Color _getOccupancyColor(double occupancy) {
-    if (occupancy <= 0.4) return Colors.green;
-    if (occupancy <= 0.7) return Colors.orange;
+  Color _getOccupancyColor(double occupancy, ColorScheme colorScheme) {
+    if (occupancy <= 0.4) return colorScheme.primary;
+    if (occupancy <= 0.7) return colorScheme.secondary;
+    return colorScheme.error;
+    if (occupancy <= 0.25) return Colors.white;
+    if (occupancy <= 0.50) return Colors.yellow;
+    if (occupancy <= 0.75) return Colors.orange;
     return Colors.red;
   }
 
@@ -70,7 +74,7 @@ class MarketCard extends StatelessWidget {
             ),
           ],
           border: Border.all(
-            color: theme.dividerColor.withOpacity(0.05),
+            color: Colors.white.withOpacity(0.3),
             width: 1,
           ),
         ),
@@ -89,12 +93,12 @@ class MarketCard extends StatelessWidget {
                     child: Container(
                       padding: EdgeInsets.all(isHorizontal ? 8 : 10),
                       decoration: BoxDecoration(
-                        color: theme.primaryColor.withOpacity(0.1),
+                        color: Colors.white.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
                         Icons.storefront_rounded,
-                        color: theme.colorScheme.primary,
+                        color: theme.iconTheme.color,
                         size: isHorizontal ? 20 : 24,
                       ),
                     ),
@@ -125,14 +129,16 @@ class MarketCard extends StatelessWidget {
                             Icon(
                               Icons.location_on_outlined,
                               size: 14,
-                              color: theme.hintColor,
+                              color:
+                                  theme.colorScheme.onSurface.withOpacity(0.7),
                             ),
                             const SizedBox(width: 2),
                             Expanded(
                               child: Text(
                                 '${market.address.neighborhood}, ${market.address.district}',
                                 style: theme.textTheme.bodySmall?.copyWith(
-                                  color: theme.hintColor,
+                                  color: theme.colorScheme.onSurface
+                                      .withOpacity(0.7),
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -151,7 +157,8 @@ class MarketCard extends StatelessWidget {
                 Row(
                   children: [
                     Icon(Icons.people_alt_outlined,
-                        size: 16, color: theme.hintColor),
+                        size: 16,
+                        color: theme.colorScheme.onSurface.withOpacity(0.7)),
                     const SizedBox(width: 6),
                     Text(
                       langVM.translate('occupancy_rate'),
@@ -164,7 +171,8 @@ class MarketCard extends StatelessWidget {
                         child: LinearProgressIndicator(
                           value: market.occupancy,
                           backgroundColor: theme.dividerColor.withOpacity(0.1),
-                          color: _getOccupancyColor(market.occupancy),
+                          color: _getOccupancyColor(
+                              market.occupancy, theme.colorScheme),
                           minHeight: 6,
                         ),
                       ),
@@ -174,7 +182,8 @@ class MarketCard extends StatelessWidget {
                       '%${(market.occupancy * 100).toInt()}',
                       style: theme.textTheme.bodySmall?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: _getOccupancyColor(market.occupancy),
+                        color: _getOccupancyColor(
+                            market.occupancy, theme.colorScheme),
                       ),
                     ),
                   ],
@@ -240,7 +249,7 @@ class MarketCard extends StatelessWidget {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: theme.scaffoldBackgroundColor,
+                      color: theme.cardColor,
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
                         color: theme.dividerColor.withOpacity(0.5),

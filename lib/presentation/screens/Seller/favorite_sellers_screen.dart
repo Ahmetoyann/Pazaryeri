@@ -46,7 +46,11 @@ class _FavoriteSellersScreenState extends State<FavoriteSellersScreen> {
               ? Center(
                   child: Text(
                     langVM.translate('no_favorite_sellers'),
-                    style: const TextStyle(color: Colors.grey),
+                    style: TextStyle(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withOpacity(0.6)),
                   ),
                 )
               : ListView.builder(
@@ -70,11 +74,15 @@ class _FavoriteSellersScreenState extends State<FavoriteSellersScreen> {
                     return Card(
                       margin: const EdgeInsets.only(bottom: 12),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16)),
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(color: Colors.white.withOpacity(0.3)),
+                      ),
                       child: ListTile(
                         leading: CircleAvatar(
-                          backgroundColor:
-                              Theme.of(context).colorScheme.primaryContainer,
+                          backgroundColor: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withOpacity(0.1),
                           backgroundImage: (seller['profilePicture'] != null &&
                                   seller['profilePicture'].isNotEmpty)
                               ? NetworkImage(seller['profilePicture'])

@@ -29,6 +29,30 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   String? _successMessage;
   List<Map<String, dynamic>> _otherSellers = [];
 
+  final Map<String, Color> _categoryColors = {
+    'category_fruit': Colors.orange,
+    'category_vegetable': Colors.green,
+    'category_delicatessen': Colors.redAccent,
+    'category_dairy': Colors.blue,
+    'category_bakery': Colors.amber,
+    'category_spices': Colors.deepOrange,
+    'category_fish': Colors.teal,
+    'category_clothing': Colors.purple,
+    'category_other': Colors.blueGrey,
+  };
+
+  final Map<String, IconData> _categoryIcons = {
+    'category_fruit': Icons.eco,
+    'category_vegetable': Icons.grass,
+    'category_delicatessen': Icons.breakfast_dining,
+    'category_dairy': Icons.local_drink,
+    'category_bakery': Icons.bakery_dining,
+    'category_spices': Icons.local_fire_department,
+    'category_fish': Icons.set_meal,
+    'category_clothing': Icons.checkroom,
+    'category_other': Icons.more_horiz,
+  };
+
   @override
   void initState() {
     super.initState();
@@ -201,7 +225,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             leading: CircleAvatar(
                               backgroundColor: Theme.of(context)
                                   .primaryColor
-                                  .withOpacity(0.1),
+                                  .withValues(alpha: 0.1),
                               child: Text(
                                   displayName.isNotEmpty ? displayName[0] : '?',
                                   style: TextStyle(
@@ -241,6 +265,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   }
 
   void _showOtherSellers() {
+    final langVM = Provider.of<LanguageViewModel>(context, listen: false);
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -285,7 +310,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     ),
                     title: Text(displayName),
                     subtitle: Text(
-                      'Fiyat: $price ₺ / $unit',
+                      'Fiyat: $price ₺ / ${langVM.translate(unit ?? 'unit_kg')}',
                       style: TextStyle(
                         color: Theme.of(context).colorScheme.primary,
                         fontWeight: FontWeight.bold,
@@ -322,6 +347,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     final langVM = Provider.of<LanguageViewModel>(context);
     final product = widget.product;
     final bool inStock = product['inStock'];
+
+    // Kategoriye göre stil belirle
+    final category = product['category'] as String? ?? 'category_other';
+    final categoryColor =
+        _categoryColors[category] ?? Theme.of(context).primaryColor;
+    final categoryIcon = _categoryIcons[category] ?? Icons.category;
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -384,49 +415,83 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           height: 200,
                           width: 200,
                           decoration: BoxDecoration(
-                            color: Colors.grey[200],
+                            color: categoryColor.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(24),
-                            image: (product['imagePath'] != null &&
-                                    product['imagePath'].toString().isNotEmpty)
-                                ? DecorationImage(
-                                    image: product['imagePath']
+                            border: Border.all(
+                              color: categoryColor.withOpacity(0.3),
+                              width: 2,
+                            ),
+                          ),
+                          child: Stack(
+                            children: [
+                              Positioned.fill(
+                                child: (product['imagePath'] != null &&
+                                        product['imagePath']
                                             .toString()
-                                            .startsWith('http')
-                                        ? NetworkImage(product['imagePath'])
-                                        : FileImage(File(product['imagePath']))
-                                            as ImageProvider,
-                                    fit: BoxFit.cover,
-                                  )
-                                : null,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
-                                blurRadius: 10,
-                                offset: const Offset(0, 5),
+                                            .isNotEmpty)
+                                    ? ClipRRect(
+                                        borderRadius: BorderRadius.circular(22),
+                                        child: product['imagePath']
+                                                .toString()
+                                                .startsWith('http')
+                                            ? Image.network(
+                                                product['imagePath'],
+                                                fit: BoxFit.cover,
+                                                errorBuilder: (context, error,
+                                                        stackTrace) =>
+                                                    Icon(categoryIcon,
+                                                        size: 64,
+                                                        color: categoryColor
+                                                            .withOpacity(0.5)),
+                                              )
+                                            : Image.file(
+                                                File(product['imagePath']),
+                                                fit: BoxFit.cover,
+                                                errorBuilder: (context, error,
+                                                        stackTrace) =>
+                                                    Icon(categoryIcon,
+                                                        size: 64,
+                                                        color: categoryColor
+                                                            .withOpacity(0.5)),
+                                              ),
+                                      )
+                                    : Center(
+                                        child: Icon(categoryIcon,
+                                            size: 80,
+                                            color:
+                                                categoryColor.withOpacity(0.5)),
+                                      ),
+                              ),
+                              Positioned(
+                                top: 12,
+                                right: 12,
+                                child: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: categoryColor,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(categoryIcon,
+                                      size: 20, color: Colors.white),
+                                ),
                               ),
                             ],
                           ),
-                          child: (product['imagePath'] == null ||
-                                  product['imagePath'].toString().isEmpty)
-                              ? const Icon(Icons.shopping_basket,
-                                  size: 64, color: Colors.grey)
-                              : null,
                         ),
                       ),
                     ),
                   ),
                   const SizedBox(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Text(
-                          product['name'],
-                          style: Theme.of(context).textTheme.headlineSmall,
-                        ),
-                      ),
                       Text(
-                        '${product['price']} ₺ / ${product['unit']}',
+                        product['name'],
+                        style: Theme.of(context).textTheme.headlineSmall,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '${product['price']} ₺ / ${langVM.translate(product['unit'] ?? 'unit_kg')}',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                               color: Theme.of(context).colorScheme.primary,
                               fontWeight: FontWeight.bold,
@@ -437,11 +502,20 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Icon(Icons.store, size: 16, color: Colors.grey[600]),
+                      Icon(Icons.store,
+                          size: 16,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.6)),
                       const SizedBox(width: 4),
                       Text(
                         widget.sellerName,
-                        style: TextStyle(color: Colors.grey[600]),
+                        style: TextStyle(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.6)),
                       ),
                       const Spacer(),
                       Container(
@@ -449,13 +523,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: inStock
-                              ? Colors.green.shade50
-                              : Colors.red.shade50,
+                              ? Colors.green.withValues(alpha: 0.1)
+                              : Colors.red.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(4),
                           border: Border.all(
                             color: inStock
-                                ? Colors.green.shade200
-                                : Colors.red.shade200,
+                                ? Colors.green.withValues(alpha: 0.5)
+                                : Colors.red.withValues(alpha: 0.5),
                           ),
                         ),
                         child: Text(
@@ -463,9 +537,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                               .translate(inStock ? 'in_stock' : 'out_of_stock'),
                           style: TextStyle(
                             fontSize: 12,
-                            color: inStock
-                                ? Colors.green.shade700
-                                : Colors.red.shade700,
+                            color: inStock ? Colors.green : Colors.red,
                           ),
                         ),
                       ),
@@ -478,9 +550,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       onPressed: _showMarketSellers,
                       icon: const Icon(Icons.store_mall_directory),
                       label: const Text('Pazardaki Satıcılar'),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
                     ),
                   ),
                   if (_otherSellers.isNotEmpty) ...[
@@ -493,8 +562,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         label: Text(
                             '${_otherSellers.length} Satıcıda Daha Var - Fiyatları Gör'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.orange.shade600,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          backgroundColor:
+                              Theme.of(context).colorScheme.secondary,
                         ),
                       ),
                     ),
@@ -514,13 +583,23 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         padding: const EdgeInsets.all(32.0),
                         child: Column(
                           children: [
-                            Icon(Icons.chat_bubble_outline,
-                                size: 48, color: Colors.grey[300]),
+                            Icon(
+                              Icons.chat_bubble_outline,
+                              size: 48,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.3),
+                            ),
                             const SizedBox(height: 16),
                             Text(
                               langVM.translate('no_reviews_for_product'),
                               textAlign: TextAlign.center,
-                              style: TextStyle(color: Colors.grey[600]),
+                              style: TextStyle(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.6)),
                             ),
                           ],
                         ),
@@ -535,6 +614,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         final review = _reviews[index];
                         return Card(
                           margin: const EdgeInsets.only(bottom: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            side: BorderSide(
+                                color: Colors.white.withOpacity(0.3)),
+                          ),
                           child: Padding(
                             padding: const EdgeInsets.all(12.0),
                             child: Column(
@@ -572,7 +656,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                           .split(' ')[0]
                                       : '',
                                   style: TextStyle(
-                                      fontSize: 10, color: Colors.grey[400]),
+                                      fontSize: 10,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface
+                                          .withValues(alpha: 0.5)),
                                 ),
                               ],
                             ),

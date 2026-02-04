@@ -56,6 +56,23 @@ class _SellerLoginScreenState extends State<SellerLoginScreen> {
     }
   }
 
+  InputDecoration _inputDecoration(String label, IconData icon) {
+    return InputDecoration(
+      labelText: label,
+      prefixIcon: Icon(icon),
+      border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(30),
+          borderSide: BorderSide(color: Colors.white.withOpacity(0.3))),
+      enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(30),
+          borderSide: BorderSide(color: Colors.white.withOpacity(0.3))),
+      focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(30),
+          borderSide:
+              BorderSide(color: Colors.white.withOpacity(0.5), width: 2)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final langVM = Provider.of<LanguageViewModel>(context);
@@ -77,12 +94,17 @@ class _SellerLoginScreenState extends State<SellerLoginScreen> {
                       width: MediaQuery.of(context).size.width * 0.35,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: Colors.orange.shade50,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .secondary
+                            .withOpacity(0.1),
+                        border:
+                            Border.all(color: Colors.white.withOpacity(0.3)),
                       ),
                       child: Icon(
                         Icons.store_outlined,
                         size: 64,
-                        color: Colors.orange.shade700,
+                        color: Theme.of(context).colorScheme.secondary,
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -104,13 +126,9 @@ class _SellerLoginScreenState extends State<SellerLoginScreen> {
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
-                      decoration: InputDecoration(
-                        labelText: langVM.translate('email_label'),
-                        prefixIcon: const Icon(Icons.email_outlined),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
+                      decoration: _inputDecoration(
+                          langVM.translate('email_label'),
+                          Icons.email_outlined),
                       validator: (v) =>
                           v!.isEmpty ? langVM.translate('email_error') : null,
                     ),
@@ -118,18 +136,16 @@ class _SellerLoginScreenState extends State<SellerLoginScreen> {
                     TextFormField(
                       controller: _passwordController,
                       obscureText: _obscurePassword,
-                      decoration: InputDecoration(
-                        labelText: langVM.translate('password_label'),
-                        prefixIcon: const Icon(Icons.lock_outline),
+                      decoration: _inputDecoration(
+                              langVM.translate('password_label'),
+                              Icons.lock_outline)
+                          .copyWith(
                         suffixIcon: IconButton(
                           icon: Icon(_obscurePassword
                               ? Icons.visibility
                               : Icons.visibility_off),
                           onPressed: () => setState(
                               () => _obscurePassword = !_obscurePassword),
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
                       validator: (v) => v!.isEmpty
@@ -140,7 +156,7 @@ class _SellerLoginScreenState extends State<SellerLoginScreen> {
                       children: [
                         Checkbox(
                           value: _rememberMe,
-                          activeColor: Colors.orange.shade700,
+                          activeColor: Theme.of(context).colorScheme.secondary,
                           onChanged: (val) {
                             setState(() {
                               _rememberMe = val ?? true;
@@ -154,11 +170,14 @@ class _SellerLoginScreenState extends State<SellerLoginScreen> {
                     ElevatedButton(
                       onPressed: _isLoading ? null : _login,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange.shade700,
+                        backgroundColor:
+                            Theme.of(context).colorScheme.secondary,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(48),
+                          borderRadius: BorderRadius.circular(30),
+                          side:
+                              BorderSide(color: Colors.white.withOpacity(0.3)),
                         ),
                       ),
                       child: _isLoading
@@ -193,7 +212,7 @@ class _SellerLoginScreenState extends State<SellerLoginScreen> {
                           child: Text(
                             "Satıcı Olun",
                             style: TextStyle(
-                              color: Colors.orange.shade800,
+                              color: Theme.of(context).colorScheme.secondary,
                               fontWeight: FontWeight.bold,
                             ),
                           ),

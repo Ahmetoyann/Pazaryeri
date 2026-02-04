@@ -65,135 +65,126 @@ class _LoginScreenState extends State<LoginScreen> {
     final langVM = Provider.of<LanguageViewModel>(context);
 
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Theme.of(context).scaffoldBackgroundColor,
-              Theme.of(context).colorScheme.primary.withOpacity(0.1),
-            ],
-          ),
-        ),
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Center(
-                  child: Container(
-                    height: MediaQuery.of(context).size.width * 0.35,
-                    width: MediaQuery.of(context).size.width * 0.35,
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Theme.of(context).cardColor,
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  height: MediaQuery.of(context).size.width * 0.35,
+                  width: MediaQuery.of(context).size.width * 0.35,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Theme.of(context).cardColor,
+                    border: Border.all(color: Colors.white.withOpacity(0.3)),
+                  ),
+                  child: Image.asset('assets/images/copilot_ikon.png'),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                langVM.translate('welcome_title'),
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
                     ),
-                    child: Image.asset('assets/images/copilot_ikon.png'),
+              ),
+              const SizedBox(height: 32),
+              if (_errorMessage != null) ...[
+                StatusMessageWidget(
+                  message: _errorMessage!,
+                  type: StatusType.error,
+                  onClose: () => setState(() => _errorMessage = null),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16.0),
+                  child: TextButton.icon(
+                    onPressed: _loginWithGoogle,
+                    icon: const Icon(Icons.refresh),
+                    label: Text(langVM.translate('retry')),
+                    style: TextButton.styleFrom(foregroundColor: Colors.red),
                   ),
                 ),
-                const SizedBox(height: 16),
-                Text(
-                  langVM.translate('welcome_title'),
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
+              ],
+              ElevatedButton.icon(
+                onPressed:
+                    (_isLoading || _isGuestLoading) ? () {} : _loginWithGoogle,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: Colors.black87,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    side: BorderSide(color: Colors.white.withOpacity(0.3)),
+                  ),
+                ),
+                icon: _isLoading
+                    ? const SizedBox(
+                        height: 24,
+                        width: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: Colors.black87,
+                        ),
+                      )
+                    : Image.asset(
+                        'assets/images/google_logo.svg.png',
+                        height: 24,
                       ),
-                ),
-                const SizedBox(height: 32),
-                if (_errorMessage != null) ...[
-                  StatusMessageWidget(
-                    message: _errorMessage!,
-                    type: StatusType.error,
-                    onClose: () => setState(() => _errorMessage = null),
+                label: Text(
+                  langVM.translate('google_login'),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
                   ),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 16.0),
-                    child: TextButton.icon(
-                      onPressed: _loginWithGoogle,
-                      icon: const Icon(Icons.refresh),
-                      label: Text(langVM.translate('retry')),
-                      style: TextButton.styleFrom(foregroundColor: Colors.red),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Container(
+                child: ElevatedButton(
+                  onPressed:
+                      (_isLoading || _isGuestLoading) ? () {} : _loginAsGuest,
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                      side: BorderSide(color: Colors.white.withOpacity(0.3)),
                     ),
                   ),
-                ],
-                ElevatedButton.icon(
-                  onPressed: (_isLoading || _isGuestLoading)
-                      ? () {}
-                      : _loginWithGoogle,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.black87,
-                    elevation: 3,
-                    shadowColor: Colors.black12,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: const StadiumBorder(),
-                  ),
-                  icon: _isLoading
+                  child: _isGuestLoading
                       ? const SizedBox(
                           height: 24,
                           width: 24,
                           child: CircularProgressIndicator(
                             strokeWidth: 2.5,
-                            color: Colors.black87,
+                            color: Colors.white,
                           ),
                         )
-                      : Image.asset(
-                          'assets/images/google_logo.svg.png',
-                          height: 24,
-                        ),
-                  label: Text(
-                    langVM.translate('google_login'),
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Container(
-                  child: ElevatedButton(
-                    onPressed:
-                        (_isLoading || _isGuestLoading) ? () {} : _loginAsGuest,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: const StadiumBorder(),
-                    ),
-                    child: _isGuestLoading
-                        ? const SizedBox(
-                            height: 24,
-                            width: 24,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.5,
+                      : Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              langVM.translate('continue_guest'),
+                              style: const TextStyle(
+                                fontSize: 16,
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            const Icon(
+                              Icons.arrow_forward_rounded,
                               color: Colors.white,
                             ),
-                          )
-                        : Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                langVM.translate('continue_guest'),
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              const Icon(
-                                Icons.arrow_forward_rounded,
-                                color: Colors.white,
-                              ),
-                            ],
-                          ),
-                  ),
+                          ],
+                        ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

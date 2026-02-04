@@ -82,15 +82,6 @@ class _SplashScreenState extends State<SplashScreen>
                 ),
                 child: Image.asset('assets/images/copilot_ikon.png'),
               ),
-              const SizedBox(height: 24),
-              Text(
-                'Pazaryeri',
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.primary,
-                      letterSpacing: 1.2,
-                    ),
-              ),
             ],
           ),
         ),

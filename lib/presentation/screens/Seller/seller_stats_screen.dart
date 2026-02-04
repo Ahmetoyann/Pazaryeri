@@ -29,7 +29,7 @@ class SellerStatsScreen extends StatelessWidget {
 
     return Scaffold(
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -87,7 +87,7 @@ class SellerStatsScreen extends StatelessWidget {
             Text(
               langVM.translate('most_viewed'),
               style: theme.textTheme.titleLarge
-                  ?.copyWith(fontWeight: FontWeight.bold),
+                  ?.copyWith(fontWeight: FontWeight.bold, color: Colors.white),
             ),
             const SizedBox(height: 16),
 
@@ -99,6 +99,7 @@ class SellerStatsScreen extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: theme.cardColor,
                   borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.white.withOpacity(0.3)),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.05),
@@ -115,19 +116,20 @@ class SellerStatsScreen extends StatelessWidget {
                     barTouchData: BarTouchData(
                       enabled: true,
                       touchTooltipData: BarTouchTooltipData(
-                        getTooltipColor: (group) => Colors.blueGrey,
+                        getTooltipColor: (group) =>
+                            theme.colorScheme.inverseSurface,
                         getTooltipItem: (group, groupIndex, rod, rodIndex) {
                           return BarTooltipItem(
                             '${chartData[group.x.toInt()].name}\n',
-                            const TextStyle(
-                              color: Colors.white,
+                            TextStyle(
+                              color: theme.colorScheme.onInverseSurface,
                               fontWeight: FontWeight.bold,
                             ),
                             children: <TextSpan>[
                               TextSpan(
                                 text: (rod.toY - 1).toInt().toString(),
-                                style: const TextStyle(
-                                  color: Colors.yellow,
+                                style: TextStyle(
+                                  color: theme.colorScheme.inversePrimary,
                                   fontSize: 16,
                                   fontWeight: FontWeight.w500,
                                 ),
@@ -145,20 +147,31 @@ class SellerStatsScreen extends StatelessWidget {
                           getTitlesWidget: (double value, TitleMeta meta) {
                             if (value.toInt() >= chartData.length)
                               return const SizedBox();
-                            // Ürün isminin ilk 3 harfini göster
-                            final name = chartData[value.toInt()].name;
+                            // Ürün isminin ilk 4 harfini ve görüntülenme sayısını göster
+                            final product = chartData[value.toInt()];
+                            final name = product.name;
                             return Padding(
                               padding: const EdgeInsets.only(top: 8.0),
-                              child: Text(
-                                name.length > 4
-                                    ? '${name.substring(0, 4)}..'
-                                    : name,
-                                style: const TextStyle(
-                                    fontSize: 10, fontWeight: FontWeight.bold),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    name.length > 4
+                                        ? '${name.substring(0, 4)}..'
+                                        : name,
+                                    style: const TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold),
+                                  ),
+                                  Text(
+                                    product.viewCount.toString(),
+                                    style: const TextStyle(fontSize: 10),
+                                  ),
+                                ],
                               ),
                             );
                           },
-                          reservedSize: 30,
+                          reservedSize: 50,
                         ),
                       ),
                       leftTitles: const AxisTitles(
@@ -177,10 +190,17 @@ class SellerStatsScreen extends StatelessWidget {
                           BarChartRodData(
                             toY: entry.value.viewCount.toDouble() +
                                 0.1, // 0 ise bile çok az görünsün
-                            color: theme.colorScheme.primary,
+                            gradient: LinearGradient(
+                              colors: [
+                                theme.colorScheme.primary.withOpacity(0.5),
+                                theme.colorScheme.primary,
+                              ],
+                              begin: Alignment.bottomCenter,
+                              end: Alignment.topCenter,
+                            ),
                             width: 20,
                             borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(6)),
+                                top: Radius.circular(12)),
                           ),
                         ],
                       );
@@ -193,7 +213,8 @@ class SellerStatsScreen extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.all(32.0),
                   child: Text(langVM.translate('no_stats_data'),
-                      style: const TextStyle(color: Colors.grey)),
+                      style: TextStyle(
+                          color: theme.colorScheme.onSurface.withOpacity(0.6))),
                 ),
               ),
           ],
@@ -212,7 +233,7 @@ class SellerStatsScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: color.withOpacity(0.1)),
+        border: Border.all(color: Colors.white.withOpacity(0.3)),
         boxShadow: [
           BoxShadow(
               color: color.withOpacity(0.05),
@@ -236,7 +257,13 @@ class SellerStatsScreen extends StatelessWidget {
               style:
                   const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
           const SizedBox(height: 4),
-          Text(title, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+          Text(title,
+              style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withOpacity(0.6))),
         ],
       ),
     );

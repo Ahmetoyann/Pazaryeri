@@ -6,6 +6,7 @@ import '../../viewmodels/seller_viewmodel.dart';
 import '../../../data/models/market.dart';
 import '../../widgets/status_message_widget.dart';
 import '../../widgets/success_dialog.dart';
+import '../../widgets/custom_app_bar.dart';
 
 class SellerRegisterScreen extends StatefulWidget {
   const SellerRegisterScreen({super.key});
@@ -89,7 +90,7 @@ class _SellerRegisterScreenState extends State<SellerRegisterScreen> {
 
       if (mounted) {
         // Modern başarı mesajı
-        await showSuccessDialog(
+        await DialogService.showSuccess(
           context,
           message:
               'Satıcı kaydınız başarıyla oluşturuldu!\nGiriş yapabilirsiniz.',
@@ -133,15 +134,11 @@ class _SellerRegisterScreenState extends State<SellerRegisterScreen> {
     final sellerVM = Provider.of<SellerViewModel>(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Satıcı Kaydı'),
-        backgroundColor: Colors.orange.shade50,
-        foregroundColor: Colors.orange.shade900,
-        elevation: 0,
-      ),
+      extendBodyBehindAppBar: true,
+      appBar: const CustomAppBar(title: Text('Satıcı Kaydı')),
       body: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
+          padding: const EdgeInsets.fromLTRB(24, 110, 24, 24),
           child: Form(
             key: _formKey,
             child: Column(
@@ -152,12 +149,16 @@ class _SellerRegisterScreenState extends State<SellerRegisterScreen> {
                   width: 80,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.orange.shade50,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .secondary
+                        .withOpacity(0.1),
+                    border: Border.all(color: Colors.white.withOpacity(0.3)),
                   ),
                   child: Icon(
                     Icons.person_add_alt_1,
                     size: 40,
-                    color: Colors.orange.shade700,
+                    color: Theme.of(context).colorScheme.secondary,
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -175,7 +176,8 @@ class _SellerRegisterScreenState extends State<SellerRegisterScreen> {
                     Expanded(
                       child: TextFormField(
                         controller: _firstNameController,
-                        decoration: _inputDecoration('İsim', Icons.person),
+                        decoration:
+                            _inputDecoration(context, 'İsim', Icons.person),
                         validator: (v) => v!.isEmpty ? 'Gerekli' : null,
                       ),
                     ),
@@ -183,8 +185,8 @@ class _SellerRegisterScreenState extends State<SellerRegisterScreen> {
                     Expanded(
                       child: TextFormField(
                         controller: _lastNameController,
-                        decoration:
-                            _inputDecoration('Soyisim', Icons.person_outline),
+                        decoration: _inputDecoration(
+                            context, 'Soyisim', Icons.person_outline),
                         validator: (v) => v!.isEmpty ? 'Gerekli' : null,
                       ),
                     ),
@@ -194,14 +196,15 @@ class _SellerRegisterScreenState extends State<SellerRegisterScreen> {
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
-                  decoration: _inputDecoration('E-posta', Icons.email_outlined),
+                  decoration: _inputDecoration(
+                      context, 'E-posta', Icons.email_outlined),
                   validator: (v) => v!.isEmpty ? 'E-posta gerekli' : null,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
-                  decoration: _inputDecoration('Telefon', Icons.phone),
+                  decoration: _inputDecoration(context, 'Telefon', Icons.phone),
                   validator: (v) => v!.isEmpty ? 'Telefon gerekli' : null,
                 ),
                 const SizedBox(height: 16),
@@ -209,8 +212,9 @@ class _SellerRegisterScreenState extends State<SellerRegisterScreen> {
                 TextFormField(
                   controller: _marketController,
                   readOnly: true,
-                  decoration: _inputDecoration('Pazar Yeri Seçin', Icons.store)
-                      .copyWith(
+                  decoration:
+                      _inputDecoration(context, 'Pazar Yeri Seçin', Icons.store)
+                          .copyWith(
                     suffixIcon: _isLoadingMarkets
                         ? const Padding(
                             padding: EdgeInsets.all(12.0),
@@ -227,7 +231,8 @@ class _SellerRegisterScreenState extends State<SellerRegisterScreen> {
                   controller: _passwordController,
                   obscureText: _obscurePassword,
                   decoration:
-                      _inputDecoration('Şifre', Icons.lock_outline).copyWith(
+                      _inputDecoration(context, 'Şifre', Icons.lock_outline)
+                          .copyWith(
                     suffixIcon: IconButton(
                       icon: Icon(_obscurePassword
                           ? Icons.visibility
@@ -243,10 +248,12 @@ class _SellerRegisterScreenState extends State<SellerRegisterScreen> {
                 ElevatedButton(
                   onPressed: _isLoading ? null : _register,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange.shade700,
-                    foregroundColor: Colors.white,
+                    backgroundColor: Theme.of(context).colorScheme.secondary,
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: const StadiumBorder(),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                      side: BorderSide(color: Colors.white.withOpacity(0.3)),
+                    ),
                   ),
                   child: _isLoading
                       ? const SizedBox(
@@ -269,19 +276,21 @@ class _SellerRegisterScreenState extends State<SellerRegisterScreen> {
     );
   }
 
-  InputDecoration _inputDecoration(String label, IconData icon) {
+  InputDecoration _inputDecoration(
+      BuildContext context, String label, IconData icon) {
     return InputDecoration(
       labelText: label,
-      prefixIcon: Icon(icon, color: Colors.orange.shade700),
+      prefixIcon: Icon(icon, color: Theme.of(context).colorScheme.secondary),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+          borderRadius: BorderRadius.circular(30),
+          borderSide: BorderSide(color: Colors.white.withOpacity(0.3))),
+      enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(30),
+          borderSide: BorderSide(color: Colors.white.withOpacity(0.3))),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.orange.shade700, width: 2),
-      ),
-      filled: true,
-      fillColor: Colors.white,
+          borderRadius: BorderRadius.circular(30),
+          borderSide:
+              BorderSide(color: Colors.white.withOpacity(0.5), width: 2)),
     );
   }
 }
@@ -314,9 +323,9 @@ class _MarketSelectionSheetState extends State<_MarketSelectionSheet> {
       maxChildSize: 0.95,
       builder: (context, scrollController) {
         return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           ),
           child: Column(
             children: [
@@ -335,10 +344,6 @@ class _MarketSelectionSheetState extends State<_MarketSelectionSheet> {
                   decoration: InputDecoration(
                     hintText: 'Pazar Ara...',
                     prefixIcon: const Icon(Icons.search),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    contentPadding: EdgeInsets.zero,
                   ),
                   onChanged: (val) => setState(() => _searchQuery = val),
                 ),

@@ -20,6 +20,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late TextEditingController _phoneController;
   late TextEditingController _emailController;
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _dateController = TextEditingController();
   DateTime? _selectedDate;
   bool _isLoading = false;
 
@@ -32,6 +33,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _phoneController = TextEditingController(text: user?.phoneNumber ?? '');
     _emailController = TextEditingController(text: user?.email ?? '');
     _selectedDate = user?.dateOfBirth;
+    if (_selectedDate != null) {
+      _dateController.text =
+          '${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}';
+    }
   }
 
   @override
@@ -41,6 +46,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _phoneController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _dateController.dispose();
     super.dispose();
   }
 
@@ -67,7 +73,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 : null,
           );
       if (mounted) {
-        await showSuccessDialog(
+        await DialogService.showSuccess(
           context,
           message: 'Bilgiler güncellendi!',
           onDismiss: () {
@@ -77,7 +83,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       }
     } catch (e) {
       if (mounted) {
-        await showErrorDialog(context, message: 'Hata: $e');
+        await DialogService.showError(context, message: 'Hata: $e');
       }
     } finally {
       if (mounted) {
@@ -95,7 +101,28 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
     if (picked != null && picked != _selectedDate) {
       setState(() => _selectedDate = picked);
+      _dateController.text = '${picked.day}/${picked.month}/${picked.year}';
     }
+  }
+
+  InputDecoration _buildInputDecoration(String label, IconData icon,
+      {String? helperText}) {
+    return InputDecoration(
+      labelText: label,
+      helperText: helperText,
+      helperStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
+      prefixIcon: Icon(icon, color: Theme.of(context).iconTheme.color),
+      border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(30),
+          borderSide: BorderSide(color: Colors.white.withOpacity(0.3))),
+      enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(30),
+          borderSide: BorderSide(color: Colors.white.withOpacity(0.3))),
+      focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(30),
+          borderSide:
+              BorderSide(color: Colors.white.withOpacity(0.5), width: 2)),
+    );
   }
 
   @override
@@ -110,110 +137,59 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           key: _formKey,
           child: Column(
             children: [
-              _buildNormalContainer(
-                context,
-                TextFormField(
-                  controller: _firstNameController,
-                  decoration: const InputDecoration(
-                    labelText: 'İsim',
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    filled: false,
-                    prefixIcon: Icon(Icons.person),
-                  ),
-                  validator: (v) => v!.isEmpty ? 'İsim boş olamaz' : null,
-                ),
+              TextFormField(
+                controller: _firstNameController,
+                decoration: _buildInputDecoration('İsim', Icons.person),
+                validator: (v) => v!.isEmpty ? 'İsim boş olamaz' : null,
               ),
-              _buildNormalContainer(
-                context,
-                TextFormField(
-                  controller: _lastNameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Soyisim',
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    filled: false,
-                    prefixIcon: Icon(Icons.person_outline),
-                  ),
-                  validator: (v) => v!.isEmpty ? 'Soyisim boş olamaz' : null,
-                ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _lastNameController,
+                decoration:
+                    _buildInputDecoration('Soyisim', Icons.person_outline),
+                validator: (v) => v!.isEmpty ? 'Soyisim boş olamaz' : null,
               ),
-              _buildNormalContainer(
-                context,
-                TextFormField(
-                  controller: _phoneController,
-                  decoration: const InputDecoration(
-                    labelText: 'Telefon Numarası',
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    filled: false,
-                    prefixIcon: Icon(Icons.phone),
-                  ),
-                  keyboardType: TextInputType.phone,
-                  inputFormatters: [_PhoneInputFormatter()],
-                  validator: (v) =>
-                      v!.isEmpty ? 'Telefon numarası boş olamaz' : null,
-                ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _phoneController,
+                decoration:
+                    _buildInputDecoration('Telefon Numarası', Icons.phone),
+                keyboardType: TextInputType.phone,
+                inputFormatters: [_PhoneInputFormatter()],
+                validator: (v) =>
+                    v!.isEmpty ? 'Telefon numarası boş olamaz' : null,
               ),
-              _buildNormalContainer(
-                context,
-                TextFormField(
-                  controller: _emailController,
-                  decoration: const InputDecoration(
-                    labelText: 'E-posta',
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    filled: false,
-                    prefixIcon: Icon(Icons.email),
-                  ),
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (v) => v!.isEmpty ? 'E-posta boş olamaz' : null,
-                ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _emailController,
+                decoration: _buildInputDecoration('E-posta', Icons.email),
+                keyboardType: TextInputType.emailAddress,
+                validator: (v) => v!.isEmpty ? 'E-posta boş olamaz' : null,
               ),
-              _buildNormalContainer(
-                context,
-                ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                  title: Text(
-                    _selectedDate == null
-                        ? 'Doğum Tarihi Seçin'
-                        : 'Doğum Tarihi: ${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}',
-                  ),
-                  leading: const Icon(Icons.calendar_today),
-                  onTap: () => _selectDate(context),
-                ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _dateController,
+                readOnly: true,
+                onTap: () => _selectDate(context),
+                decoration:
+                    _buildInputDecoration('Doğum Tarihi', Icons.calendar_today),
+                validator: (v) =>
+                    _selectedDate == null ? 'Lütfen doğum tarihi seçin.' : null,
               ),
-              _buildNormalContainer(
-                context,
-                TextFormField(
-                  controller: _passwordController,
-                  decoration: const InputDecoration(
-                    labelText: 'Yeni Şifre (İsteğe Bağlı)',
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    filled: false,
-                    prefixIcon: Icon(Icons.lock),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _passwordController,
+                decoration: _buildInputDecoration(
+                    'Yeni Şifre (İsteğe Bağlı)', Icons.lock,
                     helperText:
-                        'Şifrenizi değiştirmek istemiyorsanız boş bırakın.',
-                  ),
-                  obscureText: true,
-                ),
+                        'Şifrenizi değiştirmek istemiyorsanız boş bırakın.'),
+                obscureText: true,
               ),
               const SizedBox(height: 24),
-              Container(
+              SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _saveProfile,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: const StadiumBorder(),
-                  ),
                   child: _isLoading
                       ? const SizedBox(
                           height: 24,
@@ -225,11 +201,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         )
                       : const Text(
                           'Kaydet',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
                         ),
                 ),
               ),
@@ -237,14 +208,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildNormalContainer(BuildContext context, Widget child) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: child,
     );
   }
 }

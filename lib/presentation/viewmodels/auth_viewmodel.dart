@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart' hide User;
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../data/models/market.dart';
 import '../viewmodels/notification_service.dart';
 import 'user_model.dart'; // Bu dosyanın projenizde olduğundan emin olun
 import 'auth_service.dart';
@@ -20,6 +22,7 @@ class AuthViewModel extends ChangeNotifier {
   bool _isSeller = false;
   String? _sellerMarketId;
   String? _verificationId;
+  StreamSubscription? _notificationSubscription;
 
   // Constructor'da otomatik giriş kontrolü yap
   AuthViewModel() {
@@ -47,6 +50,9 @@ class AuthViewModel extends ChangeNotifier {
 
       // Favori pazarları dinlemeye başla
       _startListeningToFavorites();
+
+      // Bildirimleri dinle (Satıcı ve Müşteri)
+      _startNotificationListener();
     }
   }
 
@@ -71,6 +77,7 @@ class AuthViewModel extends ChangeNotifier {
       if (_sellerMarketId != null && _sellerMarketId!.isEmpty) {
         _sellerMarketId = null;
       }
+
       notifyListeners();
     }
   }
@@ -138,6 +145,7 @@ class AuthViewModel extends ChangeNotifier {
         await AuthService.instance.setIsSeller(true);
         _isSeller = true;
         _isGuest = false;
+        _startNotificationListener();
         notifyListeners();
         return true;
       }
@@ -207,6 +215,7 @@ class AuthViewModel extends ChangeNotifier {
         await AuthService.instance.setIsSeller(false);
         _isSeller = false;
         _isGuest = false;
+        _startNotificationListener();
         notifyListeners();
         return true;
       }
@@ -227,6 +236,8 @@ class AuthViewModel extends ChangeNotifier {
     _isSeller = false;
     _isRemembered = false;
     _sellerMarketId = null;
+    _notificationSubscription?.cancel();
+    _notificationSubscription = null;
     notifyListeners();
   }
 
@@ -239,6 +250,8 @@ class AuthViewModel extends ChangeNotifier {
     _isGuest = false;
     _isRemembered = false;
     _sellerMarketId = null;
+    _notificationSubscription?.cancel();
+    _notificationSubscription = null;
     notifyListeners();
   }
 
@@ -451,8 +464,109 @@ class AuthViewModel extends ChangeNotifier {
 
   // --- BİLDİRİM DİNLEYİCİSİ ---
 
-  /// Favori pazarlara yeni ürün eklendiğinde bildirim gönderir.
+  /// Favori pazarların açık olup olmadığını kontrol eder ve bildirim gönderir.
+  /// Günde sadece 1 kez çalışır.
   Future<void> _startListeningToFavorites() async {
     // Firestore kaldırıldığı için bildirim dinleme iptal edildi.
+  }
+
+  /// Kullanıcıya gelen bildirimleri dinler (Satıcı veya Müşteri)
+  /// Müşteriler için: Sadece satıcı yanıtları Firestore'a yazıldığı için buradan gelir.
+  void _startNotificationListener() {
+    if (_currentUser == null) return;
+
+    _notificationSubscription?.cancel();
+
+    // Sadece son 1 dakikada gelenleri veya yeni eklenenleri dinlemek için
+    // Basitçe stream başlatıyoruz, 'added' eventlerini yakalıyoruz.
+    _notificationSubscription = FirebaseFirestore.instance
+        .collection('users')
+        .doc(_currentUser!.id)
+        .collection('notifications')
+        .orderBy('timestamp', descending: true)
+        .limit(1)
+        .snapshots()
+        .listen((snapshot) {
+      for (var change in snapshot.docChanges) {
+        if (change.type == DocumentChangeType.added) {
+          final data = change.doc.data();
+          if (data != null && data['read'] == false) {
+            // Bildirimi göster
+            NotificationService.instance.showNotification(
+              id: DateTime.now().millisecondsSinceEpoch % 10000,
+              title: data['title'] ?? 'Bildirim',
+              body: data['body'] ?? '',
+            );
+
+            // Okundu olarak işaretle ki tekrar gelmesin
+            change.doc.reference.update({'read': true});
+          }
+        }
+      }
+    });
+  }
+
+  /// Favori pazarları kontrol et ve bugün açıksa bildirim gönder
+  /// Müşteriler için: Favori pazarın açık olduğu günlerde yerel bildirim gönderir.
+  Future<void> checkFavoritesAndNotify(List<Market> allMarkets) async {
+    if (_currentUser == null) return;
+
+    try {
+      // 1. Kullanıcının favorilerini çek
+      final snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_currentUser!.id)
+          .collection('favorites')
+          .get();
+
+      final favoriteIds = snapshot.docs.map((doc) => doc.id).toSet();
+      if (favoriteIds.isEmpty) return;
+
+      // 2. Tüm pazarlar içinden favorileri bul
+      final favoriteMarkets =
+          allMarkets.where((m) => favoriteIds.contains(m.id)).toList();
+      if (favoriteMarkets.isEmpty) return;
+
+      // 3. Bugün açık olan favorileri bul
+      final today = _getTodayName();
+      final openFavorites =
+          favoriteMarkets.where((m) => m.openDays.contains(today)).toList();
+
+      if (openFavorites.isEmpty) return;
+
+      // 4. Bugün daha önce bildirim gönderildi mi kontrol et
+      final prefs = await SharedPreferences.getInstance();
+      final lastDate = prefs.getString('last_fav_notification_date');
+      final todayStr = DateTime.now().toIso8601String().split('T')[0];
+
+      if (lastDate != todayStr) {
+        // 5. Bildirim gönder
+        final marketNames = openFavorites.map((m) => m.name).join(', ');
+        await NotificationService.instance.showNotification(
+          id: 100,
+          title: 'Favori Pazarlarınız Açık! 🛒',
+          body: 'Bugün açık olan pazarlar: $marketNames',
+          payload: openFavorites.first.id, // Tıklanınca ilk pazara git
+        );
+
+        // 6. Tarihi kaydet (Bugün tekrar gönderme)
+        await prefs.setString('last_fav_notification_date', todayStr);
+      }
+    } catch (e) {
+      debugPrint('Favori bildirim hatası: $e');
+    }
+  }
+
+  String _getTodayName() {
+    final map = {
+      1: 'Pazartesi',
+      2: 'Salı',
+      3: 'Çarşamba',
+      4: 'Perşembe',
+      5: 'Cuma',
+      6: 'Cumartesi',
+      7: 'Pazar',
+    };
+    return map[DateTime.now().weekday]!;
   }
 }

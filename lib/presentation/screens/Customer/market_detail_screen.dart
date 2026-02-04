@@ -233,11 +233,19 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
                         ),
                         decoration: BoxDecoration(
                           color: isOpen
-                              ? Colors.green.withOpacity(0.1)
-                              : Colors.red.withOpacity(0.1),
+                              ? Theme.of(context)
+                                  .colorScheme
+                                  .primary
+                                  .withOpacity(0.1)
+                              : Theme.of(context)
+                                  .colorScheme
+                                  .error
+                                  .withOpacity(0.1),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: isOpen ? Colors.green : Colors.red,
+                            color: isOpen
+                                ? Theme.of(context).colorScheme.primary
+                                : Theme.of(context).colorScheme.error,
                           ),
                         ),
                         child: Row(
@@ -246,7 +254,9 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
                             Icon(
                               isOpen ? Icons.check_circle : Icons.cancel,
                               size: 16,
-                              color: isOpen ? Colors.green : Colors.red,
+                              color: isOpen
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Theme.of(context).colorScheme.error,
                             ),
                             const SizedBox(width: 6),
                             Text(
@@ -254,7 +264,9 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
                                   ? langVM.translate('market_open_status')
                                   : langVM.translate('market_closed_status'),
                               style: TextStyle(
-                                color: isOpen ? Colors.green : Colors.red,
+                                color: isOpen
+                                    ? Theme.of(context).colorScheme.primary
+                                    : Theme.of(context).colorScheme.error,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -271,8 +283,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
                           color: Theme.of(context).cardColor,
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color:
-                                Theme.of(context).dividerColor.withOpacity(0.5),
+                            color: Colors.white.withOpacity(0.3),
                           ),
                           boxShadow: [
                             BoxShadow(
@@ -308,7 +319,10 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
                   Text(
                     widget.market.description,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: Colors.grey.shade700,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withOpacity(0.7),
                         ),
                   ),
                   const SizedBox(height: 24),
@@ -320,8 +334,6 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
                   ),
                   const SizedBox(height: 16),
                   _buildWeeklyCalendar(context),
-                  const SizedBox(height: 24),
-                  _buildProductsSection(context),
                   const SizedBox(height: 32),
                   SizedBox(
                     width: double.infinity,
@@ -338,13 +350,6 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
                       },
                       icon: const Icon(Icons.people),
                       label: Text(langVM.translate('sellers_title')),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        textStyle: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -354,23 +359,6 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
                       onPressed: _openMap,
                       icon: const Icon(Icons.directions),
                       label: Text(langVM.translate('get_directions')),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context).colorScheme.primary,
-                        foregroundColor: Colors.white,
-                        elevation: 6,
-                        shadowColor: Theme.of(context)
-                            .colorScheme
-                            .primary
-                            .withOpacity(0.4),
-                        padding: const EdgeInsets.symmetric(vertical: 18),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16)),
-                        textStyle: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1.1,
-                        ),
-                      ),
                     ),
                   ),
                   const SizedBox(height: 32),
@@ -400,7 +388,10 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
 
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.white.withOpacity(0.3)),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -437,11 +428,21 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
               controller: _commentController,
               decoration: InputDecoration(
                 hintText: langVM.translate('comment_hint'),
-                border: const OutlineInputBorder(),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 12,
-                ),
+                hintStyle: TextStyle(color: Colors.white.withOpacity(0.6)),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide:
+                        BorderSide(color: Colors.white.withOpacity(0.3))),
+                enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide:
+                        BorderSide(color: Colors.white.withOpacity(0.3))),
+                focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                        color: Colors.white.withOpacity(0.5), width: 2)),
+                filled: true,
+                fillColor: Theme.of(context).cardColor,
               ),
               maxLines: 3,
             ),
@@ -581,6 +582,10 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
 
         return Card(
           margin: const EdgeInsets.only(bottom: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: Colors.white.withOpacity(0.3)),
+          ),
           child: Padding(
             padding: const EdgeInsets.all(12.0),
             child: Column(
@@ -623,7 +628,10 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
                         Text(
                           review['date'],
                           style: TextStyle(
-                            color: Colors.grey.shade600,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withOpacity(0.6),
                             fontSize: 12,
                           ),
                         ),
@@ -850,7 +858,10 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
                   style: TextStyle(
                     color: isToday
                         ? Theme.of(context).primaryColor
-                        : Colors.grey.shade600,
+                        : Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withOpacity(0.6),
                     fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
                     fontSize: 12,
                   ),
@@ -860,7 +871,9 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
                   width: 36,
                   height: 36,
                   decoration: BoxDecoration(
-                    color: isOpen ? Colors.green : Colors.grey.shade100,
+                    color: isOpen
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context).cardColor,
                     shape: BoxShape.circle,
                     border: isToday
                         ? Border.all(
@@ -873,7 +886,12 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
                     child: Icon(
                       isOpen ? Icons.check : Icons.circle,
                       size: isOpen ? 20 : 8,
-                      color: isOpen ? Colors.white : Colors.grey.shade300,
+                      color: isOpen
+                          ? Colors.white
+                          : Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withOpacity(0.2),
                     ),
                   ),
                 ),
@@ -881,106 +899,6 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
             );
           }),
         ),
-      ],
-    );
-  }
-
-  Widget _buildProductsSection(BuildContext context) {
-    final langVM = Provider.of<LanguageViewModel>(context);
-    final products = widget.market.products;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(
-              Icons.shopping_basket,
-              color: Theme.of(context).primaryColor,
-              size: 28,
-            ),
-            const SizedBox(width: 16),
-            Text(
-              langVM.translate('products_label'),
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        if (products.isEmpty)
-          Padding(
-            padding: const EdgeInsets.only(left: 44),
-            child: Text(
-              langVM.translate('general_products'),
-              style: TextStyle(
-                color: Colors.grey.shade600,
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-          )
-        else
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 1.0,
-            ),
-            itemCount: products.length,
-            itemBuilder: (context, index) {
-              final product = products[index];
-              return Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.shade200),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.03),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).primaryColor.withOpacity(0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.local_offer,
-                        color: Theme.of(context).primaryColor,
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: Text(
-                        product,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
       ],
     );
   }
@@ -1128,17 +1046,17 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
     String description;
 
     if (occupancyRate <= 0.4) {
-      color = Colors.green;
+      color = Theme.of(context).colorScheme.primary;
       label = 'Tenha';
       icon = Icons.person_outline;
       description = 'Alışveriş için en uygun zaman.';
     } else if (occupancyRate <= 0.7) {
-      color = Colors.orange;
+      color = Theme.of(context).colorScheme.secondary;
       label = 'Normal';
       icon = Icons.people;
       description = 'Pazar yeri hareketli.';
     } else {
-      color = Colors.red;
+      color = Theme.of(context).colorScheme.error;
       label = 'Kalabalık';
       icon = Icons.groups;
       description = 'Pazar yeri oldukça yoğun.';
@@ -1158,8 +1076,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
               offset: const Offset(0, 5),
             ),
           ],
-          border: Border.all(
-              color: Theme.of(context).dividerColor.withOpacity(0.1)),
+          border: Border.all(color: Colors.white.withOpacity(0.3)),
         ),
         child: Column(
           children: [
@@ -1266,15 +1183,6 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: _hasReportedPresence ? null : _reportPresence,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).primaryColor,
-                  disabledBackgroundColor: Colors.green,
-                  disabledForegroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
                 icon: Icon(
                   _hasReportedPresence
                       ? Icons.check_circle

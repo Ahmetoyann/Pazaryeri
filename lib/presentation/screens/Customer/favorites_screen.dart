@@ -70,12 +70,13 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                   padding: const EdgeInsets.only(right: 20),
                   margin: const EdgeInsets.symmetric(vertical: 8),
                   decoration: BoxDecoration(
-                    color: Colors.red,
-                    borderRadius: BorderRadius.circular(20),
+                    color: Theme.of(context).colorScheme.error,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: Colors.white.withOpacity(0.3)),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.delete,
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onError,
                     size: 30,
                   ),
                 ),
@@ -112,8 +113,10 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                       right: 16,
                       child: Container(
                         decoration: BoxDecoration(
-                          color: Colors.red,
+                          color: Theme.of(context).colorScheme.error,
                           shape: BoxShape.circle,
+                          border:
+                              Border.all(color: Colors.white.withOpacity(0.3)),
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withOpacity(0.1),
@@ -122,9 +125,9 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                           ],
                         ),
                         child: IconButton(
-                          icon: const Icon(
+                          icon: Icon(
                             Icons.delete_outline,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onError,
                           ),
                           tooltip: 'Favorilerden Kaldır',
                           onPressed: () {

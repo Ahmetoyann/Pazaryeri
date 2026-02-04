@@ -148,14 +148,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 },
                 decoration: InputDecoration(
                   labelText: langVM.translate('search_placeholder'),
-                  focusedBorder: OutlineInputBorder(
-                    borderSide: BorderSide(
-                      color: Theme.of(context).colorScheme.primary,
-                      width: 2,
-                    ),
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  prefixIcon: const Icon(Icons.search),
+                  prefixIcon: const Icon(Icons.search, color: Colors.white),
                   suffixIcon: _query.isNotEmpty
                       ? IconButton(
                           icon: const Icon(Icons.clear),
@@ -168,13 +161,20 @@ class _SearchScreenState extends State<SearchScreen> {
                         )
                       : null,
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(24),
-                    borderSide: BorderSide.none,
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide:
+                        BorderSide(color: Colors.white.withOpacity(0.3)),
                   ),
-                  filled: true,
-                  fillColor: Theme.of(context).cardColor,
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide:
+                        BorderSide(color: Colors.white.withOpacity(0.3)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: BorderSide(
+                        color: Colors.white.withOpacity(0.5), width: 2),
+                  ),
                 ),
               ),
             ),
@@ -189,12 +189,26 @@ class _SearchScreenState extends State<SearchScreen> {
                     label: Text(langVM.translate('filter_open_today')),
                     selected: _filterOpenToday,
                     onSelected: (val) => setState(() => _filterOpenToday = val),
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    surfaceTintColor: Colors.transparent,
+                    shape: const StadiumBorder(),
+                    side: BorderSide(color: Colors.white.withOpacity(0.3)),
+                    labelStyle: const TextStyle(color: Colors.white),
+                    selectedColor: Theme.of(context).colorScheme.primary,
+                    checkmarkColor: Colors.white,
                   ),
                   const SizedBox(width: 8),
                   FilterChip(
                     label: Text(langVM.translate('filter_weekend')),
                     selected: _filterWeekend,
                     onSelected: (val) => setState(() => _filterWeekend = val),
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    surfaceTintColor: Colors.transparent,
+                    shape: const StadiumBorder(),
+                    side: BorderSide(color: Colors.white.withOpacity(0.3)),
+                    labelStyle: const TextStyle(color: Colors.white),
+                    selectedColor: Theme.of(context).colorScheme.primary,
+                    checkmarkColor: Colors.white,
                   ),
                 ],
               ),
@@ -208,7 +222,11 @@ class _SearchScreenState extends State<SearchScreen> {
                       child: _recentSearches.isEmpty
                           ? Text(
                               langVM.translate('search_initial_message'),
-                              style: const TextStyle(color: Colors.grey),
+                              style: TextStyle(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.6)),
                             )
                           : _buildRecentSearchesList(langVM),
                     )
@@ -223,30 +241,29 @@ class _SearchScreenState extends State<SearchScreen> {
                             final market = results[index];
                             final tag = '${market.id}_search';
 
-                            // Doluluk oranı simülasyonu (Gerçek veride API'den gelmeli)
-                            final occupancyLevel = market.id.hashCode % 3;
+                            // Gerçek doluluk oranı kullanımı
+                            final occupancy = market.occupancy;
                             Color statusColor;
+                            Color contentColor = Colors.white;
                             IconData statusIcon;
-                            String statusText;
 
-                            switch (occupancyLevel) {
-                              case 0:
-                                statusColor = Colors.green;
-                                statusIcon = Icons.person_outline;
-                                statusText = '%25'; // Tenha
-                                break;
-                              case 1:
-                                statusColor = Colors.orange;
-                                statusIcon = Icons.people_outline;
-                                statusText = '%60'; // Normal
-                                break;
-                              case 2:
-                              default:
-                                statusColor = Colors.red;
-                                statusIcon = Icons.groups;
-                                statusText = '%95'; // Kalabalık
-                                break;
+                            if (occupancy <= 0.25) {
+                              statusColor = Colors.white;
+                              contentColor = Colors.black;
+                              statusIcon = Icons.person_outline;
+                            } else if (occupancy <= 0.50) {
+                              statusColor = Colors.yellow;
+                              contentColor = Colors.black;
+                              statusIcon = Icons.person;
+                            } else if (occupancy <= 0.75) {
+                              statusColor = Colors.orange;
+                              statusIcon = Icons.people_outline;
+                            } else {
+                              statusColor = Colors.red;
+                              statusIcon = Icons.groups;
                             }
+
+                            final statusText = '%${(occupancy * 100).toInt()}';
 
                             return Stack(
                               children: [
@@ -272,11 +289,12 @@ class _SearchScreenState extends State<SearchScreen> {
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 8, vertical: 4),
                                     decoration: BoxDecoration(
-                                      color: statusColor.withOpacity(0.9),
+                                      color: statusColor.withValues(alpha: 0.9),
                                       borderRadius: BorderRadius.circular(12),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: Colors.black.withOpacity(0.2),
+                                          color: Colors.black
+                                              .withValues(alpha: 0.2),
                                           blurRadius: 4,
                                           offset: const Offset(0, 2),
                                         ),
@@ -286,12 +304,12 @@ class _SearchScreenState extends State<SearchScreen> {
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         Icon(statusIcon,
-                                            size: 14, color: Colors.white),
+                                            size: 14, color: contentColor),
                                         const SizedBox(width: 4),
                                         Text(
                                           statusText,
-                                          style: const TextStyle(
-                                            color: Colors.white,
+                                          style: TextStyle(
+                                            color: contentColor,
                                             fontSize: 11,
                                             fontWeight: FontWeight.bold,
                                           ),

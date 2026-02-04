@@ -410,6 +410,11 @@ class AuthService {
           'dateOfBirth': data['dateOfBirth']?.toString() ?? '',
           'profilePicture': data['profilePicture']?.toString() ?? '',
           'sellerMarketId': data['sellerMarketId']?.toString() ?? '',
+          'stallName': data['stallName']?.toString() ?? '',
+          'stallDescription': data['stallDescription']?.toString() ?? '',
+          'stallHours': data['stallHours']?.toString() ?? '',
+          'instagramLink': data['instagramLink']?.toString() ?? '',
+          'facebookLink': data['facebookLink']?.toString() ?? '',
         };
       }
     } catch (e) {
@@ -517,12 +522,42 @@ class AuthService {
   // --- FAVORİLER İŞLEMLERİ ---
 
   Future<List<String>> getFavorites() async {
+    final user = FirebaseAuth.instance.currentUser;
     final prefs = await SharedPreferences.getInstance();
+
+    // Kullanıcı giriş yapmışsa Firestore'dan çek
+    if (user != null) {
+      try {
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+
+        if (doc.exists) {
+          final data = doc.data();
+          if (data != null && data['favoriteMarkets'] != null) {
+            final List<dynamic> favs = data['favoriteMarkets'];
+            final List<String> stringFavs =
+                favs.map((e) => e.toString()).toList();
+
+            // Yerel veriyi güncelle (Senkronizasyon için)
+            await prefs.setStringList(_keyFavorites, stringFavs);
+            return stringFavs;
+          }
+        }
+      } catch (e) {
+        debugPrint('Favori pazarlar çekilemedi: $e');
+      }
+    }
+
     return prefs.getStringList(_keyFavorites) ?? [];
   }
 
   Future<void> toggleFavorite(String marketId) async {
+    final user = FirebaseAuth.instance.currentUser;
     final prefs = await SharedPreferences.getInstance();
+
+    // 1. Yerel Güncelleme (Hız için)
     List<String> favorites = prefs.getStringList(_keyFavorites) ?? [];
     if (favorites.contains(marketId)) {
       favorites.remove(marketId);
@@ -530,6 +565,37 @@ class AuthService {
       favorites.add(marketId);
     }
     await prefs.setStringList(_keyFavorites, favorites);
+
+    // 2. Firestore Güncelleme (Kalıcılık için)
+    if (user != null) {
+      try {
+        final userRef =
+            FirebaseFirestore.instance.collection('users').doc(user.uid);
+
+        if (favorites.contains(marketId)) {
+          // Favorilere ekle
+          await userRef.update({
+            'favoriteMarkets': FieldValue.arrayUnion([marketId])
+          });
+        } else {
+          // Favorilerden çıkar
+          await userRef.update({
+            'favoriteMarkets': FieldValue.arrayRemove([marketId])
+          });
+        }
+      } catch (e) {
+        debugPrint('Favori pazar güncellenemedi: $e');
+        // Doküman yoksa oluşturmayı dene (Örn: Eski kullanıcılar için)
+        try {
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .set({'favoriteMarkets': favorites}, SetOptions(merge: true));
+        } catch (e2) {
+          debugPrint('Kullanıcı dokümanı oluşturulamadı: $e2');
+        }
+      }
+    }
   }
 
   // --- FAVORİ SATICILAR İŞLEMLERİ ---
@@ -565,6 +631,100 @@ class AuthService {
     return prefs.getStringList(_keyFavoriteSellers) ?? [];
   }
 
+  /// Satıcıya bildirim gönderir (Firestore'a yazar)
+  Future<void> sendSellerNotification(
+      String sellerId, String title, String body) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(sellerId)
+          .collection('notifications')
+          .add({
+        'title': title,
+        'body': body,
+        'timestamp': FieldValue.serverTimestamp(),
+        'read': false,
+      });
+    } catch (e) {
+      debugPrint('Bildirim gönderilemedi: $e');
+    }
+  }
+
+  /// Kullanıcıya bildirim gönderir (Firestore'a yazar)
+  /// NOT: Bu metot şu an sadece satıcı bir yoruma yanıt verdiğinde kullanılmaktadır.
+  Future<void> sendUserNotification(
+      String userId, String title, String body) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .collection('notifications')
+          .add({
+        'title': title,
+        'body': body,
+        'timestamp': FieldValue.serverTimestamp(),
+        'read': false,
+      });
+    } catch (e) {
+      debugPrint('Bildirim gönderilemedi: $e');
+    }
+  }
+
+  /// Kullanıcının bildirimlerini dinler (Stream)
+  Stream<List<Map<String, dynamic>>> getUserNotifications(String userId) {
+    return FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .collection('notifications')
+        .orderBy('timestamp', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        return data;
+      }).toList();
+    });
+  }
+
+  /// Bildirimi okundu olarak işaretler
+  Future<void> markNotificationAsRead(
+      String userId, String notificationId) async {
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .collection('notifications')
+        .doc(notificationId)
+        .update({'read': true});
+  }
+
+  /// Tüm bildirimleri okundu olarak işaretler
+  Future<void> markAllNotificationsAsRead(String userId) async {
+    final batch = FirebaseFirestore.instance.batch();
+    final snapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .collection('notifications')
+        .where('read', isEqualTo: false)
+        .get();
+
+    for (var doc in snapshot.docs) {
+      batch.update(doc.reference, {'read': true});
+    }
+
+    await batch.commit();
+  }
+
+  /// Bildirimi siler
+  Future<void> deleteNotification(String userId, String notificationId) async {
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .collection('notifications')
+        .doc(notificationId)
+        .delete();
+  }
+
   Future<void> toggleFavoriteSeller(String sellerId) async {
     final user = FirebaseAuth.instance.currentUser;
     final prefs = await SharedPreferences.getInstance();
@@ -595,6 +755,13 @@ class AuthService {
           await userRef.update({
             'favoriteSellers': FieldValue.arrayUnion([sellerId])
           });
+
+          // Satıcıya bildirim gönder
+          await sendSellerNotification(
+            sellerId,
+            'Yeni Takipçi! 🎉',
+            'Bir kullanıcı sizi favori satıcılarına ekledi.',
+          );
         }
       } catch (e) {
         debugPrint('Favori satıcı güncellenemedi: $e');
@@ -735,6 +902,45 @@ class AuthService {
     }
   }
 
+  /// Belirtilen ürün ID'lerine ait yorumları getirir (Chunking ile)
+  Future<List<Map<String, dynamic>>> getReviewsForProducts(
+      List<String> productIds) async {
+    if (productIds.isEmpty) return [];
+    List<Map<String, dynamic>> allReviews = [];
+
+    // Firestore 'whereIn' limiti 10 olduğu için listeyi parçalara bölüyoruz
+    for (var i = 0; i < productIds.length; i += 10) {
+      final end = (i + 10 < productIds.length) ? i + 10 : productIds.length;
+      final chunk = productIds.sublist(i, end);
+
+      try {
+        final snapshot = await FirebaseFirestore.instance
+            .collection('product_reviews')
+            .where('productId', whereIn: chunk)
+            .get();
+
+        final reviews = snapshot.docs.map((doc) {
+          final data = doc.data();
+          data['id'] = doc.id;
+          return data;
+        }).toList();
+
+        allReviews.addAll(reviews);
+      } catch (e) {
+        debugPrint('Yorumlar çekilirken hata: $e');
+      }
+    }
+
+    // Tarihe göre sırala (Yeniden eskiye)
+    allReviews.sort((a, b) {
+      final dateA = a['date'] ?? '';
+      final dateB = b['date'] ?? '';
+      return dateB.compareTo(dateA);
+    });
+
+    return allReviews;
+  }
+
   Future<List<Map<String, dynamic>>> getAllProductReviews() async {
     try {
       final snapshot =
@@ -753,6 +959,19 @@ class AuthService {
 
   Future<void> addProductReview(Map<String, dynamic> review) async {
     try {
+      // Satıcı ID'sini bul ve yoruma ekle (Gelecekteki sorgular için)
+      String? sellerId;
+      if (review['productId'] != null) {
+        final productDoc = await FirebaseFirestore.instance
+            .collection('products')
+            .doc(review['productId'])
+            .get();
+        sellerId = productDoc.data()?['sellerId'];
+        if (sellerId != null) {
+          review['sellerId'] = sellerId;
+        }
+      }
+
       // ID varsa onu kullan, yoksa Firestore oluştursun
       if (review.containsKey('id') && review['id'] != null) {
         await FirebaseFirestore.instance
@@ -764,8 +983,44 @@ class AuthService {
             .collection('product_reviews')
             .add(review);
       }
+
+      // Bildirim gönder
+      if (sellerId != null) {
+        if (sellerId != null) {
+          await sendSellerNotification(sellerId, 'Yeni Ürün Yorumu 💬',
+              'Bir ürününüze yeni yorum yapıldı.');
+        }
+      }
     } catch (e) {
       debugPrint('Ürün yorumu eklenirken hata: $e');
+      throw e;
+    }
+  }
+
+  // Yorum yanıtlama
+  Future<void> replyToProductReview(String reviewId, String reply) async {
+    try {
+      final docRef = FirebaseFirestore.instance
+          .collection('product_reviews')
+          .doc(reviewId);
+
+      await docRef.update({
+        'sellerReply': reply,
+        'replyDate': FieldValue.serverTimestamp(),
+      });
+
+      // Müşteriye bildirim gönder
+      final doc = await docRef.get();
+      final data = doc.data();
+      if (data != null && data['userId'] != null) {
+        await sendUserNotification(
+          data['userId'],
+          'Satıcı Yanıt Verdi 💬',
+          'Satıcı yorumunuza yanıt verdi: "$reply"',
+        );
+      }
+    } catch (e) {
+      debugPrint('Yorum yanıtlanırken hata: $e');
       throw e;
     }
   }
@@ -979,6 +1234,48 @@ class AuthService {
     } catch (e) {
       debugPrint('Ürün güncellenirken hata: $e');
       throw e;
+    }
+  }
+
+  /// Ürün görüntülenme sayısını artırır
+  Future<void> incrementProductViewCount(String productId) async {
+    try {
+      final productRef =
+          FirebaseFirestore.instance.collection('products').doc(productId);
+
+      await FirebaseFirestore.instance.runTransaction((transaction) async {
+        final snapshot = await transaction.get(productRef);
+        if (!snapshot.exists) return;
+
+        final currentViews =
+            (snapshot.data()?['viewCount'] as num?)?.toInt() ?? 0;
+        final newViews = currentViews + 1;
+
+        transaction.update(productRef, {'viewCount': newViews});
+
+        // 50 görüntülenmeye ulaştığında bildirim gönder
+        if (newViews == 50) {
+          final sellerId = snapshot.data()?['sellerId'] as String?;
+          final productName = snapshot.data()?['name'] as String? ?? 'Ürününüz';
+
+          if (sellerId != null) {
+            final notificationRef = FirebaseFirestore.instance
+                .collection('users')
+                .doc(sellerId)
+                .collection('notifications')
+                .doc();
+
+            transaction.set(notificationRef, {
+              'title': 'Tebrikler! 🎉',
+              'body': '"$productName" 50 görüntülenmeye ulaştı.',
+              'timestamp': FieldValue.serverTimestamp(),
+              'read': false,
+            });
+          }
+        }
+      });
+    } catch (e) {
+      debugPrint('Görüntülenme sayısı artırılamadı: $e');
     }
   }
 

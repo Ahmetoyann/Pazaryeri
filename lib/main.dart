@@ -9,6 +9,7 @@ import 'presentation/screens/Customer/home_screen.dart';
 import 'presentation/screens/Customer/search_screen.dart';
 import 'presentation/screens/Customer/account_screen.dart';
 import 'presentation/screens/Customer/report_list_screen.dart';
+import 'presentation/screens/Customer/market_detail_screen.dart';
 import 'presentation/viewmodels/home_viewmodel.dart';
 import 'presentation/viewmodels/auth_viewmodel.dart';
 import 'presentation/viewmodels/theme_viewmodel.dart';
@@ -24,6 +25,7 @@ import 'presentation/widgets/connectivity_wrapper.dart';
 import 'presentation/screens/user_type_selection_screen.dart';
 import 'presentation/screens/Seller/seller_market_selection_screen.dart';
 import 'presentation/screens/Seller/seller_main_screen.dart';
+import 'app_theme.dart';
 
 // Global navigasyon anahtarı
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -67,165 +69,11 @@ class MyApp extends StatelessWidget {
               navigatorObservers: [KeyboardDismissObserver()],
               debugShowCheckedModeBanner: false,
               title: languageVM.translate('home_title'),
-              themeMode: themeVM.themeMode,
-              theme: ThemeData(
-                colorScheme: ColorScheme.fromSeed(
-                  seedColor: themeVM.seedColor,
-                  brightness: Brightness.light,
-                ),
-                useMaterial3: true,
-                scaffoldBackgroundColor: Colors.transparent,
-                cardColor: Colors.white.withOpacity(0.9),
-                pageTransitionsTheme: const PageTransitionsTheme(
-                  builders: {
-                    TargetPlatform.android: CustomScaleTransitionBuilder(),
-                    TargetPlatform.iOS: CustomScaleTransitionBuilder(),
-                  },
-                ),
-                chipTheme: ChipThemeData(
-                  backgroundColor: Colors.white.withOpacity(0.5),
-                  side: BorderSide.none,
-                  shape: const StadiumBorder(),
-                ),
-                elevatedButtonTheme: ElevatedButtonThemeData(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: themeVM.seedColor.withOpacity(0.85),
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: const StadiumBorder(), // Hap şeklinde buton
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 16, horizontal: 32),
-                  ),
-                ),
-                outlinedButtonTheme: OutlinedButtonThemeData(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: themeVM.seedColor,
-                    backgroundColor: Colors.white.withOpacity(0.3),
-                    side: BorderSide(color: themeVM.seedColor.withOpacity(0.7)),
-                    shape: const StadiumBorder(), // Hap şeklinde buton
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 16, horizontal: 32),
-                  ),
-                ),
-                textButtonTheme: TextButtonThemeData(
-                  style: TextButton.styleFrom(
-                    foregroundColor: themeVM.seedColor,
-                    shape: const StadiumBorder(),
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 12,
-                      horizontal: 24,
-                    ),
-                  ),
-                ),
-                inputDecorationTheme: InputDecorationTheme(
-                  filled: true,
-                  fillColor: Colors.white.withOpacity(0.9),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30),
-                    borderSide: BorderSide.none,
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30),
-                    borderSide: BorderSide.none,
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30),
-                    borderSide:
-                        BorderSide(color: themeVM.seedColor, width: 1.5),
-                  ),
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                ),
-                textTheme: _buildTextTheme(
-                    ThemeData.light().textTheme, Colors.black.withOpacity(0.2)),
-                iconTheme: IconThemeData(
-                  shadows: [
-                    Shadow(
-                        offset: const Offset(1, 1),
-                        blurRadius: 2,
-                        color: Colors.black.withOpacity(0.2))
-                  ],
-                ),
-              ),
-              darkTheme: ThemeData(
-                colorScheme: ColorScheme.fromSeed(
-                  seedColor: themeVM.seedColor,
-                  brightness: Brightness.dark,
-                ),
-                useMaterial3: true,
-                scaffoldBackgroundColor: Colors.transparent,
-                cardColor: Colors.black.withOpacity(0.8),
-                pageTransitionsTheme: const PageTransitionsTheme(
-                  builders: {
-                    TargetPlatform.android: CustomScaleTransitionBuilder(),
-                    TargetPlatform.iOS: CustomScaleTransitionBuilder(),
-                  },
-                ),
-                chipTheme: ChipThemeData(
-                  backgroundColor: Colors.grey.withOpacity(0.2),
-                  side: BorderSide.none,
-                  shape: const StadiumBorder(),
-                ),
-                elevatedButtonTheme: ElevatedButtonThemeData(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: themeVM.seedColor.withOpacity(0.85),
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: const StadiumBorder(), // Hap şeklinde buton
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 16, horizontal: 32),
-                  ),
-                ),
-                outlinedButtonTheme: OutlinedButtonThemeData(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: themeVM.seedColor,
-                    backgroundColor: Colors.black.withOpacity(0.3),
-                    side: BorderSide(color: themeVM.seedColor.withOpacity(0.7)),
-                    shape: const StadiumBorder(), // Hap şeklinde buton
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 16, horizontal: 32),
-                  ),
-                ),
-                textButtonTheme: TextButtonThemeData(
-                  style: TextButton.styleFrom(
-                    foregroundColor: themeVM.seedColor,
-                    shape: const StadiumBorder(),
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 12,
-                      horizontal: 24,
-                    ),
-                  ),
-                ),
-                inputDecorationTheme: InputDecorationTheme(
-                  filled: true,
-                  fillColor: Colors.grey.withOpacity(0.8),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30),
-                    borderSide: BorderSide.none,
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30),
-                    borderSide: BorderSide.none,
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30),
-                    borderSide:
-                        BorderSide(color: themeVM.seedColor, width: 1.5),
-                  ),
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                ),
-                textTheme: _buildTextTheme(
-                    ThemeData.dark().textTheme, Colors.black.withOpacity(0.5)),
-                iconTheme: IconThemeData(
-                  shadows: [
-                    Shadow(
-                        offset: const Offset(1, 1),
-                        blurRadius: 2,
-                        color: Colors.black.withOpacity(0.5))
-                  ],
-                ),
-              ),
+              themeMode: themeVM.themeMode, // Tema modu (Sistem/Açık/Koyu)
+              theme: AppTheme.lightTheme(
+                  themeVM.seedColor), // Merkezi Aydınlık Tema
+              darkTheme: AppTheme.darkTheme(
+                  themeVM.seedColor), // Merkezi Karanlık Tema
               locale: Locale(languageVM.currentLanguage),
               supportedLocales: const [Locale('tr', 'TR'), Locale('en', 'US')],
               localizationsDelegates: const [
@@ -251,8 +99,8 @@ class MyApp extends StatelessWidget {
                                     Colors.black,
                                   ]
                                 : [
-                                    theme.colorScheme.primary.withOpacity(0.05),
-                                    const Color(0xFFFAFAFA), // Kırık beyaz
+                                    const Color(0xFF1B5E20), // Sabit koyu yeşil
+                                    const Color(0xFF1B5E20),
                                   ],
                           ),
                         ),
@@ -308,103 +156,6 @@ class MyApp extends StatelessWidget {
             ),
           );
         },
-      ),
-    );
-  }
-}
-
-TextTheme _buildTextTheme(TextTheme base, Color shadowColor) {
-  return base.copyWith(
-    displayLarge: base.displayLarge?.copyWith(
-      shadows: [
-        Shadow(offset: const Offset(1, 1), blurRadius: 2, color: shadowColor)
-      ],
-    ),
-    displayMedium: base.displayMedium?.copyWith(
-      shadows: [
-        Shadow(offset: const Offset(1, 1), blurRadius: 2, color: shadowColor)
-      ],
-    ),
-    displaySmall: base.displaySmall?.copyWith(
-      shadows: [
-        Shadow(offset: const Offset(1, 1), blurRadius: 2, color: shadowColor)
-      ],
-    ),
-    headlineLarge: base.headlineLarge?.copyWith(
-      shadows: [
-        Shadow(offset: const Offset(1, 1), blurRadius: 2, color: shadowColor)
-      ],
-    ),
-    headlineMedium: base.headlineMedium?.copyWith(
-      shadows: [
-        Shadow(offset: const Offset(1, 1), blurRadius: 2, color: shadowColor)
-      ],
-    ),
-    headlineSmall: base.headlineSmall?.copyWith(
-      shadows: [
-        Shadow(offset: const Offset(1, 1), blurRadius: 2, color: shadowColor)
-      ],
-    ),
-    titleLarge: base.titleLarge?.copyWith(
-      shadows: [
-        Shadow(offset: const Offset(1, 1), blurRadius: 2, color: shadowColor)
-      ],
-    ),
-    titleMedium: base.titleMedium?.copyWith(
-      shadows: [
-        Shadow(offset: const Offset(1, 1), blurRadius: 2, color: shadowColor)
-      ],
-    ),
-    titleSmall: base.titleSmall?.copyWith(
-      shadows: [
-        Shadow(offset: const Offset(1, 1), blurRadius: 2, color: shadowColor)
-      ],
-    ),
-    bodyLarge: base.bodyLarge?.copyWith(
-      shadows: [
-        Shadow(
-            offset: const Offset(0.5, 0.5), blurRadius: 1, color: shadowColor)
-      ],
-    ),
-    bodyMedium: base.bodyMedium?.copyWith(
-      shadows: [
-        Shadow(
-            offset: const Offset(0.5, 0.5), blurRadius: 1, color: shadowColor)
-      ],
-    ),
-    bodySmall: base.bodySmall?.copyWith(
-      shadows: [
-        Shadow(
-            offset: const Offset(0.5, 0.5), blurRadius: 1, color: shadowColor)
-      ],
-    ),
-    labelLarge: base.labelLarge?.copyWith(
-      shadows: [
-        Shadow(
-            offset: const Offset(0.5, 0.5), blurRadius: 1, color: shadowColor)
-      ],
-    ),
-  );
-}
-
-class CustomScaleTransitionBuilder extends PageTransitionsBuilder {
-  const CustomScaleTransitionBuilder();
-
-  @override
-  Widget buildTransitions<T>(
-    PageRoute<T> route,
-    BuildContext context,
-    Animation<double> animation,
-    Animation<double> secondaryAnimation,
-    Widget child,
-  ) {
-    return FadeTransition(
-      opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
-      child: ScaleTransition(
-        scale: Tween<double>(begin: 0.92, end: 1.0).animate(
-          CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
-        ),
-        child: child,
       ),
     );
   }
@@ -539,7 +290,13 @@ class _HomeWrapperState extends State<_HomeWrapper> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final vm = Provider.of<HomeViewModel>(context, listen: false);
       if (vm.nearbyMarkets.isEmpty && vm.state == ViewState.idle) {
-        vm.loadData();
+        vm.loadData().then((_) {
+          // Veriler yüklendikten sonra favori kontrolü yap
+          if (mounted) {
+            final authVM = Provider.of<AuthViewModel>(context, listen: false);
+            authVM.checkFavoritesAndNotify(vm.nearbyMarkets);
+          }
+        });
       }
     });
   }
@@ -581,9 +338,7 @@ class _MainScaffoldState extends State<MainScaffold> {
     final String? initialPayload = NotificationService.instance.launchPayload;
     if (initialPayload != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _navigateToMarketDetail(initialPayload);
-        NotificationService.instance.launchPayload =
-            null; // Tekrar tetiklenmemesi için temizle
+        _handleNotificationLaunch(initialPayload);
       });
     }
 
@@ -596,32 +351,50 @@ class _MainScaffoldState extends State<MainScaffold> {
     });
   }
 
-  void _navigateToMarketDetail(String marketId) {
-    // 1. HomeViewModel üzerinden pazarı bulmaya çalış
+  Future<void> _handleNotificationLaunch(String marketId) async {
     final homeVM = Provider.of<HomeViewModel>(context, listen: false);
 
-    // Not: Eğer pazar listesi henüz yüklenmediyse önce yüklemeyi deneyebilirsiniz
-    // veya direkt ID ile MarketDetailScreen'e gidebilirsiniz.
+    // Eğer uygulama soğuk açılış yaptıysa veriler henüz yüklenmemiş olabilir.
+    // Yönlendirme yapmadan önce verilerin yüklenmesini bekliyoruz.
+    if (homeVM.nearbyMarkets.isEmpty && homeVM.provinceMarkets.isEmpty) {
+      await homeVM.loadData();
+    }
 
-    // ÖRNEK YÖNLENDİRME KODU:
-    // MarketDetailScreen'in projenizde import edildiğinden emin olun.
-    /*
-    final market = homeVM.nearbyMarkets.firstWhere(
-      (m) => m.id == marketId, 
-      orElse: () => null
+    _navigateToMarketDetail(marketId);
+    NotificationService.instance.launchPayload = null;
+  }
+
+  Widget _buildActiveIcon(BuildContext context, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.primary.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withOpacity(0.6)),
+      ),
+      child: Icon(icon, size: 30),
     );
+  }
 
-    if (market != null) {
+  void _navigateToMarketDetail(String marketId) {
+    final homeVM = Provider.of<HomeViewModel>(context, listen: false);
+
+    // Hem yakındaki hem de il bazlı pazarlarda arama yap
+    try {
+      final market = homeVM.nearbyMarkets.firstWhere((m) => m.id == marketId,
+          orElse: () =>
+              homeVM.provinceMarkets.firstWhere((m) => m.id == marketId));
+
       navigatorKey.currentState?.push(
         MaterialPageRoute(builder: (_) => MarketDetailScreen(market: market)),
       );
+    } catch (e) {
+      debugPrint('Bildirimden gelen pazar ID bulunamadı: $marketId');
+      // İsteğe bağlı: Pazar bulunamazsa kullanıcıya bilgi verilebilir
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Pazar detayları yüklenemedi.')),
+      );
     }
-    */
-
-    // Eğer MarketDetailScreen sadece ID alabiliyorsa:
-    // navigatorKey.currentState?.push(MaterialPageRoute(builder: (_) => MarketDetailScreen(marketId: marketId)));
-
-    debugPrint('Bildirime tıklandı, gidilecek pazar ID: $marketId');
   }
 
   @override
@@ -632,12 +405,13 @@ class _MainScaffoldState extends State<MainScaffold> {
       extendBody: true,
       body: IndexedStack(index: _index, children: _screens),
       bottomNavigationBar: Padding(
-        padding: const EdgeInsets.only(left: 32, right: 32, bottom: 32),
+        padding: const EdgeInsets.only(left: 32, right: 32, bottom: 16),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(24),
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
             child: Container(
+              padding: EdgeInsets.zero,
               decoration: BoxDecoration(
                 color: Theme.of(context).brightness == Brightness.dark
                     ? Colors.black.withOpacity(0.2)
@@ -647,31 +421,35 @@ class _MainScaffoldState extends State<MainScaffold> {
               child: BottomNavigationBar(
                 currentIndex: _index,
                 onTap: (i) => setState(() => _index = i),
-                selectedItemColor: Theme.of(context).colorScheme.primary,
-                unselectedItemColor: Colors.grey,
-                showUnselectedLabels: true,
-                type: BottomNavigationBarType.fixed,
+                // Renkler ve stiller artık AppTheme içinden geliyor
+                // Ancak buradaki backgroundColor transparent olmalı çünkü
+                // üstteki Container blur efekti veriyor.
                 backgroundColor: Colors.transparent,
                 elevation: 0,
+                showSelectedLabels: false,
+                showUnselectedLabels: false,
+                selectedFontSize: 3,
+                unselectedFontSize: 0,
+                iconSize: 30,
                 items: [
                   BottomNavigationBarItem(
                     icon: const Icon(Icons.home_outlined),
-                    activeIcon: const Icon(Icons.home),
+                    activeIcon: _buildActiveIcon(context, Icons.home),
                     label: langVM.translate('home_title'),
                   ),
                   BottomNavigationBarItem(
                     icon: const Icon(Icons.search_outlined),
-                    activeIcon: const Icon(Icons.search),
+                    activeIcon: _buildActiveIcon(context, Icons.search),
                     label: langVM.translate('search_tab'),
                   ),
                   BottomNavigationBarItem(
                     icon: const Icon(Icons.person_outline),
-                    activeIcon: const Icon(Icons.person),
+                    activeIcon: _buildActiveIcon(context, Icons.person),
                     label: langVM.translate('account_title'),
                   ),
                   BottomNavigationBarItem(
                     icon: const Icon(Icons.report_gmailerrorred_outlined),
-                    activeIcon: const Icon(Icons.report),
+                    activeIcon: _buildActiveIcon(context, Icons.report),
                     label: langVM.translate('report_tab'),
                   ),
                 ],

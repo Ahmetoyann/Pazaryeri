@@ -72,7 +72,13 @@ class _SellerMarketSelectionScreenState
           }
 
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return Center(child: Text(langVM.translate('no_results')));
+            return Center(
+                child: Text(
+              langVM.translate('no_results'),
+              style: TextStyle(
+                  color:
+                      Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
+            ));
           }
 
           final markets = snapshot.data!;
@@ -96,11 +102,33 @@ class _SellerMarketSelectionScreenState
                     return Card(
                       margin: const EdgeInsets.symmetric(
                           horizontal: 16, vertical: 8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(color: Colors.white.withOpacity(0.3)),
+                      ),
                       child: ListTile(
-                        leading: const Icon(Icons.storefront),
-                        title: Text(market.name),
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withOpacity(0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(Icons.storefront,
+                              color: Theme.of(context).colorScheme.primary),
+                        ),
+                        title: Text(market.name,
+                            style:
+                                const TextStyle(fontWeight: FontWeight.bold)),
                         subtitle: Text(market.address.district),
-                        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                        trailing: Icon(Icons.arrow_forward_ios,
+                            size: 16,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withOpacity(0.6)),
                         onTap: () async {
                           // İşlem başladığında yükleniyor dialogunu göster
                           showDialog(

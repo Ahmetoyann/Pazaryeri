@@ -40,7 +40,8 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
           child: Wrap(
             children: [
               ListTile(
-                leading: const Icon(Icons.photo_camera),
+                leading: Icon(Icons.photo_camera,
+                    color: Theme.of(context).iconTheme.color),
                 title: const Text('Kamera'),
                 onTap: () async {
                   Navigator.of(ctx).pop();
@@ -53,7 +54,8 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.photo_library),
+                leading: Icon(Icons.photo_library,
+                    color: Theme.of(context).iconTheme.color),
                 title: const Text('Galeri'),
                 onTap: () async {
                   Navigator.of(ctx).pop();
@@ -132,66 +134,109 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _buildNormalContainer(
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                  child: DropdownButtonFormField<String>(
-                    value: _selectedSubject,
-                    hint: const Text('Konu Seçiniz'),
-                    items: _subjects.map((s) {
-                      return DropdownMenuItem(value: s, child: Text(s));
-                    }).toList(),
-                    onChanged: (val) => setState(() => _selectedSubject = val),
-                    decoration: const InputDecoration(
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 12,
-                      ),
-                    ),
-                  ),
+              DropdownButtonFormField<String>(
+                value: _selectedSubject,
+                dropdownColor: const Color(0xFF1B5E20).withValues(alpha: 0.95),
+                style: const TextStyle(color: Colors.white, fontSize: 16),
+                decoration: InputDecoration(
+                  labelText: 'Konu Seçiniz',
+                  prefixIcon: Icon(Icons.subject,
+                      color: Theme.of(context).iconTheme.color),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(30),
+                      borderSide:
+                          BorderSide(color: Colors.white.withOpacity(0.3))),
+                  enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(30),
+                      borderSide:
+                          BorderSide(color: Colors.white.withOpacity(0.3))),
+                  focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(30),
+                      borderSide: BorderSide(
+                          color: Colors.white.withOpacity(0.5), width: 2)),
+                  filled: true,
+                  fillColor: Theme.of(context).cardColor,
+                ),
+                items: _subjects.map((s) {
+                  return DropdownMenuItem(
+                    value: s,
+                    child: Text(s, style: const TextStyle(color: Colors.white)),
+                  );
+                }).toList(),
+                onChanged: (val) => setState(() => _selectedSubject = val),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _controller,
+                maxLines: 6,
+                decoration: InputDecoration(
+                  hintText: 'Sorunuzu/yorumunuzu yazın',
+                  hintStyle:
+                      TextStyle(color: Colors.white.withValues(alpha: 0.7)),
+                  alignLabelWithHint: true,
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(30),
+                      borderSide:
+                          BorderSide(color: Colors.white.withOpacity(0.3))),
+                  enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(30),
+                      borderSide:
+                          BorderSide(color: Colors.white.withOpacity(0.3))),
+                  focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(30),
+                      borderSide: BorderSide(
+                          color: Colors.white.withOpacity(0.5), width: 2)),
+                  filled: true,
+                  fillColor: Theme.of(context).cardColor,
                 ),
               ),
-              _buildNormalContainer(
-                TextField(
-                  controller: _controller,
-                  maxLines: 6,
-                  decoration: const InputDecoration(
-                    hintText: 'Sorunuzu/yorumunuzu yazın',
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.all(16),
-                  ),
+              const SizedBox(height: 16),
+              Card(
+                margin: EdgeInsets.zero,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
+                  side: BorderSide(color: Colors.white.withOpacity(0.3)),
                 ),
-              ),
-              _buildNormalContainer(
-                GestureDetector(
+                child: InkWell(
                   onTap: _pickImage,
+                  borderRadius: BorderRadius.circular(24),
                   child: Container(
                     height: 150,
                     width: double.infinity,
-                    child: _selectedImage != null
-                        ? ClipRRect(
-                            borderRadius: BorderRadius.circular(16),
-                            child: Image.file(
-                              File(_selectedImage!.path),
+                    decoration: _selectedImage == null
+                        ? null
+                        : BoxDecoration(
+                            borderRadius: BorderRadius.circular(24),
+                            image: DecorationImage(
+                              image: FileImage(File(_selectedImage!.path)),
                               fit: BoxFit.cover,
                             ),
-                          )
-                        : Column(
+                          ),
+                    child: _selectedImage == null
+                        ? Column(
                             mainAxisAlignment: MainAxisAlignment.center,
-                            children: const [
+                            children: [
                               Icon(
                                 Icons.add_a_photo,
                                 size: 40,
-                                color: Colors.grey,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withValues(alpha: 0.4),
                               ),
-                              SizedBox(height: 8),
+                              const SizedBox(height: 8),
                               Text(
                                 'Fotoğraf Ekle (İsteğe Bağlı)',
-                                style: TextStyle(color: Colors.grey),
+                                style: TextStyle(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.6),
+                                ),
                               ),
                             ],
-                          ),
+                          )
+                        : null,
                   ),
                 ),
               ),
@@ -200,34 +245,40 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
                   alignment: Alignment.centerRight,
                   child: TextButton.icon(
                     onPressed: () => setState(() => _selectedImage = null),
-                    icon: const Icon(Icons.delete, color: Colors.red),
-                    label: const Text(
+                    icon: Icon(Icons.delete,
+                        color: Theme.of(context).colorScheme.error),
+                    label: Text(
                       'Fotoğrafı Kaldır',
-                      style: TextStyle(color: Colors.red),
+                      style:
+                          TextStyle(color: Theme.of(context).colorScheme.error),
                     ),
                   ),
                 ),
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: _sending ? null : _sendReport,
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    side: BorderSide(color: Colors.white.withOpacity(0.3)),
+                  ),
+                ),
                 child: _sending
-                    ? const CircularProgressIndicator()
-                    : const Text('Gönder'),
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white))
+                    : const Text('Gönder',
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold)),
               ),
               const SizedBox(height: 12),
             ],
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildNormalContainer(Widget child) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: 2,
-      child: child,
     );
   }
 }

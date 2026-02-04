@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../viewmodels/seller_viewmodel.dart';
@@ -8,7 +9,9 @@ import '../../widgets/success_dialog.dart';
 
 class SellerAddProductScreen extends StatefulWidget {
   final SellerProduct? productToEdit;
-  const SellerAddProductScreen({super.key, this.productToEdit});
+  final VoidCallback? onProductAdded;
+  const SellerAddProductScreen(
+      {super.key, this.productToEdit, this.onProductAdded});
 
   @override
   State<SellerAddProductScreen> createState() => _SellerAddProductScreenState();
@@ -20,7 +23,6 @@ class _SellerAddProductScreenState extends State<SellerAddProductScreen> {
   final _priceController = TextEditingController();
   final _stockController = TextEditingController();
   final _descController = TextEditingController();
-  final _locationController = TextEditingController();
   String? _selectedCategory;
   String _selectedUnit = 'unit_kg';
   bool _inStock = true;
@@ -29,18 +31,44 @@ class _SellerAddProductScreenState extends State<SellerAddProductScreen> {
     'category_fruit',
     'category_vegetable',
     'category_delicatessen',
+    'category_dairy',
+    'category_bakery',
+    'category_spices',
+    'category_fish',
+    'category_clothing',
+    'category_other',
   ];
 
   final Map<String, IconData> _categoryIcons = {
     'category_fruit': Icons.eco,
     'category_vegetable': Icons.grass,
     'category_delicatessen': Icons.breakfast_dining,
+    'category_dairy': Icons.local_drink,
+    'category_bakery': Icons.bakery_dining,
+    'category_spices': Icons.local_fire_department,
+    'category_fish': Icons.set_meal,
+    'category_clothing': Icons.checkroom,
+    'category_other': Icons.more_horiz,
+  };
+
+  final Map<String, Color> _categoryColors = {
+    'category_fruit': Colors.orange,
+    'category_vegetable': Colors.green,
+    'category_delicatessen': Colors.redAccent,
+    'category_dairy': Colors.blue,
+    'category_bakery': Colors.amber.shade700,
+    'category_spices': Colors.deepOrange,
+    'category_fish': Colors.teal,
+    'category_clothing': Colors.purple,
+    'category_other': Colors.blueGrey,
   };
 
   final List<String> _units = [
     'unit_kg',
     'unit_piece',
     'unit_bunch',
+    'unit_package',
+    'unit_box',
   ];
 
   @override
@@ -55,6 +83,8 @@ class _SellerAddProductScreenState extends State<SellerAddProductScreen> {
       _selectedCategory = p.category;
       _selectedUnit = p.unit;
       _inStock = p.inStock;
+    } else {
+      _stockController.text = '1';
     }
   }
 
@@ -64,8 +94,117 @@ class _SellerAddProductScreenState extends State<SellerAddProductScreen> {
     _priceController.dispose();
     _stockController.dispose();
     _descController.dispose();
-    _locationController.dispose();
     super.dispose();
+  }
+
+  void _showImagePicker(BuildContext context) {
+    final langVM = Provider.of<LanguageViewModel>(context, listen: false);
+    final sellerVM = Provider.of<SellerViewModel>(context, listen: false);
+
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_camera),
+              title: Text(langVM.translate('camera')),
+              onTap: () {
+                Navigator.pop(ctx);
+                sellerVM.pickImage(ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: Text(langVM.translate('gallery')),
+              onTap: () {
+                Navigator.pop(ctx);
+                sellerVM.pickImage(ImageSource.gallery);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  InputDecoration _buildInputDecoration(String label) {
+    return InputDecoration(
+      labelText: label,
+      border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(30),
+          borderSide: BorderSide(color: Colors.white.withOpacity(0.3))),
+      enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(30),
+          borderSide: BorderSide(color: Colors.white.withOpacity(0.3))),
+      focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(30),
+          borderSide:
+              BorderSide(color: Colors.white.withOpacity(0.5), width: 2)),
+    );
+  }
+
+  Future<void> _handleFormSubmit(SellerViewModel sellerVM,
+      LanguageViewModel langVM, bool stayOnPage) async {
+    if (_formKey.currentState!.validate()) {
+      if (widget.productToEdit != null) {
+        // GÜNCELLEME İŞLEMİ
+        await sellerVM.updateProduct(
+          id: widget.productToEdit!.id,
+          name: _nameController.text,
+          description: _descController.text,
+          price: double.tryParse(_priceController.text) ?? 0,
+          category: _selectedCategory!,
+          stockQuantity: double.tryParse(_stockController.text) ?? 0,
+          unit: _selectedUnit,
+          inStock: _inStock,
+          currentImagePath: widget.productToEdit!.imagePath,
+        );
+
+        await sellerVM.loadProducts();
+
+        if (mounted) {
+          Navigator.pop(context);
+        }
+      } else {
+        // EKLEME İŞLEMİ
+        await sellerVM.addProduct(
+          name: _nameController.text,
+          description: _descController.text,
+          price: double.tryParse(_priceController.text) ?? 0,
+          category: _selectedCategory!,
+          stockQuantity: double.tryParse(_stockController.text) ?? 0,
+          unit: _selectedUnit,
+          inStock: _inStock,
+        );
+
+        await sellerVM.loadProducts();
+
+        if (mounted) {
+          await DialogService.showSuccess(
+            context,
+            message: langVM.translate('success_product_added'),
+          );
+          _nameController.clear();
+          _priceController.clear();
+          _stockController.text = '1';
+          _descController.clear();
+          setState(() {
+            _selectedCategory = null;
+            _selectedUnit = 'unit_kg';
+            _inStock = true;
+          });
+          // Görselleri temizle
+          while (sellerVM.selectedImages.isNotEmpty) {
+            sellerVM.removeImage(0);
+          }
+
+          if (!stayOnPage) {
+            widget.onProductAdded?.call();
+          }
+        }
+      }
+    }
   }
 
   @override
@@ -98,90 +237,123 @@ class _SellerAddProductScreenState extends State<SellerAddProductScreen> {
                       ),
                     ),
                     const SizedBox(width: 16),
-                    const Expanded(
+                    Expanded(
                       child: Text(
                         "Mevcut fotoğraf. Değiştirmek için aşağıdan yeni fotoğraf seçiniz.",
-                        style: TextStyle(color: Colors.grey, fontSize: 12),
+                        style: TextStyle(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withOpacity(0.6),
+                            fontSize: 12),
                       ),
                     ),
                   ],
                 ),
               ),
             // Fotoğraf Alanı
-            SizedBox(
-              height: 120,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                itemCount: sellerVM.selectedImages.length + 1,
-                itemBuilder: (context, index) {
-                  if (index == 0) {
-                    return GestureDetector(
-                      onTap: () => sellerVM.pickImage(ImageSource.gallery),
-                      child: Container(
-                        width: 100,
-                        margin: const EdgeInsets.only(right: 8),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).cardColor,
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(
-                              color: Theme.of(context)
-                                  .dividerColor
-                                  .withOpacity(0.1)),
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.add_a_photo, color: Colors.grey),
-                            const SizedBox(height: 4),
-                            Text(langVM.translate('add_photo_button'),
-                                style: const TextStyle(fontSize: 12)),
-                          ],
-                        ),
+            GestureDetector(
+              onTap: () => _showImagePicker(context),
+              child: Container(
+                height: 150,
+                width: double.infinity,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).cardColor,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.3),
+                  ),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.add_a_photo,
+                        size: 48,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withOpacity(0.5)),
+                    const SizedBox(height: 12),
+                    Text(
+                      langVM.translate('add_photo_button'),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withOpacity(0.7),
                       ),
-                    );
-                  }
-                  final image = sellerVM.selectedImages[index - 1];
-                  return Stack(
-                    children: [
-                      Container(
-                        width: 100,
-                        margin: const EdgeInsets.only(right: 8),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(24),
-                          image: DecorationImage(
-                            image: FileImage(File(image.path)),
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        top: 0,
-                        right: 8,
-                        child: GestureDetector(
-                          onTap: () => sellerVM.removeImage(index - 1),
-                          child: const CircleAvatar(
-                            radius: 10,
-                            backgroundColor: Colors.red,
-                            child: Icon(Icons.close,
-                                size: 12, color: Colors.white),
-                          ),
-                        ),
-                      ),
-                    ],
-                  );
-                },
+                    ),
+                  ],
+                ),
               ),
             ),
+            if (sellerVM.selectedImages.isNotEmpty)
+              Container(
+                height: 120,
+                margin: const EdgeInsets.only(bottom: 16),
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: sellerVM.selectedImages.length,
+                  itemBuilder: (context, index) {
+                    final image = sellerVM.selectedImages[index];
+                    return Stack(
+                      children: [
+                        Container(
+                          width: 100,
+                          margin: const EdgeInsets.only(right: 12),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            image: DecorationImage(
+                              image: FileImage(File(image.path)),
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          top: 4,
+                          right: 16,
+                          child: GestureDetector(
+                            onTap: () => sellerVM.removeImage(index),
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Colors.red,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.close,
+                                  size: 14, color: Colors.white),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _nameController,
-              decoration: InputDecoration(
-                labelText: langVM.translate('product_name_label'),
-              ),
-              validator: (v) =>
-                  v!.isEmpty ? langVM.translate('error_prefix') : null,
+              decoration:
+                  _buildInputDecoration(langVM.translate('product_name_label')),
+              validator: (v) {
+                if (v == null || v.isEmpty) {
+                  return langVM.translate('error_prefix');
+                }
+                if (v.length < 3) return 'En az 3 karakter giriniz';
+                return null;
+              },
             ),
             const SizedBox(height: 16),
+            TextFormField(
+              controller: _descController,
+              maxLines: 3,
+              decoration:
+                  _buildInputDecoration(langVM.translate('product_desc_label')),
+            ),
+            const SizedBox(height: 24),
             FormField<String>(
               validator: (value) {
                 if (_selectedCategory == null) {
@@ -195,11 +367,15 @@ class _SellerAddProductScreenState extends State<SellerAddProductScreen> {
                   children: [
                     Text(
                       langVM.translate('category_label'),
-                      style: Theme.of(context).textTheme.titleMedium,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 12),
                     GridView.builder(
                       shrinkWrap: true,
+                      padding: EdgeInsets.zero,
                       physics: const NeverScrollableScrollPhysics(),
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
@@ -212,65 +388,79 @@ class _SellerAddProductScreenState extends State<SellerAddProductScreen> {
                       itemBuilder: (context, index) {
                         final categoryKey = _categories[index];
                         final isSelected = _selectedCategory == categoryKey;
+                        final color = _categoryColors[categoryKey] ??
+                            Theme.of(context).primaryColor;
+
                         return GestureDetector(
                           onTap: () {
                             setState(() => _selectedCategory = categoryKey);
                             state.didChange(categoryKey);
                           },
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? Theme.of(context)
-                                      .colorScheme
-                                      .primary
-                                      .withOpacity(0.05)
-                                  : Theme.of(context).cardColor,
-                              borderRadius: BorderRadius.circular(24),
-                              border: Border.all(
-                                color: isSelected
-                                    ? Theme.of(context).colorScheme.primary
-                                    : Colors.grey.shade300,
-                                width: 2,
-                              ),
-                              boxShadow: isSelected
-                                  ? [
-                                      BoxShadow(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .primary
-                                            .withOpacity(0.1),
-                                        blurRadius: 8,
-                                        offset: const Offset(0, 2),
-                                      )
-                                    ]
-                                  : null,
-                            ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  _categoryIcons[categoryKey],
-                                  size: 32,
-                                  color: isSelected
-                                      ? Theme.of(context).colorScheme.primary
-                                      : Colors.grey,
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  langVM.translate(categoryKey),
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: isSelected
-                                        ? FontWeight.bold
-                                        : FontWeight.normal,
+                          child: Stack(
+                            children: [
+                              Container(
+                                width: double.infinity,
+                                height: double.infinity,
+                                decoration: BoxDecoration(
+                                  color: color.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(24),
+                                  border: Border.all(
                                     color: isSelected
-                                        ? Theme.of(context).colorScheme.primary
-                                        : Colors.grey.shade700,
+                                        ? color
+                                        : Colors.white.withOpacity(0.3),
+                                    width: 2,
                                   ),
                                 ),
-                              ],
-                            ),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: color.withOpacity(0.2),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(
+                                        _categoryIcons[categoryKey],
+                                        size: 32,
+                                        color: color,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      langVM.translate(categoryKey),
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                        color: isSelected
+                                            ? color
+                                            : Theme.of(context)
+                                                .colorScheme
+                                                .onSurface
+                                                .withOpacity(0.7),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (isSelected)
+                                Positioned(
+                                  top: 8,
+                                  right: 8,
+                                  child: Container(
+                                    decoration: const BoxDecoration(
+                                      color: Colors.white,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      Icons.check_circle,
+                                      color: color,
+                                      size: 24,
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
                         );
                       },
@@ -290,16 +480,29 @@ class _SellerAddProductScreenState extends State<SellerAddProductScreen> {
                 );
               },
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
             Row(
               children: [
                 Expanded(
                   child: TextFormField(
                     controller: _priceController,
-                    keyboardType: TextInputType.number,
-                    decoration: InputDecoration(
-                      labelText: langVM.translate('product_price_label'),
-                    ),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(
+                          RegExp(r'^\d+\.?\d{0,2}')),
+                    ],
+                    decoration: _buildInputDecoration(
+                        langVM.translate('product_price_label')),
+                    validator: (v) {
+                      if (v == null || v.isEmpty) {
+                        return langVM.translate('error_prefix');
+                      }
+                      final val = double.tryParse(v);
+                      if (val == null || val <= 0)
+                        return langVM.translate('error_prefix');
+                      return null;
+                    },
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -307,9 +510,17 @@ class _SellerAddProductScreenState extends State<SellerAddProductScreen> {
                   child: TextFormField(
                     controller: _stockController,
                     keyboardType: TextInputType.number,
-                    decoration: InputDecoration(
-                      labelText: langVM.translate('stock_quantity_label'),
-                    ),
+                    decoration: _buildInputDecoration(
+                        langVM.translate('stock_quantity_label')),
+                    validator: (v) {
+                      if (v == null || v.isEmpty) {
+                        return langVM.translate('error_prefix');
+                      }
+                      final val = double.tryParse(v);
+                      if (val == null || val <= 0)
+                        return langVM.translate('error_prefix');
+                      return null;
+                    },
                   ),
                 ),
               ],
@@ -317,9 +528,9 @@ class _SellerAddProductScreenState extends State<SellerAddProductScreen> {
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
               value: _selectedUnit,
-              decoration: InputDecoration(
-                labelText: langVM.translate('unit_label'),
-              ),
+              dropdownColor: const Color(0xFF1B5E20).withOpacity(0.95),
+              style: const TextStyle(color: Colors.white),
+              decoration: _buildInputDecoration(langVM.translate('unit_label')),
               items: _units
                   .map((u) => DropdownMenuItem(
                       value: u, child: Text(langVM.translate(u))))
@@ -327,20 +538,11 @@ class _SellerAddProductScreenState extends State<SellerAddProductScreen> {
               onChanged: (v) => setState(() => _selectedUnit = v!),
             ),
             const SizedBox(height: 16),
-            TextFormField(
-              controller: _locationController,
-              maxLines: 2,
-              decoration: InputDecoration(
-                labelText: langVM.translate('stall_location_label'),
-                hintText: langVM.translate('stall_location_hint'),
-                prefixIcon: const Icon(Icons.location_on_outlined),
-              ),
-            ),
-            const SizedBox(height: 16),
             SwitchListTile(
               tileColor: Theme.of(context).cardColor,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30)),
+                  borderRadius: BorderRadius.circular(30),
+                  side: BorderSide(color: Colors.white.withOpacity(0.3))),
               title: Text(langVM.translate('stock_status_label')),
               subtitle: Text(
                   langVM.translate(_inStock ? 'in_stock' : 'out_of_stock')),
@@ -348,68 +550,48 @@ class _SellerAddProductScreenState extends State<SellerAddProductScreen> {
               onChanged: (val) => setState(() => _inStock = val),
             ),
             const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: sellerVM.isLoading
-                  ? null
-                  : () async {
-                      if (_formKey.currentState!.validate()) {
-                        if (widget.productToEdit != null) {
-                          // GÜNCELLEME İŞLEMİ
-                          await sellerVM.updateProduct(
-                            id: widget.productToEdit!.id,
-                            name: _nameController.text,
-                            description: _descController.text,
-                            price: double.tryParse(_priceController.text) ?? 0,
-                            category: _selectedCategory!,
-                            stockQuantity:
-                                double.tryParse(_stockController.text) ?? 0,
-                            unit: _selectedUnit,
-                            inStock: _inStock,
-                            currentImagePath: widget.productToEdit!.imagePath,
-                          );
-                          if (mounted) {
-                            Navigator.pop(context); // Sayfayı kapat
-                          }
-                        } else {
-                          // EKLEME İŞLEMİ
-                          await sellerVM.addProduct(
-                            name: _nameController.text,
-                            description: _descController.text,
-                            price: double.tryParse(_priceController.text) ?? 0,
-                            stallLocation: _locationController.text,
-                            category: _selectedCategory!,
-                            stockQuantity:
-                                double.tryParse(_stockController.text) ?? 0,
-                            unit: _selectedUnit,
-                            inStock: _inStock,
-                          );
-                          if (mounted) {
-                            await showSuccessDialog(
-                              context,
-                              message:
-                                  langVM.translate('success_product_added'),
-                            );
-                            _nameController.clear();
-                            _priceController.clear();
-                            _stockController.clear();
-                            _locationController.clear();
-                            setState(() {
-                              _selectedCategory = null;
-                              _selectedUnit = 'unit_kg';
-                              _inStock = true;
-                            });
-                          }
-                        }
-                      }
-                    },
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-              ),
-              child: sellerVM.isLoading
-                  ? const CircularProgressIndicator()
-                  : Text(widget.productToEdit != null
-                      ? langVM.translate('update_button')
-                      : langVM.translate('publish_product_button')),
+            Row(
+              children: [
+                if (widget.productToEdit == null) ...[
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: sellerVM.isLoading
+                          ? null
+                          : () => _handleFormSubmit(sellerVM, langVM, true),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                      child: Text(
+                        langVM.translate('save_and_add_new'),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                            fontSize: 13, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                ],
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: sellerVM.isLoading
+                        ? null
+                        : () => _handleFormSubmit(sellerVM, langVM, false),
+                    child: sellerVM.isLoading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white))
+                        : Text(
+                            widget.productToEdit != null
+                                ? langVM.translate('update_button')
+                                : langVM.translate('publish_product_button'),
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(fontSize: 13),
+                          ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),

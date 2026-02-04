@@ -49,6 +49,7 @@ class _ReportListScreenState extends State<ReportListScreen> {
             // Arama Çubuğu
             TextField(
               controller: _searchController,
+              style: const TextStyle(color: Colors.white),
               onChanged: (val) {
                 setState(() {
                   _searchQuery = val;
@@ -56,10 +57,12 @@ class _ReportListScreenState extends State<ReportListScreen> {
               },
               decoration: InputDecoration(
                 hintText: langVM.translate('search_placeholder'),
-                prefixIcon: const Icon(Icons.search),
+                hintStyle: TextStyle(color: Colors.white.withOpacity(0.6)),
+                prefixIcon:
+                    Icon(Icons.search, color: Colors.white.withOpacity(0.6)),
                 suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(Icons.clear),
+                        icon: const Icon(Icons.clear, color: Colors.white),
                         onPressed: () {
                           _searchController.clear();
                           setState(() {
@@ -80,16 +83,17 @@ class _ReportListScreenState extends State<ReportListScreen> {
                           : Text(langVM.translate('no_results')),
                     )
                   : ListView.builder(
-                      padding: EdgeInsets.zero,
+                      padding: const EdgeInsets.only(top: 8, bottom: 100),
                       itemCount: markets.length,
                       itemBuilder: (c, i) {
                         final m = markets[i];
                         return Card(
                           margin: const EdgeInsets.only(bottom: 12),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: BorderRadius.circular(12),
+                            side: BorderSide(
+                                color: Colors.white.withOpacity(0.3)),
                           ),
-                          elevation: 2,
                           child: ListTile(
                             leading: Container(
                               padding: const EdgeInsets.all(8),
@@ -107,8 +111,14 @@ class _ReportListScreenState extends State<ReportListScreen> {
                                 style: const TextStyle(
                                     fontWeight: FontWeight.bold)),
                             subtitle: Text(m.address.neighborhood),
-                            trailing: const Icon(Icons.arrow_forward_ios,
-                                size: 16, color: Colors.grey),
+                            trailing: Icon(
+                              Icons.arrow_forward_ios,
+                              size: 16,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withOpacity(0.6),
+                            ),
                             onTap: () {
                               Navigator.of(context).push(
                                 MaterialPageRoute(
