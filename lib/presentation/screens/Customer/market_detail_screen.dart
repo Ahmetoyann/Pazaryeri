@@ -152,8 +152,10 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
           IconButton(
             icon: Icon(isFav ? Icons.favorite : Icons.favorite_border),
             color: isFav ? Colors.red : Colors.white,
-            onPressed: () {
-              homeVM.toggleFavorite(widget.market.id);
+            onPressed: () async {
+              if (await authVM.checkGuestStatus(context)) {
+                homeVM.toggleFavorite(widget.market.id);
+              }
             },
           ),
           Container(
@@ -491,7 +493,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
             Align(
               alignment: Alignment.centerRight,
               child: ElevatedButton(
-                onPressed: () {
+                onPressed: () async {
                   if (_userRating == 0) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text(langVM.translate('please_rate'))),
@@ -508,18 +510,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
                   }
 
                   final authVM = context.read<AuthViewModel>();
-                  // Misafir kontrolü: Eğer misafirse uyarı göster ve giriş yapmaya yönlendir
-                  if (authVM.isGuest) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(langVM.translate('guest_message')),
-                        action: SnackBarAction(
-                          label: langVM.translate('login'),
-                          onPressed: () => authVM
-                              .exitGuestMode(), // Giriş ekranına yönlendirir
-                        ),
-                      ),
-                    );
+                  if (!await authVM.checkGuestStatus(context)) {
                     return;
                   }
 

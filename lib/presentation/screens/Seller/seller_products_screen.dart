@@ -124,7 +124,13 @@ class _SellerProductsScreenState extends State<SellerProductsScreen> {
                 color:
                     Theme.of(context).colorScheme.onSurface.withOpacity(0.2)),
             const SizedBox(height: 16),
-            Text(langVM.translate('no_products_yet')),
+            Text("Henüz ürün eklemediniz.",
+                style: TextStyle(
+                    fontSize: 16,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withOpacity(0.5))),
           ],
         ),
       );

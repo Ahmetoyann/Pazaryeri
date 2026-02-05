@@ -26,6 +26,7 @@ import 'presentation/screens/user_type_selection_screen.dart';
 import 'presentation/screens/Seller/seller_market_selection_screen.dart';
 import 'presentation/screens/Seller/seller_main_screen.dart';
 import 'app_theme.dart';
+import 'presentation/widgets/success_dialog.dart';
 
 // Global navigasyon anahtarı
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -100,7 +101,7 @@ class MyApp extends StatelessWidget {
                                   ]
                                 : [
                                     const Color(0xFF1B5E20), // Sabit koyu yeşil
-                                    const Color(0xFF1B5E20),
+                                    const Color.fromRGBO(27, 94, 32, 1),
                                   ],
                           ),
                         ),
@@ -118,7 +119,7 @@ class MyApp extends StatelessWidget {
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: theme.colorScheme.primary
-                                .withOpacity(isDark ? 0.15 : 0.08),
+                                .withOpacity(isDark ? 0.4 : 0.0),
                           ),
                         ),
                       ),
@@ -133,13 +134,13 @@ class MyApp extends StatelessWidget {
                           height: 250,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: theme.colorScheme.secondary
-                                .withOpacity(isDark ? 0.15 : 0.08),
+                            color: theme.colorScheme.tertiary
+                                .withOpacity(isDark ? 0.4 : 0.0),
                           ),
                         ),
                       ),
                     ),
-                    if (child != null) child,
+                    if (child != null) GlobalConnectivityManager(child: child),
                   ],
                 );
               },
@@ -158,6 +159,103 @@ class MyApp extends StatelessWidget {
         },
       ),
     );
+  }
+}
+
+class GlobalConnectivityManager extends StatefulWidget {
+  final Widget child;
+  const GlobalConnectivityManager({super.key, required this.child});
+
+  @override
+  State<GlobalConnectivityManager> createState() =>
+      _GlobalConnectivityManagerState();
+}
+
+class _GlobalConnectivityManagerState extends State<GlobalConnectivityManager> {
+  StreamSubscription? _subscription;
+  bool _isDialogShowing = false;
+  bool _wasDisconnected = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _subscription = Connectivity().onConnectivityChanged.listen((result) {
+      final bool hasConnection = !result.contains(ConnectivityResult.none);
+      if (!hasConnection) {
+        _wasDisconnected = true;
+        _showNoInternetDialog();
+      } else if (_wasDisconnected) {
+        _wasDisconnected = false;
+        _showConnectionRestoredDialog();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _showNoInternetDialog() async {
+    if (_isDialogShowing) return;
+
+    final context = navigatorKey.currentContext;
+    if (context == null) return;
+
+    _isDialogShowing = true;
+
+    // Dil desteği için güvenli erişim
+    String message = 'İnternet bağlantısı yok';
+    try {
+      final langVM = Provider.of<LanguageViewModel>(context, listen: false);
+      message = langVM.translate('no_internet');
+    } catch (_) {}
+
+    await DialogService.showError(
+      context,
+      message: message,
+    );
+
+    if (mounted) {
+      _isDialogShowing = false;
+    }
+  }
+
+  Future<void> _showConnectionRestoredDialog() async {
+    // Eğer şu an "İnternet yok" diyaloğu açıksa kapanmasını bekle
+    while (_isDialogShowing) {
+      await Future.delayed(const Duration(milliseconds: 100));
+      if (!mounted) return;
+    }
+
+    final context = navigatorKey.currentContext;
+    if (context == null) return;
+
+    _isDialogShowing = true;
+
+    String message = 'Bağlantı sağlandı';
+    try {
+      final langVM = Provider.of<LanguageViewModel>(context, listen: false);
+      final translated = langVM.translate('connection_restored');
+      if (translated != 'connection_restored') {
+        message = translated;
+      }
+    } catch (_) {}
+
+    await DialogService.showSuccess(
+      context,
+      message: message,
+    );
+
+    if (mounted) {
+      _isDialogShowing = false;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return widget.child;
   }
 }
 

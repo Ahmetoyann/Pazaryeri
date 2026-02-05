@@ -1,4 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../viewmodels/seller_viewmodel.dart';
 import '../../viewmodels/auth_service.dart';
@@ -21,6 +24,9 @@ class _SellerProductManagementScreenState
   late TextEditingController _stockController;
   late TextEditingController _salesController;
   bool _isLoading = false;
+  List<String> _existingImages = [];
+  List<XFile> _newImages = [];
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
@@ -31,6 +37,49 @@ class _SellerProductManagementScreenState
         TextEditingController(text: widget.product.stockQuantity.toString());
     _salesController =
         TextEditingController(text: widget.product.salesCount.toString());
+    _loadProductImages();
+  }
+
+  Future<void> _loadProductImages() async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('products')
+          .doc(widget.product.id)
+          .get();
+      if (doc.exists && mounted) {
+        final data = doc.data();
+        if (data != null && data['images'] != null) {
+          setState(() {
+            _existingImages = List<String>.from(data['images']);
+          });
+        } else if (data != null && data['imagePath'] != null) {
+          setState(() {
+            _existingImages = [data['imagePath']];
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Resimler yüklenemedi: $e');
+    }
+  }
+
+  Future<void> _pickImages() async {
+    try {
+      final List<XFile> images = await _picker.pickMultiImage();
+      if (images.isNotEmpty) {
+        setState(() {
+          _newImages.addAll(images);
+        });
+      }
+    } catch (e) {
+      debugPrint('Resim seçme hatası: $e');
+    }
+  }
+
+  void _removeNewImage(int index) {
+    setState(() {
+      _newImages.removeAt(index);
+    });
   }
 
   @override
@@ -71,12 +120,27 @@ class _SellerProductManagementScreenState
       final double stock = double.parse(_stockController.text);
       final int sales = int.parse(_salesController.text);
 
+      // Yeni resimleri yükle
+      List<String> newImageUrls = [];
+      for (var image in _newImages) {
+        final url =
+            await AuthService.instance.uploadProductImage(File(image.path));
+        newImageUrls.add(url);
+      }
+
       // Firestore güncellemesi
-      await AuthService.instance.updateProductInDb(widget.product.id, {
+      final Map<String, dynamic> updateData = {
         'price': price,
         'stockQuantity': stock,
         'salesCount': sales,
-      });
+      };
+
+      if (newImageUrls.isNotEmpty) {
+        updateData['images'] = FieldValue.arrayUnion(newImageUrls);
+      }
+
+      await AuthService.instance
+          .updateProductInDb(widget.product.id, updateData);
 
       // ViewModel'i yenile (Listeyi ve istatistikleri güncellemek için)
       if (mounted) {
@@ -139,6 +203,95 @@ class _SellerProductManagementScreenState
             children: [
               Text('Hızlı Düzenleme & İstatistik',
                   style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 24),
+
+              // Fotoğraflar Bölümü
+              Text('Ürün Fotoğrafları',
+                  style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 100,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  children: [
+                    // Resim Ekle Butonu
+                    GestureDetector(
+                      onTap: _pickImages,
+                      child: Container(
+                        width: 100,
+                        height: 100,
+                        margin: const EdgeInsets.only(right: 12),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .primary
+                                  .withOpacity(0.3)),
+                        ),
+                        child: Icon(Icons.add_a_photo,
+                            color: Theme.of(context).colorScheme.primary),
+                      ),
+                    ),
+                    // Yeni Seçilen Resimler
+                    ..._newImages.asMap().entries.map((entry) {
+                      return Stack(
+                        children: [
+                          Container(
+                            width: 100,
+                            height: 100,
+                            margin: const EdgeInsets.only(right: 12),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              image: DecorationImage(
+                                image: FileImage(File(entry.value.path)),
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            top: 4,
+                            right: 16,
+                            child: GestureDetector(
+                              onTap: () => _removeNewImage(entry.key),
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: const BoxDecoration(
+                                  color: Colors.red,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.close,
+                                    size: 12, color: Colors.white),
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    }),
+                    // Mevcut Resimler
+                    ..._existingImages.map((url) {
+                      return Container(
+                        width: 100,
+                        height: 100,
+                        margin: const EdgeInsets.only(right: 12),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          border:
+                              Border.all(color: Colors.white.withOpacity(0.2)),
+                          image: DecorationImage(
+                            image: NetworkImage(url),
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      );
+                    }),
+                  ],
+                ),
+              ),
               const SizedBox(height: 24),
 
               // Fiyat

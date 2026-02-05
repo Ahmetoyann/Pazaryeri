@@ -11,6 +11,7 @@ import 'seller_products_screen.dart';
 import 'seller_settings_screen.dart';
 import 'seller_stats_screen.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../Customer/notifications_screen.dart';
 
 class SellerMainScreen extends StatefulWidget {
   final int initialIndex;
@@ -60,6 +61,7 @@ class _SellerMainScreenState extends State<SellerMainScreen> {
   Widget build(BuildContext context) {
     final langVM = Provider.of<LanguageViewModel>(context);
     final sellerVM = Provider.of<SellerViewModel>(context);
+    final authVM = Provider.of<AuthViewModel>(context);
 
     final List<Widget> pages = [
       SellerAddProductScreen(onProductAdded: () {
@@ -76,6 +78,62 @@ class _SellerMainScreenState extends State<SellerMainScreen> {
         title: Text(sellerVM.selectedMarket?.name ??
             langVM.translate('seller_panel_title')),
         actions: [
+          StreamBuilder<List<Map<String, dynamic>>>(
+            stream: authVM.currentUser != null
+                ? AuthService.instance
+                    .getUserNotifications(authVM.currentUser!.id)
+                : null,
+            builder: (context, snapshot) {
+              int unreadCount = 0;
+              if (snapshot.hasData) {
+                unreadCount =
+                    snapshot.data!.where((n) => n['read'] == false).length;
+              }
+              return IconButton(
+                icon: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    const Icon(Icons.notifications),
+                    if (unreadCount > 0)
+                      Positioned(
+                        right: -2,
+                        top: -2,
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 1.5),
+                          ),
+                          constraints: const BoxConstraints(
+                            minWidth: 18,
+                            minHeight: 18,
+                          ),
+                          child: Center(
+                            child: Text(
+                              '$unreadCount',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const NotificationsScreen()),
+                  );
+                },
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.settings),
             tooltip: langVM.translate('seller_settings_title'),
@@ -95,7 +153,7 @@ class _SellerMainScreenState extends State<SellerMainScreen> {
         ),
       ),
       bottomNavigationBar: Padding(
-        padding: const EdgeInsets.only(left: 32, right: 32, bottom: 32),
+        padding: const EdgeInsets.only(left: 32, right: 32, bottom: 16),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(24),
           child: BackdropFilter(

@@ -51,11 +51,21 @@ class AuthService {
         prefs.getStringList(_keyFavorites) ?? [];
 
     // 1. Firebase Auth ile giriş
-    UserCredential userCredential =
-        await FirebaseAuth.instance.signInWithEmailAndPassword(
-      email: email,
-      password: password,
-    );
+    UserCredential userCredential;
+    try {
+      userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'user-not-found' ||
+          e.code == 'wrong-password' ||
+          e.code == 'invalid-credential' ||
+          e.code == 'invalid-email') {
+        throw Exception('E-posta veya şifreyi hatalı girdiniz.');
+      }
+      throw Exception('Giriş başarısız: ${e.message}');
+    }
 
     final user = userCredential.user;
     if (user == null) {
@@ -111,6 +121,26 @@ class AuthService {
     } on FirebaseAuthException catch (e) {
       // Hata yönetimi ViewModel tarafında veya burada detaylandırılabilir
       throw Exception(e.message ?? 'Kayıt oluşturulamadı.');
+    }
+  }
+
+  /// Şifre sıfırlama e-postası gönderir.
+  Future<void> sendPasswordResetEmail(String email) async {
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+    } on FirebaseAuthException catch (e) {
+      String message;
+      switch (e.code) {
+        case 'user-not-found':
+          message = 'Bu e-posta adresiyle kayıtlı kullanıcı bulunamadı.';
+          break;
+        case 'invalid-email':
+          message = 'Geçersiz e-posta adresi.';
+          break;
+        default:
+          message = 'İşlem başarısız: ${e.message}';
+      }
+      throw Exception(message);
     }
   }
 
@@ -652,8 +682,8 @@ class AuthService {
 
   /// Kullanıcıya bildirim gönderir (Firestore'a yazar)
   /// NOT: Bu metot şu an sadece satıcı bir yoruma yanıt verdiğinde kullanılmaktadır.
-  Future<void> sendUserNotification(
-      String userId, String title, String body) async {
+  Future<void> sendUserNotification(String userId, String title, String body,
+      {Map<String, dynamic>? metadata}) async {
     try {
       await FirebaseFirestore.instance
           .collection('users')
@@ -664,6 +694,7 @@ class AuthService {
         'body': body,
         'timestamp': FieldValue.serverTimestamp(),
         'read': false,
+        if (metadata != null) 'metadata': metadata,
       });
     } catch (e) {
       debugPrint('Bildirim gönderilemedi: $e');
@@ -723,6 +754,22 @@ class AuthService {
         .collection('notifications')
         .doc(notificationId)
         .delete();
+  }
+
+  /// Tüm bildirimleri siler
+  Future<void> deleteAllNotifications(String userId) async {
+    final batch = FirebaseFirestore.instance.batch();
+    final snapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .collection('notifications')
+        .get();
+
+    for (var doc in snapshot.docs) {
+      batch.delete(doc.reference);
+    }
+
+    await batch.commit();
   }
 
   Future<void> toggleFavoriteSeller(String sellerId) async {
@@ -997,6 +1044,41 @@ class AuthService {
     }
   }
 
+  /// Ürün yorumunu siler (Firestore)
+  Future<void> deleteProductReview(String reviewId) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('product_reviews')
+          .doc(reviewId)
+          .delete();
+    } catch (e) {
+      debugPrint('Ürün yorumu silinirken hata: $e');
+      throw e;
+    }
+  }
+
+  /// Ürün yorumu beğenme durumunu değiştir (Firestore)
+  Future<void> toggleProductReviewLike(String reviewId, String userId) async {
+    final docRef =
+        FirebaseFirestore.instance.collection('product_reviews').doc(reviewId);
+
+    await FirebaseFirestore.instance.runTransaction((transaction) async {
+      final snapshot = await transaction.get(docRef);
+      if (!snapshot.exists) return;
+
+      final data = snapshot.data()!;
+      List<String> likes = List<String>.from(data['likes'] ?? []);
+
+      if (likes.contains(userId)) {
+        likes.remove(userId);
+      } else {
+        likes.add(userId);
+      }
+
+      transaction.update(docRef, {'likes': likes});
+    });
+  }
+
   // Yorum yanıtlama
   Future<void> replyToProductReview(String reviewId, String reply) async {
     try {
@@ -1017,10 +1099,153 @@ class AuthService {
           data['userId'],
           'Satıcı Yanıt Verdi 💬',
           'Satıcı yorumunuza yanıt verdi: "$reply"',
+          metadata: {
+            'type': 'product_reply',
+            'productId': data['productId'],
+          },
         );
       }
     } catch (e) {
       debugPrint('Yorum yanıtlanırken hata: $e');
+      throw e;
+    }
+  }
+
+  // --- ÜRÜN SORULARI İŞLEMLERİ ---
+
+  Future<List<Map<String, dynamic>>> getProductQuestions(
+      String productId) async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('product_questions')
+          .where('productId', isEqualTo: productId)
+          .get();
+
+      final questions = snapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        return data;
+      }).toList();
+
+      // Tarihe göre sırala (Yeniden eskiye)
+      questions.sort((a, b) {
+        final dateA = a['date'] ?? '';
+        final dateB = b['date'] ?? '';
+        return dateB.compareTo(dateA);
+      });
+
+      return questions;
+    } catch (e) {
+      debugPrint('Ürün soruları çekilirken hata: $e');
+      return [];
+    }
+  }
+
+  /// Belirtilen ürün ID'lerine ait soruları getirir (Chunking ile)
+  Future<List<Map<String, dynamic>>> getQuestionsForProducts(
+      List<String> productIds) async {
+    if (productIds.isEmpty) return [];
+    List<Map<String, dynamic>> allQuestions = [];
+
+    for (var i = 0; i < productIds.length; i += 10) {
+      final end = (i + 10 < productIds.length) ? i + 10 : productIds.length;
+      final chunk = productIds.sublist(i, end);
+
+      try {
+        final snapshot = await FirebaseFirestore.instance
+            .collection('product_questions')
+            .where('productId', whereIn: chunk)
+            .get();
+
+        final questions = snapshot.docs.map((doc) {
+          final data = doc.data();
+          data['id'] = doc.id;
+          return data;
+        }).toList();
+
+        allQuestions.addAll(questions);
+      } catch (e) {
+        debugPrint('Sorular çekilirken hata: $e');
+      }
+    }
+
+    allQuestions.sort((a, b) {
+      final dateA = a['date'] ?? '';
+      final dateB = b['date'] ?? '';
+      return dateB.compareTo(dateA);
+    });
+
+    return allQuestions;
+  }
+
+  Future<void> replyToProductQuestion(String questionId, String reply) async {
+    try {
+      final docRef = FirebaseFirestore.instance
+          .collection('product_questions')
+          .doc(questionId);
+
+      await docRef.update({
+        'sellerReply': reply,
+        'replyDate': FieldValue.serverTimestamp(),
+      });
+
+      // Müşteriye bildirim gönder
+      final doc = await docRef.get();
+      final data = doc.data();
+      if (data != null && data['userId'] != null) {
+        await sendUserNotification(
+          data['userId'],
+          'Satıcı Sorunuzu Yanıtladı 💬',
+          'Satıcı sorunuza yanıt verdi: "$reply"',
+          metadata: {
+            'type': 'product_reply',
+            'productId': data['productId'],
+          },
+        );
+      }
+    } catch (e) {
+      debugPrint('Soru yanıtlanırken hata: $e');
+      throw e;
+    }
+  }
+
+  Future<void> askProductQuestion(Map<String, dynamic> question) async {
+    try {
+      String? sellerId;
+      if (question['productId'] != null) {
+        final productDoc = await FirebaseFirestore.instance
+            .collection('products')
+            .doc(question['productId'])
+            .get();
+        sellerId = productDoc.data()?['sellerId'];
+        if (sellerId != null) {
+          question['sellerId'] = sellerId;
+        }
+      }
+
+      await FirebaseFirestore.instance
+          .collection('product_questions')
+          .add(question);
+
+      if (sellerId != null) {
+        await sendSellerNotification(
+            sellerId, 'Yeni Ürün Sorusu ❓', 'Bir ürününüze yeni soru soruldu.');
+      }
+    } catch (e) {
+      debugPrint('Soru sorulurken hata: $e');
+      throw e;
+    }
+  }
+
+  /// Ürün sorusunu siler (Firestore)
+  Future<void> deleteProductQuestion(String questionId) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('product_questions')
+          .doc(questionId)
+          .delete();
+    } catch (e) {
+      debugPrint('Ürün sorusu silinirken hata: $e');
       throw e;
     }
   }
@@ -1158,6 +1383,19 @@ class AuthService {
     final ref = FirebaseStorage.instance
         .ref()
         .child('products')
+        .child(user.uid)
+        .child('${DateTime.now().millisecondsSinceEpoch}.jpg');
+    await ref.putFile(file);
+    return await ref.getDownloadURL();
+  }
+
+  /// Yorum görselini Storage'a yükler
+  Future<String> uploadReviewImage(File file) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) throw Exception('Kullanıcı oturumu açık değil');
+    final ref = FirebaseStorage.instance
+        .ref()
+        .child('product_reviews')
         .child(user.uid)
         .child('${DateTime.now().millisecondsSinceEpoch}.jpg');
     await ref.putFile(file);

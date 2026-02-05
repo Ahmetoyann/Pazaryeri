@@ -322,6 +322,7 @@ class _AccountScreenState extends State<AccountScreen>
                         title: Text(langVM.translate('language')),
                         trailing: DropdownButton<String>(
                           value: langVM.currentLanguage,
+                          dropdownColor: Theme.of(context).cardColor,
                           underline: const SizedBox(),
                           items: const [
                             DropdownMenuItem(
@@ -483,51 +484,111 @@ class _AccountScreenState extends State<AccountScreen>
     final langVM = context.watch<LanguageViewModel>();
 
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Icon(
-              Icons.person_off_outlined,
-              size: 80,
-              color: Colors.grey.shade700,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              langVM.translate('guest_message'),
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 17, color: Colors.grey),
-            ),
-            const SizedBox(height: 32),
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Icon(
+                Icons.person_off_outlined,
+                size: 80,
+                color: Colors.grey.shade700,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                langVM.translate('guest_message'),
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 17, color: Colors.grey),
+              ),
+              const SizedBox(height: 32),
 
-            // Google ile Bağla Butonu
-            ElevatedButton.icon(
-              onPressed: () async {
-                try {
-                  await context.read<AuthViewModel>().loginWithGoogle();
-                } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Hata: $e')),
-                    );
+              // Google ile Bağla Butonu
+              ElevatedButton.icon(
+                onPressed: () async {
+                  try {
+                    await context.read<AuthViewModel>().loginWithGoogle();
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Hata: $e')),
+                      );
+                    }
                   }
-                }
-              },
-              icon: const Icon(Icons.g_mobiledata, size: 32),
-              label: Text(langVM.translate('connect_with_google')),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: Colors.black,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
-                  side: BorderSide(color: Colors.white.withOpacity(0.3)),
+                },
+                icon: Image.asset(
+                  'assets/images/google_logo.svg.png',
+                  height: 24,
+                ),
+                label: Text(langVM.translate('connect_with_google')),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: Colors.black,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    side: BorderSide(color: Colors.white.withOpacity(0.3)),
+                  ),
                 ),
               ),
-            ),
-          ],
+              const SizedBox(height: 32),
+              // Misafirler için Dil Ayarları
+              _buildNormalCard(
+                context,
+                Consumer<LanguageViewModel>(
+                  builder: (context, langVM, child) {
+                    return ListTile(
+                      leading: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.purple.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.language, color: Colors.purple),
+                      ),
+                      title: Text(langVM.translate('language')),
+                      trailing: DropdownButton<String>(
+                        value: langVM.currentLanguage,
+                        dropdownColor: Theme.of(context).cardColor,
+                        underline: const SizedBox(),
+                        items: const [
+                          DropdownMenuItem(value: 'tr', child: Text('Türkçe')),
+                          DropdownMenuItem(value: 'en', child: Text('English')),
+                        ],
+                        onChanged: (val) {
+                          if (val != null) langVM.changeLanguage(val);
+                        },
+                      ),
+                    );
+                  },
+                ),
+              ),
+              // Misafirler için Tema Ayarları
+              _buildNormalCard(
+                context,
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.teal.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.palette, color: Colors.teal),
+                  ),
+                  title: Text(langVM.translate('theme_settings')),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const ThemeSettingsScreen(),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

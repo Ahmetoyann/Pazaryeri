@@ -60,7 +60,19 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             padding: const EdgeInsets.fromLTRB(12, 110, 12, 12),
             itemCount: homeVM.favoriteMarkets.length,
             itemBuilder: (context, index) {
-              final market = homeVM.favoriteMarkets[index];
+              var market = homeVM.favoriteMarkets[index];
+
+              // Uzaklık bilgisini düzeltmek için güncel listelerden kontrol et
+              try {
+                market =
+                    homeVM.nearbyMarkets.firstWhere((m) => m.id == market.id);
+              } catch (_) {
+                try {
+                  market = homeVM.provinceMarkets
+                      .firstWhere((m) => m.id == market.id);
+                } catch (_) {}
+              }
+
               final tag = '${market.id}_fav';
               return Dismissible(
                 key: Key(market.id),

@@ -64,136 +64,143 @@ class _SellerMarketSelectionScreenState
       appBar: CustomAppBar(
         title: Text(langVM.translate('select_market_title')),
       ),
-      body: FutureBuilder<List<Market>>(
-        future: sellerVM.getMarkets(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      body: Container(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        child: FutureBuilder<List<Market>>(
+          future: sellerVM.getMarkets(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return Center(
-                child: Text(
-              langVM.translate('no_results'),
-              style: TextStyle(
-                  color:
-                      Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
-            ));
-          }
+            if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              return Center(
+                  child: Text(
+                langVM.translate('no_results'),
+                style: TextStyle(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withOpacity(0.6)),
+              ));
+            }
 
-          final markets = snapshot.data!;
+            final markets = snapshot.data!;
 
-          return Column(
-            children: [
-              const SizedBox(height: 110), // AppBar için boşluk
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Text(
-                  langVM.translate('select_market_instruction'),
-                  style: Theme.of(context).textTheme.titleMedium,
-                  textAlign: TextAlign.center,
+            return Column(
+              children: [
+                const SizedBox(height: 110), // AppBar için boşluk
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Text(
+                    langVM.translate('select_market_instruction'),
+                    style: Theme.of(context).textTheme.titleMedium,
+                    textAlign: TextAlign.center,
+                  ),
                 ),
-              ),
-              Expanded(
-                child: ListView.builder(
-                  itemCount: markets.length,
-                  itemBuilder: (context, index) {
-                    final market = markets[index];
-                    return Card(
-                      margin: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(color: Colors.white.withOpacity(0.3)),
-                      ),
-                      child: ListTile(
-                        leading: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .primary
-                                .withOpacity(0.1),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(Icons.storefront,
-                              color: Theme.of(context).colorScheme.primary),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: markets.length,
+                    itemBuilder: (context, index) {
+                      final market = markets[index];
+                      return Card(
+                        margin: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side:
+                              BorderSide(color: Colors.white.withOpacity(0.3)),
                         ),
-                        title: Text(market.name,
-                            style:
-                                const TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: Text(market.address.district),
-                        trailing: Icon(Icons.arrow_forward_ios,
-                            size: 16,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withOpacity(0.6)),
-                        onTap: () async {
-                          // İşlem başladığında yükleniyor dialogunu göster
-                          showDialog(
-                            context: context,
-                            barrierDismissible: false,
-                            useRootNavigator: false,
-                            builder: (ctx) => const Center(
-                                child: CircularProgressIndicator()),
-                          );
-
-                          // 1. Seçimi ViewModel'e bildir
-                          sellerVM.selectMarket(market);
-                          final navigator = Navigator.of(context);
-                          final scaffoldMessenger =
-                              ScaffoldMessenger.of(context);
-                          final authVM = Provider.of<AuthViewModel>(context,
-                              listen: false);
-
-                          try {
-                            // 2. Seçimi Kalıcı Olarak Kaydet (DB ve Yerel)
-                            if (authVM.currentUser != null) {
-                              // Firestore'a kaydet ki diğer kullanıcılar görebilsin
-                              await AuthService.instance.updateUserInDb({
-                                'sellerMarketId': market.id,
-                                'isSeller': true, // Satıcı olarak işaretle
-                              }, authVM.currentUser!.email).timeout(
-                                const Duration(seconds: 5),
-                                onTimeout: () {
-                                  // Bağlantı yavaşsa bekleme, yerel olarak devam et
-                                  debugPrint(
-                                      'Bulut güncellemesi zaman aşımı, yerel devam ediliyor.');
-                                },
-                              );
-
-                              await AuthService.instance
-                                  .updateSellerMarketId(market.id);
-                            }
-
-                            // İşlem başarılı, yükleniyor dialogunu kapat
-                            navigator.pop();
-
-                            // Dialog kapandıktan sonra ekran geçişini tetikle
-                            if (authVM.currentUser != null) {
-                              authVM.setSellerMarketId(market.id);
-                            }
-                          } catch (e) {
-                            // Hata oluştu, yükleniyor dialogunu kapat
-                            navigator.pop();
-
-                            scaffoldMessenger.showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                    '${langVM.translate('error_prefix')}: $e'),
-                              ),
+                        color: Theme.of(context).cardColor,
+                        child: ListTile(
+                          leading: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .primary
+                                  .withOpacity(0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(Icons.storefront,
+                                color: Theme.of(context).colorScheme.primary),
+                          ),
+                          title: Text(market.name,
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.bold)),
+                          subtitle: Text(market.address.district),
+                          trailing: Icon(Icons.arrow_forward_ios,
+                              size: 16,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withOpacity(0.6)),
+                          onTap: () async {
+                            // İşlem başladığında yükleniyor dialogunu göster
+                            showDialog(
+                              context: context,
+                              barrierDismissible: false,
+                              useRootNavigator: false,
+                              builder: (ctx) => const Center(
+                                  child: CircularProgressIndicator()),
                             );
-                          }
-                        },
-                      ),
-                    );
-                  },
+
+                            // 1. Seçimi ViewModel'e bildir
+                            sellerVM.selectMarket(market);
+                            final navigator = Navigator.of(context);
+                            final scaffoldMessenger =
+                                ScaffoldMessenger.of(context);
+                            final authVM = Provider.of<AuthViewModel>(context,
+                                listen: false);
+
+                            try {
+                              // 2. Seçimi Kalıcı Olarak Kaydet (DB ve Yerel)
+                              if (authVM.currentUser != null) {
+                                // Firestore'a kaydet ki diğer kullanıcılar görebilsin
+                                await AuthService.instance.updateUserInDb({
+                                  'sellerMarketId': market.id,
+                                  'isSeller': true, // Satıcı olarak işaretle
+                                }, authVM.currentUser!.email).timeout(
+                                  const Duration(seconds: 5),
+                                  onTimeout: () {
+                                    // Bağlantı yavaşsa bekleme, yerel olarak devam et
+                                    debugPrint(
+                                        'Bulut güncellemesi zaman aşımı, yerel devam ediliyor.');
+                                  },
+                                );
+
+                                await AuthService.instance
+                                    .updateSellerMarketId(market.id);
+                              }
+
+                              // İşlem başarılı, yükleniyor dialogunu kapat
+                              navigator.pop();
+
+                              // Dialog kapandıktan sonra ekran geçişini tetikle
+                              if (authVM.currentUser != null) {
+                                authVM.setSellerMarketId(market.id);
+                              }
+                            } catch (e) {
+                              // Hata oluştu, yükleniyor dialogunu kapat
+                              navigator.pop();
+
+                              scaffoldMessenger.showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                      '${langVM.translate('error_prefix')}: $e'),
+                                ),
+                              );
+                            }
+                          },
+                        ),
+                      );
+                    },
+                  ),
                 ),
-              ),
-            ],
-          );
-        },
+              ],
+            );
+          },
+        ),
       ),
     );
   }

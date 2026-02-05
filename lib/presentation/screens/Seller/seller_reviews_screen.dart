@@ -15,9 +15,12 @@ class SellerReviewsScreen extends StatefulWidget {
 class _SellerReviewsScreenState extends State<SellerReviewsScreen> {
   List<Map<String, dynamic>> _allReviews = [];
   List<Map<String, dynamic>> _filteredReviews = [];
+  List<Map<String, dynamic>> _allQuestions = [];
+  List<Map<String, dynamic>> _filteredQuestions = [];
   Map<String, Map<String, dynamic>> _productStats = {};
   String? _selectedProductId;
   bool _isLoading = true;
+  int _selectedTab = 0; // 0: Değerlendirmeler, 1: Sorular
 
   @override
   void initState() {
@@ -39,6 +42,8 @@ class _SellerReviewsScreenState extends State<SellerReviewsScreen> {
     final myProductIds = sellerVM.myProducts.map((p) => p.id).toList();
     final myReviewsRaw =
         await AuthService.instance.getReviewsForProducts(myProductIds);
+    final myQuestionsRaw =
+        await AuthService.instance.getQuestionsForProducts(myProductIds);
 
     final myReviews = myReviewsRaw.map((r) {
       final product = sellerVM.myProducts.firstWhere(
@@ -57,6 +62,39 @@ class _SellerReviewsScreenState extends State<SellerReviewsScreen> {
         'productName': product.name,
       };
     }).toList();
+
+    final myQuestions = myQuestionsRaw.map((q) {
+      final product = sellerVM.myProducts.firstWhere(
+        (p) => p.id == q['productId'],
+        orElse: () => SellerProduct(
+            id: '',
+            sellerId: '',
+            name: 'Bilinmeyen Ürün',
+            description: '',
+            price: 0,
+            category: ''),
+      );
+      return {
+        ...q,
+        'user': q['userName'] ?? 'Misafir',
+        'productName': product.name,
+      };
+    }).toList();
+
+    // Yanıtlanmamış soruları en üstte göster, diğerlerini tarihe göre sırala
+    myQuestions.sort((a, b) {
+      final bool isAnsweredA =
+          a['sellerReply'] != null && (a['sellerReply'] as String).isNotEmpty;
+      final bool isAnsweredB =
+          b['sellerReply'] != null && (b['sellerReply'] as String).isNotEmpty;
+
+      if (!isAnsweredA && isAnsweredB) return -1;
+      if (isAnsweredA && !isAnsweredB) return 1;
+
+      final String dateA = a['date'] ?? '';
+      final String dateB = b['date'] ?? '';
+      return dateB.compareTo(dateA);
+    });
 
     // İstatistikleri hesapla
     final stats = <String, Map<String, dynamic>>{};
@@ -78,6 +116,7 @@ class _SellerReviewsScreenState extends State<SellerReviewsScreen> {
     if (mounted) {
       setState(() {
         _allReviews = myReviews;
+        _allQuestions = myQuestions;
         _productStats = stats;
         _applyFilter();
         _isLoading = false;
@@ -88,9 +127,13 @@ class _SellerReviewsScreenState extends State<SellerReviewsScreen> {
   void _applyFilter() {
     if (_selectedProductId == null) {
       _filteredReviews = List.from(_allReviews);
+      _filteredQuestions = List.from(_allQuestions);
     } else {
       _filteredReviews = _allReviews
           .where((r) => r['productId'] == _selectedProductId)
+          .toList();
+      _filteredQuestions = _allQuestions
+          .where((q) => q['productId'] == _selectedProductId)
           .toList();
     }
   }
@@ -102,55 +145,125 @@ class _SellerReviewsScreenState extends State<SellerReviewsScreen> {
     });
   }
 
-  Future<void> _showReplyDialog(String reviewId) async {
+  Future<void> _showReplyBottomSheet(String id,
+      {bool isQuestion = false}) async {
     final TextEditingController _replyController = TextEditingController();
     final langVM = Provider.of<LanguageViewModel>(context, listen: false);
 
-    await showDialog(
+    await showModalBottomSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(langVM.translate('reply_to_review_title')),
-        content: TextField(
-          controller: _replyController,
-          decoration: InputDecoration(
-            hintText: langVM.translate('answer_hint'),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-          maxLines: 3,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFF1E1E1E)
+              : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(langVM.translate('cancel')),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (_replyController.text.trim().isNotEmpty) {
-                try {
-                  await AuthService.instance.replyToProductReview(
-                    reviewId,
-                    _replyController.text.trim(),
-                  );
-                  if (mounted) {
-                    Navigator.pop(context);
-                    await DialogService.showSuccess(
-                      context,
-                      message: langVM.translate('reply_sent_success'),
-                      duration: const Duration(seconds: 3),
-                    );
-                    _loadReviews(); // Listeyi yenile
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+          left: 24,
+          right: 24,
+          top: 12,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 24),
+                decoration: BoxDecoration(
+                  color: Colors.grey.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Text(
+              isQuestion
+                  ? 'Soruyu Yanıtla'
+                  : langVM.translate('reply_to_review_title'),
+              style: TextStyle(
+                color: Colors.orange,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _replyController,
+              autofocus: true,
+              style: const TextStyle(
+                color: Colors.orange,
+              ),
+              decoration: InputDecoration(
+                hintText: langVM.translate('answer_hint'),
+                hintStyle: TextStyle(
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                filled: true,
+                fillColor: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white.withOpacity(0.05)
+                    : Colors.black.withOpacity(0.05),
+                contentPadding: const EdgeInsets.all(16),
+              ),
+              maxLines: 4,
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: () async {
+                  if (_replyController.text.trim().isNotEmpty) {
+                    try {
+                      if (isQuestion) {
+                        await AuthService.instance.replyToProductQuestion(
+                          id,
+                          _replyController.text.trim(),
+                        );
+                      } else {
+                        await AuthService.instance.replyToProductReview(
+                          id,
+                          _replyController.text.trim(),
+                        );
+                      }
+                      if (mounted) {
+                        Navigator.pop(context);
+                        await DialogService.showSuccess(
+                          context,
+                          message: langVM.translate('reply_sent_success'),
+                          duration: const Duration(seconds: 3),
+                        );
+                        _loadReviews(); // Listeyi yenile
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        Navigator.pop(context);
+                        DialogService.showError(context, message: 'Hata: $e');
+                      }
+                    }
                   }
-                } catch (e) {
-                  if (mounted) {
-                    Navigator.pop(context);
-                    DialogService.showError(context, message: 'Hata: $e');
-                  }
-                }
-              }
-            },
-            child: Text(langVM.translate('send_button')),
-          ),
-        ],
+                },
+                child: Text(langVM.translate('send_button')),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -162,29 +275,6 @@ class _SellerReviewsScreenState extends State<SellerReviewsScreen> {
 
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
-    }
-
-    // Eğer hiç yorum yoksa (filtre bağımsız)
-    if (_allReviews.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.rate_review_outlined,
-              size: 64,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.2),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              langVM.translate('no_reviews_yet'),
-              style: TextStyle(
-                  color:
-                      Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
-            ),
-          ],
-        ),
-      );
     }
 
     return Column(
@@ -260,6 +350,41 @@ class _SellerReviewsScreenState extends State<SellerReviewsScreen> {
               },
             ),
           ),
+        // Sekme Seçimi
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          child: Row(
+            children: [
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => setState(() => _selectedTab = 0),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _selectedTab == 0
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context).cardColor,
+                    foregroundColor:
+                        _selectedTab == 0 ? Colors.white : Colors.grey,
+                  ),
+                  child: Text('Puanlama'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => setState(() => _selectedTab = 1),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _selectedTab == 1
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context).cardColor,
+                    foregroundColor:
+                        _selectedTab == 1 ? Colors.white : Colors.grey,
+                  ),
+                  child: const Text('Soru'),
+                ),
+              ),
+            ],
+          ),
+        ),
         // Filtreleme Alanı
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
@@ -303,147 +428,319 @@ class _SellerReviewsScreenState extends State<SellerReviewsScreen> {
           ),
         ),
         // Yorum Listesi
-        Expanded(
-          child: _filteredReviews.isEmpty
-              ? Center(
-                  child: Text(langVM.translate('no_results')),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                  itemCount: _filteredReviews.length,
-                  itemBuilder: (context, index) {
-                    final item = _filteredReviews[index];
-                    final date = item['date'] != null
-                        ? DateTime.parse(item['date']).toString().split(' ')[0]
-                        : '';
+        if (_selectedTab == 0)
+          Expanded(
+            child: _filteredReviews.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.rate_review_outlined,
+                          size: 64,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withOpacity(0.2),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          langVM.translate('no_reviews_yet'),
+                          style: TextStyle(
+                              fontSize: 16,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withOpacity(0.6)),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    itemCount: _filteredReviews.length,
+                    itemBuilder: (context, index) {
+                      final item = _filteredReviews[index];
+                      final date = item['date'] != null
+                          ? DateTime.parse(item['date'])
+                              .toString()
+                              .split(' ')[0]
+                          : '';
 
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(color: Colors.white.withOpacity(0.3)),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Expanded(
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side:
+                              BorderSide(color: Colors.white.withOpacity(0.3)),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          item['user'] as String,
+                                          style: const TextStyle(
+                                              fontWeight: FontWeight.bold),
+                                        ),
+                                        if (item['productName'] != null)
+                                          Text(
+                                            item['productName'],
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .primary,
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      Row(
+                                        children: List.generate(
+                                          5,
+                                          (i) => Icon(
+                                            i < (item['rating'] as int)
+                                                ? Icons.star
+                                                : Icons.star_border,
+                                            size: 16,
+                                            color: Colors.amber,
+                                          ),
+                                        ),
+                                      ),
+                                      Text(
+                                        date,
+                                        style: TextStyle(
+                                            fontSize: 10,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurface
+                                                .withOpacity(0.5)),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Text(item['comment'] as String),
+                              // Yanıt Alanı
+                              if (item['sellerReply'] != null) ...[
+                                const SizedBox(height: 12),
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .primary
+                                        .withOpacity(0.05),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border(
+                                      left: BorderSide(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary,
+                                        width: 4,
+                                      ),
+                                    ),
+                                  ),
                                   child: Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        item['user'] as String,
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold),
-                                      ),
-                                      if (item['productName'] != null)
-                                        Text(
-                                          item['productName'],
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .primary,
-                                          ),
+                                        langVM.translate('seller_reply_label'),
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .primary,
                                         ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(item['sellerReply']),
                                     ],
                                   ),
                                 ),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    Row(
-                                      children: List.generate(
-                                        5,
-                                        (i) => Icon(
-                                          i < (item['rating'] as int)
-                                              ? Icons.star
-                                              : Icons.star_border,
-                                          size: 16,
-                                          color: Colors.amber,
-                                        ),
-                                      ),
-                                    ),
-                                    Text(
-                                      date,
-                                      style: TextStyle(
-                                          fontSize: 10,
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .onSurface
-                                              .withOpacity(0.5)),
-                                    ),
-                                  ],
-                                ),
                               ],
-                            ),
-                            const SizedBox(height: 12),
-                            Text(item['comment'] as String),
-                            // Yanıt Alanı
-                            if (item['sellerReply'] != null) ...[
-                              const SizedBox(height: 12),
-                              Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .primary
-                                      .withOpacity(0.05),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border(
-                                    left: BorderSide(
-                                      color:
-                                          Theme.of(context).colorScheme.primary,
-                                      width: 4,
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          )
+        else
+          Expanded(
+            child: _filteredQuestions.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.help_outline,
+                          size: 64,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withOpacity(0.2),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Henüz soru yok',
+                          style: TextStyle(
+                              fontSize: 16,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withOpacity(0.6)),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    itemCount: _filteredQuestions.length,
+                    itemBuilder: (context, index) {
+                      final item = _filteredQuestions[index];
+                      final date = item['date'] != null
+                          ? DateTime.parse(item['date'])
+                              .toString()
+                              .split(' ')[0]
+                          : '';
+
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side:
+                              BorderSide(color: Colors.white.withOpacity(0.3)),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          item['user'] as String,
+                                          style: const TextStyle(
+                                              fontWeight: FontWeight.bold),
+                                        ),
+                                        if (item['productName'] != null)
+                                          Text(
+                                            item['productName'],
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .primary,
+                                            ),
+                                          ),
+                                      ],
                                     ),
                                   ),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      langVM.translate('seller_reply_label'),
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 12,
+                                  Text(
+                                    date,
+                                    style: TextStyle(
+                                        fontSize: 10,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withOpacity(0.5)),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Text(item['question'] ?? ''),
+                              // Yanıt Alanı
+                              if (item['sellerReply'] != null) ...[
+                                const SizedBox(height: 12),
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .primary
+                                        .withOpacity(0.05),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border(
+                                      left: BorderSide(
                                         color: Theme.of(context)
                                             .colorScheme
                                             .primary,
+                                        width: 4,
                                       ),
                                     ),
-                                    const SizedBox(height: 4),
-                                    Text(item['sellerReply']),
-                                  ],
-                                ),
-                              ),
-                            ] else ...[
-                              const SizedBox(height: 8),
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: TextButton.icon(
-                                  onPressed: () => _showReplyDialog(item['id']),
-                                  icon: const Icon(Icons.reply, size: 18),
-                                  label: Text(langVM.translate('reply_button')),
-                                  style: TextButton.styleFrom(
-                                    foregroundColor:
-                                        Theme.of(context).colorScheme.secondary,
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        langVM.translate('seller_reply_label'),
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .primary,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(item['sellerReply']),
+                                    ],
                                   ),
                                 ),
-                              ),
+                              ] else ...[
+                                const SizedBox(height: 8),
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: TextButton.icon(
+                                    onPressed: () => _showReplyBottomSheet(
+                                        item['id'],
+                                        isQuestion: true),
+                                    icon: const Icon(Icons.reply, size: 18),
+                                    label:
+                                        Text(langVM.translate('reply_button')),
+                                    style: TextButton.styleFrom(
+                                      foregroundColor: Theme.of(context)
+                                          .colorScheme
+                                          .secondary,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ],
-                          ],
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                ),
-        ),
+                      );
+                    },
+                  ),
+          ),
       ],
     );
   }

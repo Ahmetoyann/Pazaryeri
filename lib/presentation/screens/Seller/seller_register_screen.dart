@@ -268,6 +268,23 @@ class _SellerRegisterScreenState extends State<SellerRegisterScreen> {
                               fontSize: 16, fontWeight: FontWeight.bold),
                         ),
                 ),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text("Zaten hesabınız var mı? "),
+                    GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Text(
+                        "Giriş Yap",
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.secondary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),

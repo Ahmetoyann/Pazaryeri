@@ -8,6 +8,7 @@ import '../../data/models/market.dart';
 import '../viewmodels/notification_service.dart';
 import 'user_model.dart'; // Bu dosyanın projenizde olduğundan emin olun
 import 'auth_service.dart';
+import '../widgets/guest_login_dialog.dart';
 
 class AuthViewModel extends ChangeNotifier {
   // --- MEVCUT DEĞİŞKENLER ---
@@ -130,6 +131,18 @@ class AuthViewModel extends ChangeNotifier {
 
   // --- METOTLAR (Durumları değiştirmek için) ---
 
+  /// Kullanıcının işlem yapabilmesi için giriş yapmış olması gerektiğini doğrular.
+  /// Eğer kullanıcı misafir modundaysa veya giriş yapmamışsa,
+  /// [GuestLoginDialog] penceresini gösterir ve `false` döner.
+  /// Kullanıcı giriş yapmışsa `true` döner.
+  Future<bool> checkGuestStatus(BuildContext context) async {
+    if (!isAuthenticated) {
+      await GuestLoginDialog.show(context);
+      return false;
+    }
+    return true;
+  }
+
   /// Satıcı girişi yapar.
   Future<bool> loginAsSeller(String email, String password,
       {bool rememberMe = true}) async {
@@ -152,6 +165,16 @@ class AuthViewModel extends ChangeNotifier {
       return false;
     } catch (e) {
       // Hata mesajını temizle (Exception: ... kısmını kaldır)
+      final message = e.toString().replaceAll('Exception: ', '');
+      throw message;
+    }
+  }
+
+  /// Şifre sıfırlama e-postası gönderir.
+  Future<void> resetPassword(String email) async {
+    try {
+      await AuthService.instance.sendPasswordResetEmail(email);
+    } catch (e) {
       final message = e.toString().replaceAll('Exception: ', '');
       throw message;
     }

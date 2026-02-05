@@ -4,6 +4,7 @@ import '../../viewmodels/language_viewmodel.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 import '../../widgets/status_message_widget.dart';
 import 'seller_register_screen.dart';
+import '../../widgets/success_dialog.dart';
 
 class SellerLoginScreen extends StatefulWidget {
   const SellerLoginScreen({super.key});
@@ -56,10 +57,74 @@ class _SellerLoginScreenState extends State<SellerLoginScreen> {
     }
   }
 
+  Future<void> _showForgotPasswordDialog() async {
+    final emailController = TextEditingController(text: _emailController.text);
+
+    await showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Şifre Sıfırlama'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Şifrenizi sıfırlamak için e-posta adresinizi girin:'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: emailController,
+              decoration: InputDecoration(
+                labelText: 'E-posta',
+                border: const OutlineInputBorder(),
+                prefixIcon: Icon(
+                  Icons.email,
+                  color: Theme.of(dialogContext).iconTheme.color,
+                ),
+              ),
+              keyboardType: TextInputType.emailAddress,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('İptal'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (emailController.text.trim().isEmpty) return;
+              Navigator.pop(dialogContext);
+
+              try {
+                await Provider.of<AuthViewModel>(context, listen: false)
+                    .resetPassword(emailController.text.trim());
+                if (mounted) {
+                  await DialogService.showSuccess(
+                    context,
+                    message:
+                        'Sıfırlama bağlantısı e-posta adresinize gönderildi.',
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Hata: $e')),
+                  );
+                }
+              }
+            },
+            child: const Text('Gönder'),
+          ),
+        ],
+      ),
+    );
+  }
+
   InputDecoration _inputDecoration(String label, IconData icon) {
     return InputDecoration(
       labelText: label,
-      prefixIcon: Icon(icon),
+      prefixIcon: Icon(
+        icon,
+        color: Theme.of(context).iconTheme.color,
+      ),
       border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(30),
           borderSide: BorderSide(color: Colors.white.withOpacity(0.3))),
@@ -104,7 +169,7 @@ class _SellerLoginScreenState extends State<SellerLoginScreen> {
                       child: Icon(
                         Icons.store_outlined,
                         size: 64,
-                        color: Theme.of(context).colorScheme.secondary,
+                        color: Theme.of(context).iconTheme.color,
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -117,12 +182,23 @@ class _SellerLoginScreenState extends State<SellerLoginScreen> {
                               ),
                     ),
                     const SizedBox(height: 32),
-                    if (_errorMessage != null)
+                    if (_errorMessage != null) ...[
                       StatusMessageWidget(
                         message: _errorMessage!,
                         type: StatusType.error,
                         onClose: () => setState(() => _errorMessage = null),
                       ),
+                      TextButton(
+                        onPressed: _showForgotPasswordDialog,
+                        child: Text(
+                          'Şifremi Unuttum',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.secondary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
@@ -146,6 +222,7 @@ class _SellerLoginScreenState extends State<SellerLoginScreen> {
                               : Icons.visibility_off),
                           onPressed: () => setState(
                               () => _obscurePassword = !_obscurePassword),
+                          color: Theme.of(context).iconTheme.color,
                         ),
                       ),
                       validator: (v) => v!.isEmpty
@@ -210,7 +287,7 @@ class _SellerLoginScreenState extends State<SellerLoginScreen> {
                             );
                           },
                           child: Text(
-                            "Satıcı Olun",
+                            "Satıcı Kaydı",
                             style: TextStyle(
                               color: Theme.of(context).colorScheme.secondary,
                               fontWeight: FontWeight.bold,

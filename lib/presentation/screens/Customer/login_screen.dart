@@ -55,6 +55,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (mounted) {
       Provider.of<AuthViewModel>(context, listen: false).enterAsGuest();
       widget.onLoginSuccess();
+      Navigator.of(context).pop();
       // Genellikle sayfa değişeceği için false yapmaya gerek kalmayabilir ama güvenli taraf:
       if (mounted) setState(() => _isGuestLoading = false);
     }
@@ -114,12 +115,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 onPressed:
                     (_isLoading || _isGuestLoading) ? () {} : _loginWithGoogle,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: Colors.black87,
+                  backgroundColor: const Color.fromARGB(255, 27, 94, 32),
+                  foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(30),
-                    side: BorderSide(color: Colors.white.withOpacity(0.3)),
+                    side: BorderSide(color: Colors.white.withOpacity(0.4)),
                   ),
                 ),
                 icon: _isLoading
@@ -128,7 +129,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         width: 24,
                         child: CircularProgressIndicator(
                           strokeWidth: 2.5,
-                          color: Colors.black87,
+                          color: Colors.white,
                         ),
                       )
                     : Image.asset(

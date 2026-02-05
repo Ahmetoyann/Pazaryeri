@@ -52,7 +52,7 @@ class UserTypeSelectionScreen extends StatelessWidget {
                 context,
                 title: langVM.translate('customer_label'),
                 icon: Icons.person_outline,
-                color: Theme.of(context).colorScheme.primary,
+                color: const Color.fromARGB(255, 27, 94, 32),
                 onTap: () {
                   Navigator.push(
                     context,
@@ -69,7 +69,7 @@ class UserTypeSelectionScreen extends StatelessWidget {
                 context,
                 title: langVM.translate('seller_label'),
                 icon: Icons.store_outlined,
-                color: Theme.of(context).colorScheme.secondary,
+                color: Theme.of(context).colorScheme.primary,
                 onTap: () {
                   Navigator.push(
                     context,
@@ -96,6 +96,7 @@ class UserTypeSelectionScreen extends StatelessWidget {
       onPressed: onTap,
       style: ElevatedButton.styleFrom(
         backgroundColor: color,
+        side: BorderSide(color: Colors.white.withOpacity(0.4), width: 2),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,

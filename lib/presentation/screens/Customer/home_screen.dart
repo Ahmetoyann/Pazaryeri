@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../../viewmodels/home_viewmodel.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../widgets/market_card.dart';
-import '../../widgets/location_chip.dart';
 import 'market_detail_screen.dart';
 import '../../viewmodels/language_viewmodel.dart';
 import '../../widgets/custom_app_bar.dart';
@@ -270,156 +269,51 @@ class _HomeScreenState extends State<HomeScreen> {
                     snapshot.data!.where((n) => n['read'] == false).length;
               }
               return IconButton(
-                icon: Badge(
-                  isLabelVisible: unreadCount > 0,
-                  label: Text('$unreadCount'),
-                  child: const Icon(Icons.notifications),
+                icon: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    const Icon(Icons.notifications),
+                    if (unreadCount > 0)
+                      Positioned(
+                        right: -2,
+                        top: -2,
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 1.5),
+                          ),
+                          constraints: const BoxConstraints(
+                            minWidth: 18,
+                            minHeight: 18,
+                          ),
+                          child: Center(
+                            child: Text(
+                              '$unreadCount',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const NotificationsScreen()),
-                  );
+                onPressed: () async {
+                  if (await authVM.checkGuestStatus(context)) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const NotificationsScreen()),
+                    );
+                  }
                 },
               );
             },
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: LocationChip(
-              address: vm.currentAddress,
-              onTap: () {
-                if (vm.currentAddress != null) {
-                  showModalBottomSheet(
-                    context: context,
-                    shape: const RoundedRectangleBorder(
-                      borderRadius: BorderRadius.vertical(
-                        top: Radius.circular(24),
-                      ),
-                    ),
-                    builder: (context) => Container(
-                      padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // Handle bar (Tutma çubuğu)
-                          Container(
-                            width: 40,
-                            height: 4,
-                            margin: const EdgeInsets.only(bottom: 24),
-                            decoration: BoxDecoration(
-                              color: Colors.grey.withOpacity(0.3),
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                          ),
-                          // Başlık Alanı
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.my_location,
-                                color: Theme.of(context).colorScheme.primary,
-                              ),
-                              const SizedBox(width: 12),
-                              Text(
-                                langVM.translate('location_title'),
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleLarge
-                                    ?.copyWith(fontWeight: FontWeight.bold),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 24),
-                          // Bilgi Kartı
-                          Card(
-                            margin: EdgeInsets.zero,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              side: BorderSide(
-                                  color: Colors.white.withOpacity(0.3)),
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: Column(
-                                children: [
-                                  _buildInfoRow(
-                                    context,
-                                    Icons.map,
-                                    '${vm.currentAddress!.neighborhood}, ${vm.currentAddress!.district}',
-                                  ),
-                                  const Divider(height: 24),
-                                  _buildInfoRow(
-                                    context,
-                                    Icons.location_city,
-                                    vm.currentAddress!.city,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-                          // Aksiyon Butonları
-                          Row(
-                            children: [
-                              Expanded(
-                                child: OutlinedButton.icon(
-                                  onPressed: () async {
-                                    await Geolocator.openLocationSettings();
-                                  },
-                                  icon: const Icon(Icons.settings),
-                                  style: OutlinedButton.styleFrom(
-                                    side: BorderSide(
-                                        color: Colors.white.withOpacity(0.3)),
-                                    shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(30)),
-                                  ),
-                                  label: Text(langVM.translate('settings')),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: ElevatedButton.icon(
-                                  onPressed: () async {
-                                    vm.clearProvinceSelection();
-                                    await vm.loadData();
-                                    if (context.mounted) {
-                                      Navigator.of(context).pop();
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            '${langVM.translate('location_updated')}: ${vm.currentAddress?.city ?? langVM.translate('unknown')}',
-                                          ),
-                                          behavior: SnackBarBehavior.floating,
-                                        ),
-                                      );
-                                    }
-                                  },
-                                  icon: const Icon(Icons.refresh),
-                                  style: ElevatedButton.styleFrom(
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(30),
-                                      side: BorderSide(
-                                          color: Colors.white.withOpacity(0.3)),
-                                    ),
-                                  ),
-                                  label: Text(
-                                    langVM.translate('location_refresh'),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }
-              },
-            ),
           ),
         ],
       ),
@@ -427,6 +321,244 @@ class _HomeScreenState extends State<HomeScreen> {
         padding: const EdgeInsets.only(top: 110),
         child: CustomScrollView(
           slivers: [
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                child: GestureDetector(
+                  onTap: () {
+                    if (vm.currentAddress != null) {
+                      showModalBottomSheet(
+                        context: context,
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.vertical(
+                            top: Radius.circular(24),
+                          ),
+                        ),
+                        builder: (context) => Container(
+                          padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // Handle bar (Tutma çubuğu)
+                              Container(
+                                width: 40,
+                                height: 4,
+                                margin: const EdgeInsets.only(bottom: 24),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.withOpacity(0.3),
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                              ),
+                              // Başlık Alanı
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .primary
+                                      .withOpacity(0.1),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Icons.location_on,
+                                  size: 32,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                langVM.translate('location_title'),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .headlineSmall
+                                    ?.copyWith(fontWeight: FontWeight.bold),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 24),
+                              // Bilgi Kartı
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).cardColor,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: Colors.white.withOpacity(0.1),
+                                  ),
+                                ),
+                                child: Column(
+                                  children: [
+                                    _buildInfoRow(
+                                      context,
+                                      Icons.map,
+                                      '${vm.currentAddress!.neighborhood}, ${vm.currentAddress!.district}',
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 12),
+                                      child: Divider(
+                                          color: Colors.white.withOpacity(0.1)),
+                                    ),
+                                    _buildInfoRow(
+                                      context,
+                                      Icons.location_city,
+                                      vm.currentAddress!.city,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 24),
+                              // Aksiyon Butonları
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: OutlinedButton.icon(
+                                      onPressed: () async {
+                                        await Geolocator.openLocationSettings();
+                                      },
+                                      icon: const Icon(Icons.settings),
+                                      style: OutlinedButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 16),
+                                        side: BorderSide(
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .primary),
+                                        shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(12)),
+                                      ),
+                                      label: Text(langVM.translate('settings')),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: ElevatedButton.icon(
+                                      onPressed: () async {
+                                        vm.clearProvinceSelection();
+                                        await vm.loadData();
+                                        if (context.mounted) {
+                                          Navigator.of(context).pop();
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                '${langVM.translate('location_updated')}: ${vm.currentAddress?.city ?? langVM.translate('unknown')}',
+                                              ),
+                                              behavior:
+                                                  SnackBarBehavior.floating,
+                                            ),
+                                          );
+                                        }
+                                      },
+                                      icon: const Icon(Icons.refresh),
+                                      style: ElevatedButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 16),
+                                        backgroundColor: Theme.of(context)
+                                            .colorScheme
+                                            .primary,
+                                        foregroundColor: Colors.white,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                        ),
+                                      ),
+                                      label: Text(
+                                        langVM.translate('location_refresh'),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).cardColor,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.1),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withOpacity(0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.location_on,
+                            color: Theme.of(context).colorScheme.primary,
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                langVM.translate('location_title'),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.color
+                                      ?.withOpacity(0.7),
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                vm.currentAddress != null
+                                    ? [
+                                        vm.currentAddress!.city,
+                                        vm.currentAddress!.district,
+                                        vm.currentAddress!.neighborhood
+                                      ].where((s) => s.isNotEmpty).join(', ')
+                                    : 'Konum Bulunuyor...',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(
+                          Icons.keyboard_arrow_down,
+                          color: Theme.of(context)
+                              .iconTheme
+                              .color
+                              ?.withOpacity(0.5),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
             // Gün Filtreleri
             SliverToBoxAdapter(
               child: Padding(
