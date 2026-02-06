@@ -179,7 +179,12 @@ class SellerViewModel extends ChangeNotifier {
   // Fotoğraf Ekleme
   Future<void> pickImage(ImageSource source) async {
     final ImagePicker picker = ImagePicker();
-    final XFile? image = await picker.pickImage(source: source);
+    final XFile? image = await picker.pickImage(
+      source: source,
+      imageQuality:
+          70, // %70 kalite (Gözle görülür fark olmadan boyutu düşürür)
+      maxWidth: 1024, // Genişliği maksimum 1024px ile sınırla
+    );
     if (image != null) {
       _selectedImages.add(image);
       notifyListeners();

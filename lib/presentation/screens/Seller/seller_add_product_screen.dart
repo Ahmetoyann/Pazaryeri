@@ -147,6 +147,12 @@ class _SellerAddProductScreenState extends State<SellerAddProductScreen> {
   Future<void> _handleFormSubmit(SellerViewModel sellerVM,
       LanguageViewModel langVM, bool stayOnPage) async {
     if (_formKey.currentState!.validate()) {
+      // Stok kontrolü: 0 ise satışı durdur
+      final double stock = double.tryParse(_stockController.text) ?? 0;
+      if (stock <= 0) {
+        _inStock = false;
+      }
+
       if (widget.productToEdit != null) {
         // GÜNCELLEME İŞLEMİ
         await sellerVM.updateProduct(
@@ -155,7 +161,7 @@ class _SellerAddProductScreenState extends State<SellerAddProductScreen> {
           description: _descController.text,
           price: double.tryParse(_priceController.text) ?? 0,
           category: _selectedCategory!,
-          stockQuantity: double.tryParse(_stockController.text) ?? 0,
+          stockQuantity: stock,
           unit: _selectedUnit,
           inStock: _inStock,
           currentImagePath: widget.productToEdit!.imagePath,
@@ -173,7 +179,7 @@ class _SellerAddProductScreenState extends State<SellerAddProductScreen> {
           description: _descController.text,
           price: double.tryParse(_priceController.text) ?? 0,
           category: _selectedCategory!,
-          stockQuantity: double.tryParse(_stockController.text) ?? 0,
+          stockQuantity: stock,
           unit: _selectedUnit,
           inStock: _inStock,
         );

@@ -57,49 +57,50 @@ class _SellerProductsScreenState extends State<SellerProductsScreen> {
   Widget build(BuildContext context) {
     final sellerVM = Provider.of<SellerViewModel>(context);
     final langVM = Provider.of<LanguageViewModel>(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final backgroundColor =
+        isDark ? Colors.white : Theme.of(context).colorScheme.primary;
+    final contentColor = isDark ? Colors.black : Colors.white;
 
     return Column(
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-          child: DropdownButtonFormField<String>(
-            value: sellerVM.categoryFilter,
-            hint: Text(langVM.translate('filter_by_category'),
-                style: TextStyle(color: Colors.white.withOpacity(0.7))),
-            isExpanded: true,
-            dropdownColor: const Color(0xFF1B5E20).withOpacity(0.95),
-            style: const TextStyle(color: Colors.white),
-            decoration: InputDecoration(
-              border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.white.withOpacity(0.3))),
-              enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.white.withOpacity(0.3))),
-              focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(
-                      color: Colors.white.withOpacity(0.5), width: 2)),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              filled: true,
-              fillColor: Theme.of(context).cardColor,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: backgroundColor,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white.withOpacity(0.3)),
             ),
-            items: [
-              DropdownMenuItem<String>(
-                value: null,
-                child: Text(langVM.translate('filter_all')),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: sellerVM.categoryFilter,
+                hint: Text(langVM.translate('filter_by_category'),
+                    style: TextStyle(color: contentColor.withOpacity(0.7))),
+                isExpanded: true,
+                dropdownColor: backgroundColor,
+                icon: Icon(Icons.filter_list, color: contentColor),
+                style: TextStyle(color: contentColor, fontSize: 16),
+                items: [
+                  DropdownMenuItem<String>(
+                    value: null,
+                    child: Text(langVM.translate('filter_all'),
+                        style: TextStyle(color: contentColor)),
+                  ),
+                  ..._categories.map((category) {
+                    return DropdownMenuItem<String>(
+                      value: category,
+                      child: Text(langVM.translate(category),
+                          style: TextStyle(color: contentColor)),
+                    );
+                  }).toList(),
+                ],
+                onChanged: (value) {
+                  sellerVM.setCategoryFilter(value);
+                },
               ),
-              ..._categories.map((category) {
-                return DropdownMenuItem<String>(
-                  value: category,
-                  child: Text(langVM.translate(category)),
-                );
-              }).toList(),
-            ],
-            onChanged: (value) {
-              sellerVM.setCategoryFilter(value);
-            },
+            ),
           ),
         ),
         Expanded(
@@ -204,8 +205,11 @@ class _SellerProductsScreenState extends State<SellerProductsScreen> {
                               ? Image.network(
                                   product.imagePath!,
                                   fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) =>
-                                      const Icon(Icons.error),
+                                  errorBuilder: (context, error, stackTrace) {
+                                    debugPrint(
+                                        'Satıcı panelinde resim hatası: $error');
+                                    return const Icon(Icons.error);
+                                  },
                                 )
                               : Image.file(
                                   File(product.imagePath!),

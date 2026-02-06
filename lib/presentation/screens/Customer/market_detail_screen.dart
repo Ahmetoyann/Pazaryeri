@@ -69,15 +69,50 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
     }
   }
 
-  Future<void> _pickReviewImage() async {
+  Future<void> _pickReviewImage(ImageSource source) async {
     try {
-      final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+      final XFile? image = await _picker.pickImage(
+        source: source,
+        imageQuality: 70,
+        maxWidth: 1024,
+      );
       if (image != null) {
         setState(() => _reviewImage = image);
       }
     } catch (e) {
       debugPrint('Resim seçilemedi: $e');
     }
+  }
+
+  void _showImageSourceActionSheet() {
+    final langVM = Provider.of<LanguageViewModel>(context, listen: false);
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Wrap(
+            children: <Widget>[
+              ListTile(
+                leading: const Icon(Icons.photo_camera),
+                title: Text(langVM.translate('camera')),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _pickReviewImage(ImageSource.camera);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: Text(langVM.translate('gallery')),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _pickReviewImage(ImageSource.gallery);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -301,7 +336,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
                             Icon(
                               Icons.near_me,
                               size: 16,
-                              color: Theme.of(context).primaryColor,
+                              color: Theme.of(context).colorScheme.primary,
                             ),
                             const SizedBox(width: 6),
                             Text(
@@ -452,7 +487,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
             Row(
               children: [
                 TextButton.icon(
-                  onPressed: _pickReviewImage,
+                  onPressed: _showImageSourceActionSheet,
                   icon: const Icon(Icons.add_photo_alternate),
                   label: const Text('Fotoğraf Ekle'),
                   style: TextButton.styleFrom(
@@ -781,7 +816,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, color: Theme.of(context).primaryColor, size: 28),
+        Icon(icon, color: Theme.of(context).colorScheme.primary, size: 28),
         const SizedBox(width: 16),
         Expanded(
           child: Column(
@@ -824,7 +859,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
           children: [
             Icon(
               Icons.calendar_month,
-              color: Theme.of(context).primaryColor,
+              color: Theme.of(context).colorScheme.primary,
               size: 28,
             ),
             const SizedBox(width: 16),
@@ -848,7 +883,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
                   shortDays[index],
                   style: TextStyle(
                     color: isToday
-                        ? Theme.of(context).primaryColor
+                        ? Theme.of(context).colorScheme.primary
                         : Theme.of(context)
                             .colorScheme
                             .onSurface
@@ -868,7 +903,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
                     shape: BoxShape.circle,
                     border: isToday
                         ? Border.all(
-                            color: Theme.of(context).primaryColor,
+                            color: Theme.of(context).colorScheme.primary,
                             width: 2,
                           )
                         : null,

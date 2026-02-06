@@ -18,8 +18,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late TextEditingController _firstNameController;
   late TextEditingController _lastNameController;
   late TextEditingController _phoneController;
-  late TextEditingController _emailController;
-  final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _dateController = TextEditingController();
   DateTime? _selectedDate;
   bool _isLoading = false;
@@ -31,7 +29,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _firstNameController = TextEditingController(text: user?.firstName ?? '');
     _lastNameController = TextEditingController(text: user?.lastName ?? '');
     _phoneController = TextEditingController(text: user?.phoneNumber ?? '');
-    _emailController = TextEditingController(text: user?.email ?? '');
     _selectedDate = user?.dateOfBirth;
     if (_selectedDate != null) {
       _dateController.text =
@@ -44,8 +41,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _firstNameController.dispose();
     _lastNameController.dispose();
     _phoneController.dispose();
-    _emailController.dispose();
-    _passwordController.dispose();
     _dateController.dispose();
     super.dispose();
   }
@@ -62,16 +57,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         throw Exception('Lütfen doğum tarihi seçin.');
       }
 
-      await context.read<AuthViewModel>().updateUserInfo(
-            firstName: _firstNameController.text.trim(),
-            lastName: _lastNameController.text.trim(),
-            phoneNumber: _phoneController.text.trim(),
-            email: _emailController.text.trim(),
-            dateOfBirth: _selectedDate!,
-            newPassword: _passwordController.text.isNotEmpty
-                ? _passwordController.text
-                : null,
-          );
+      final authVM = context.read<AuthViewModel>();
+      await authVM.updateUserInfo(
+        firstName: _firstNameController.text.trim(),
+        lastName: _lastNameController.text.trim(),
+        phoneNumber: _phoneController.text.trim(),
+        email: authVM.currentUser?.email ?? '',
+        dateOfBirth: _selectedDate!,
+      );
       if (mounted) {
         await DialogService.showSuccess(
           context,
@@ -88,6 +81,27 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _changePassword() async {
+    final authVM = context.read<AuthViewModel>();
+    final email = authVM.currentUser?.email;
+    if (email != null) {
+      try {
+        await authVM.resetPassword(email);
+        if (mounted) {
+          await DialogService.showSuccess(
+            context,
+            message:
+                'Şifre sıfırlama bağlantısı e-posta adresinize gönderildi.',
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          await DialogService.showError(context, message: 'Hata: $e');
+        }
       }
     }
   }
@@ -161,13 +175,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ),
               const SizedBox(height: 16),
               TextFormField(
-                controller: _emailController,
-                decoration: _buildInputDecoration('E-posta', Icons.email),
-                keyboardType: TextInputType.emailAddress,
-                validator: (v) => v!.isEmpty ? 'E-posta boş olamaz' : null,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
                 controller: _dateController,
                 readOnly: true,
                 onTap: () => _selectDate(context),
@@ -177,13 +184,20 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     _selectedDate == null ? 'Lütfen doğum tarihi seçin.' : null,
               ),
               const SizedBox(height: 16),
-              TextFormField(
-                controller: _passwordController,
-                decoration: _buildInputDecoration(
-                    'Yeni Şifre (İsteğe Bağlı)', Icons.lock,
-                    helperText:
-                        'Şifrenizi değiştirmek istemiyorsanız boş bırakın.'),
-                obscureText: true,
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _changePassword,
+                  icon: const Icon(Icons.lock_reset),
+                  label: const Text('Şifreyi Değiştir'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                      side: BorderSide(color: Colors.white.withOpacity(0.3)),
+                    ),
+                  ),
+                ),
               ),
               const SizedBox(height: 24),
               SizedBox(

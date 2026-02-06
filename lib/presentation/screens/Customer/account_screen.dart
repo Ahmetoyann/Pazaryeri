@@ -10,7 +10,10 @@ import '../../viewmodels/language_viewmodel.dart';
 import 'edit_profile_screen.dart';
 import 'favorites_screen.dart';
 import '../Seller/favorite_sellers_screen.dart';
-import 'my_reviews_screen.dart';
+import '../../viewmodels/auth_service.dart';
+import 'notifications_screen.dart';
+import 'my_questions_screen.dart';
+import 'my_ratings_screen.dart';
 import 'theme_settings_screen.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/success_dialog.dart';
@@ -45,43 +48,106 @@ class _AccountScreenState extends State<AccountScreen>
   Future<void> _showLogoutConfirmation() async {
     final langVM = Provider.of<LanguageViewModel>(context, listen: false);
 
-    final bool confirm = await DialogService.showConfirmation(
-      context,
-      title: langVM.translate('logout_confirmation_title'),
-      message: langVM.translate('logout_confirmation_message'),
-      confirmText: langVM.translate('yes'),
-      cancelText: langVM.translate('no'),
-      icon: Icons.logout,
+    final bool? confirm = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: Colors.black.withOpacity(0.9),
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 24),
+              decoration: BoxDecoration(
+                color: Colors.grey.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.error.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.logout,
+                size: 32,
+                color: Theme.of(context).colorScheme.error,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              langVM.translate('logout_confirmation_title'),
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              langVM.translate('logout_confirmation_message'),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              ),
+            ),
+            const SizedBox(height: 32),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      side: BorderSide(color: Colors.grey.withOpacity(0.3)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    child: Text(
+                      langVM.translate('cancel'),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).colorScheme.error,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: Text(
+                      langVM.translate('logout'),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
 
     if (confirm == true && mounted) {
       context.read<AuthViewModel>().logout();
-    }
-  }
-
-  Future<void> _showDeleteAccountConfirmation() async {
-    final langVM = Provider.of<LanguageViewModel>(context, listen: false);
-
-    final bool confirm = await DialogService.showConfirmation(
-      context,
-      title: langVM.translate('delete_account_confirm_title'),
-      message: langVM.translate('delete_account_confirm_message'),
-      confirmText: langVM.translate('yes'),
-      cancelText: langVM.translate('no'),
-      icon: Icons.delete_forever,
-    );
-
-    if (confirm == true && mounted) {
-      try {
-        await context.read<AuthViewModel>().deleteAccount();
-        if (mounted) {
-          await DialogService.showFarewell(context);
-        }
-      } catch (e) {
-        if (mounted) {
-          await DialogService.showError(context, message: 'Hata: $e');
-        }
-      }
     }
   }
 
@@ -94,9 +160,64 @@ class _AccountScreenState extends State<AccountScreen>
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: CustomAppBar(
-        title: Text(langVM.translate('account_title')),
+        title: const Text('MENÜ'),
         // Kullanıcı giriş yapmışsa AppBar'da da çıkış butonu gösterebiliriz
         actions: [
+          if (authVM.isAuthenticated)
+            StreamBuilder<List<Map<String, dynamic>>>(
+              stream: AuthService.instance
+                  .getUserNotifications(authVM.currentUser!.id),
+              builder: (context, snapshot) {
+                int unreadCount = 0;
+                if (snapshot.hasData) {
+                  unreadCount =
+                      snapshot.data!.where((n) => n['read'] == false).length;
+                }
+                return IconButton(
+                  icon: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      const Icon(Icons.notifications),
+                      if (unreadCount > 0)
+                        Positioned(
+                          right: -2,
+                          top: -2,
+                          child: Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              shape: BoxShape.circle,
+                              border:
+                                  Border.all(color: Colors.white, width: 1.5),
+                            ),
+                            constraints: const BoxConstraints(
+                              minWidth: 18,
+                              minHeight: 18,
+                            ),
+                            child: Center(
+                              child: Text(
+                                '$unreadCount',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  onPressed: () {
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const NotificationsScreen()));
+                  },
+                );
+              },
+            ),
           if (authVM.isAuthenticated)
             IconButton(
               icon: const Icon(Icons.logout),
@@ -137,81 +258,118 @@ class _AccountScreenState extends State<AccountScreen>
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               _buildAnimatedItem(
-                Stack(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Theme.of(context).cardColor,
-                        border:
-                            Border.all(color: Colors.white.withOpacity(0.3)),
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).cardColor,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 15,
+                        offset: const Offset(0, 5),
                       ),
-                      child: CircleAvatar(
-                        radius: 65,
-                        backgroundColor: Colors.grey.shade200,
-                        backgroundImage: userImage != null
-                            ? (userImage.startsWith('http')
-                                ? NetworkImage(userImage)
-                                : FileImage(File(userImage))) as ImageProvider
-                            : null,
-                        child: userImage == null
-                            ? Icon(
-                                Icons.person,
-                                size: 60,
-                                color: Colors.grey.shade500,
-                              )
-                            : null,
-                      ),
+                    ],
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.3),
                     ),
-                    if (authVM.isSeller)
-                      Positioned(
-                        bottom: 5,
-                        right: 5,
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.orange.shade700,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 2),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.3),
-                                blurRadius: 5,
-                                offset: const Offset(0, 2),
+                  ),
+                  child: Column(
+                    children: [
+                      Stack(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .primary
+                                    .withOpacity(0.3),
+                                width: 2,
                               ),
-                            ],
+                            ),
+                            child: CircleAvatar(
+                              radius: 50,
+                              backgroundColor: Colors.grey.shade200,
+                              backgroundImage: userImage != null
+                                  ? (userImage.startsWith('http')
+                                          ? NetworkImage(userImage)
+                                          : FileImage(File(userImage)))
+                                      as ImageProvider
+                                  : null,
+                              child: userImage == null
+                                  ? Icon(
+                                      Icons.person,
+                                      size: 50,
+                                      color: Colors.grey.shade500,
+                                    )
+                                  : null,
+                            ),
                           ),
-                          child: const Icon(
-                            Icons.storefront,
-                            color: Colors.white,
-                            size: 20,
+                          if (authVM.isSeller)
+                            Positioned(
+                              bottom: 0,
+                              right: 0,
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange.shade700,
+                                  shape: BoxShape.circle,
+                                  border:
+                                      Border.all(color: Colors.white, width: 2),
+                                ),
+                                child: const Icon(
+                                  Icons.storefront,
+                                  color: Colors.white,
+                                  size: 16,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        '${authVM.currentUser?.firstName ?? ''} ${authVM.currentUser?.lastName ?? ''}',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        authVM.currentUser?.email ?? '',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Colors.grey,
+                            ),
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => const EditProfileScreen(),
+                              ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor:
+                                Theme.of(context).colorScheme.primary,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
                           ),
+                          child: Text(langVM.translate('edit_profile')),
                         ),
                       ),
-                  ],
-                ),
-                0,
-              ),
-              const SizedBox(height: 20),
-              _buildAnimatedItem(
-                SizedBox(
-                  width: double.infinity,
-                  child: _buildNormalButton(
-                    context,
-                    label: langVM.translate('edit_profile'),
-                    icon: Icons.edit,
-                    color: Theme.of(context).colorScheme.primary,
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => const EditProfileScreen(),
-                        ),
-                      );
-                    },
+                    ],
                   ),
                 ),
-                1,
+                0,
               ),
               const SizedBox(height: 20),
               // Favorilerim Butonu
@@ -275,7 +433,7 @@ class _AccountScreenState extends State<AccountScreen>
                 3,
               ),
 
-              // Yorumlarım Butonu
+              // Sorularım Butonu
               _buildAnimatedItem(
                 _buildNormalCard(
                   context,
@@ -283,26 +441,59 @@ class _AccountScreenState extends State<AccountScreen>
                     leading: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.blueAccent.withOpacity(0.1),
+                        color: Colors.indigo.withOpacity(0.1),
                         shape: BoxShape.circle,
                       ),
                       child:
-                          const Icon(Icons.comment, color: Colors.blueAccent),
+                          const Icon(Icons.help_outline, color: Colors.indigo),
                     ),
                     title: Text(
-                      context.read<LanguageViewModel>().translate('my_reviews'),
+                      context
+                          .read<LanguageViewModel>()
+                          .translate('my_questions_title'),
                     ),
                     trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                     onTap: () {
                       Navigator.of(context).push(
                         MaterialPageRoute(
-                            builder: (_) => const MyReviewsScreen()),
+                            builder: (_) => const MyQuestionsScreen()),
                       );
                     },
                   ),
                 ),
                 4,
               ),
+
+              // Değerlendirmelerim Butonu
+              _buildAnimatedItem(
+                _buildNormalCard(
+                  context,
+                  ListTile(
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.star, color: Colors.amber),
+                    ),
+                    title: Text(
+                      context
+                          .read<LanguageViewModel>()
+                          .translate('my_ratings_title'),
+                    ),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                            builder: (_) => const MyRatingsScreen()),
+                      );
+                    },
+                  ),
+                ),
+                5,
+              ),
+
               // Dil Ayarları
               _buildAnimatedItem(
                 _buildNormalCard(
@@ -338,7 +529,7 @@ class _AccountScreenState extends State<AccountScreen>
                     },
                   ),
                 ),
-                5,
+                6,
               ),
               // Tema Ayarları
               _buildAnimatedItem(
@@ -366,34 +557,21 @@ class _AccountScreenState extends State<AccountScreen>
                     },
                   ),
                 ),
-                6,
+                7,
               ),
               const SizedBox(height: 10),
               _buildAnimatedItem(
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildNormalButton(
-                        context,
-                        label: langVM.translate('logout'),
-                        icon: Icons.logout,
-                        color: Theme.of(context).colorScheme.secondary,
-                        onPressed: _showLogoutConfirmation,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildNormalButton(
-                        context,
-                        label: langVM.translate('delete_account'),
-                        icon: Icons.delete_forever,
-                        color: Theme.of(context).colorScheme.error,
-                        onPressed: _showDeleteAccountConfirmation,
-                      ),
-                    ),
-                  ],
+                SizedBox(
+                  width: double.infinity,
+                  child: _buildNormalButton(
+                    context,
+                    label: langVM.translate('logout'),
+                    icon: Icons.logout,
+                    color: Theme.of(context).colorScheme.error,
+                    onPressed: _showLogoutConfirmation,
+                  ),
                 ),
-                7,
+                8,
               ),
             ],
           ),

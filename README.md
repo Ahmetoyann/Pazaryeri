@@ -19,6 +19,7 @@ Semt pazarları, ürün arama, doluluk oranları, satıcı yönetimi ve bildirim
   - **Satıcılar:** Pazardaki satıcıları ve ürünlerini görüntüleme.
   - **Favoriler:** Pazar ve satıcıları favorilere ekleme.
   - **Değerlendirme:** Pazarlara ve ürünlere yorum yapma, puan verme.
+  - **Soru-Cevap:** Satıcılara ürün hakkında soru sorma ve yanıtları takip etme.
 - **Bildirim/Şikayet:** Pazaryerleri için şikayet veya bildirim oluşturma.
 - **Doluluk Oranları:** Pazaryerlerinin anlık doluluk yüzdelerini görüntüleme.
 
@@ -32,6 +33,7 @@ Semt pazarları, ürün arama, doluluk oranları, satıcı yönetimi ve bildirim
   - Grafiksel verilerle analiz.
 - **Müşteri İlişkileri:**
   - Ürünlere yapılan yorumları görüntüleme ve yanıtlama.
+  - Ürünlerle ilgili gelen soruları görüntüleme ve yanıtlama.
 - **Profil Yönetimi:**
   - Tezgah adı, açıklama ve çalışma saatleri düzenleme.
   - Sosyal medya hesaplarını ekleme.
@@ -42,6 +44,7 @@ Semt pazarları, ürün arama, doluluk oranları, satıcı yönetimi ve bildirim
 - **Tema:** Karanlık (Dark) ve Aydınlık (Light) mod desteği.
 - **Dil:** Türkçe ve İngilizce dil desteği.
 - **Harita:** Google Haritalar entegrasyonu ile yol tarifi.
+- **Bağlantı Kontrolü:** İnternet bağlantısı koptuğunda kullanıcıyı bilgilendirme.
 
 ## Proje Mimarisi
 
@@ -100,5 +103,8 @@ Uygulamanın tam fonksiyonlu çalışması için aşağıdaki izinlerin yapılan
   - `search_screen.dart`: Ürün arama ekranı.
   - `report_list_screen.dart` & `report_form_screen.dart`: Bildirim listeleme ve oluşturma.
   - `account_screen.dart`: Profil ve ayarlar yönetimi.
+  - `seller_questions_screen.dart`: Satıcı soru yönetim ekranı.
+  - `my_questions_screen.dart`: Müşteri soru takip ekranı.
+  - `notifications_screen.dart`: Bildirim merkezi.
 - **Modeller:**
   - `Market` modeli `products` alanlarını içerir.

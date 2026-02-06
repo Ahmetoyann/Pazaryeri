@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:fl_chart/fl_chart.dart';
 import '../../viewmodels/seller_viewmodel.dart';
 import '../../viewmodels/auth_service.dart';
 import 'seller_add_product_screen.dart';
@@ -24,9 +25,11 @@ class _SellerProductManagementScreenState
   late TextEditingController _stockController;
   late TextEditingController _salesController;
   bool _isLoading = false;
+  bool _inStock = true;
   List<String> _existingImages = [];
   List<XFile> _newImages = [];
   final ImagePicker _picker = ImagePicker();
+  double _initialTotalQuantity = 0;
 
   @override
   void initState() {
@@ -37,6 +40,9 @@ class _SellerProductManagementScreenState
         TextEditingController(text: widget.product.stockQuantity.toString());
     _salesController =
         TextEditingController(text: widget.product.salesCount.toString());
+    _inStock = widget.product.inStock;
+    _initialTotalQuantity =
+        widget.product.stockQuantity + widget.product.salesCount;
     _loadProductImages();
   }
 
@@ -63,9 +69,12 @@ class _SellerProductManagementScreenState
     }
   }
 
-  Future<void> _pickImages() async {
+  Future<void> _pickImagesFromGallery() async {
     try {
-      final List<XFile> images = await _picker.pickMultiImage();
+      final List<XFile> images = await _picker.pickMultiImage(
+        imageQuality: 70,
+        maxWidth: 1024,
+      );
       if (images.isNotEmpty) {
         setState(() {
           _newImages.addAll(images);
@@ -74,6 +83,53 @@ class _SellerProductManagementScreenState
     } catch (e) {
       debugPrint('Resim seçme hatası: $e');
     }
+  }
+
+  Future<void> _pickImageFromCamera() async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 70,
+        maxWidth: 1024,
+      );
+      if (image != null) {
+        setState(() {
+          _newImages.add(image);
+        });
+      }
+    } catch (e) {
+      debugPrint('Kamera hatası: $e');
+    }
+  }
+
+  void _showImageSourceActionSheet() {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Wrap(
+            children: <Widget>[
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Galeri'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _pickImagesFromGallery();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_camera),
+                title: const Text('Kamera'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _pickImageFromCamera();
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   void _removeNewImage(int index) {
@@ -92,21 +148,21 @@ class _SellerProductManagementScreenState
 
   InputDecoration _buildInputDecoration(String label, IconData icon,
       {String? suffixText, String? helperText}) {
+    final colorScheme = Theme.of(context).colorScheme;
     return InputDecoration(
       labelText: label,
-      prefixIcon: Icon(icon),
+      prefixIcon: Icon(icon, color: colorScheme.primary),
       suffixText: suffixText,
       helperText: helperText,
       border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(30),
-          borderSide: BorderSide(color: Colors.white.withOpacity(0.3))),
+          borderSide: const BorderSide(color: Colors.white)),
       enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(30),
-          borderSide: BorderSide(color: Colors.white.withOpacity(0.3))),
+          borderSide: const BorderSide(color: Colors.white)),
       focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(30),
-          borderSide:
-              BorderSide(color: Colors.white.withOpacity(0.5), width: 2)),
+          borderSide: const BorderSide(color: Colors.white, width: 2)),
     );
   }
 
@@ -120,12 +176,23 @@ class _SellerProductManagementScreenState
       final double stock = double.parse(_stockController.text);
       final int sales = int.parse(_salesController.text);
 
+      // Stok 0 ise otomatik olarak satışı durdur
+      if (stock <= 0) {
+        _inStock = false;
+      }
+
       // Yeni resimleri yükle
       List<String> newImageUrls = [];
       for (var image in _newImages) {
-        final url =
-            await AuthService.instance.uploadProductImage(File(image.path));
-        newImageUrls.add(url);
+        final file = File(image.path);
+        if (await file.exists()) {
+          try {
+            final url = await AuthService.instance.uploadProductImage(file);
+            newImageUrls.add(url);
+          } catch (e) {
+            throw Exception('Resim yüklenirken hata oluştu: $e');
+          }
+        }
       }
 
       // Firestore güncellemesi
@@ -133,6 +200,7 @@ class _SellerProductManagementScreenState
         'price': price,
         'stockQuantity': stock,
         'salesCount': sales,
+        'inStock': _inStock,
       };
 
       if (newImageUrls.isNotEmpty) {
@@ -165,13 +233,120 @@ class _SellerProductManagementScreenState
     }
   }
 
+  Widget _buildStockHistoryChart(BuildContext context) {
+    double currentStock = double.tryParse(_stockController.text) ?? 0;
+    double totalSales = double.tryParse(_salesController.text) ?? 0;
+    // Basit bir simülasyon: Başlangıç stoğu = Şu anki + Satılan
+    double initialStock = currentStock + totalSales;
+    if (initialStock == 0) initialStock = 10; // Grafik boş görünmesin diye
+
+    List<FlSpot> spots = [];
+    for (int i = 0; i <= 6; i++) {
+      // 7 günlük simülasyon (0..6)
+      double progress = i / 6.0;
+      double value = initialStock - (totalSales * progress);
+      if (value < 0) value = 0;
+      spots.add(FlSpot(i.toDouble(), value));
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Stok Hareket Grafiği',
+            style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 12),
+        Container(
+          height: 260,
+          padding: const EdgeInsets.fromLTRB(12, 24, 24, 12),
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardColor,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white),
+          ),
+          child: LineChart(
+            LineChartData(
+              gridData: const FlGridData(show: true, drawVerticalLine: false),
+              titlesData: FlTitlesData(
+                bottomTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 32,
+                    interval: 1,
+                    getTitlesWidget: (value, meta) {
+                      if (value == 0) {
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text('Başlangıç',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              )),
+                        );
+                      }
+                      if (value == 6) {
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text('Bugün',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              )),
+                        );
+                      }
+                      return const SizedBox();
+                    },
+                  ),
+                ),
+                leftTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 46,
+                    getTitlesWidget: (value, meta) {
+                      return Text(value.toInt().toString(),
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ));
+                    },
+                  ),
+                ),
+                topTitles:
+                    const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                rightTitles:
+                    const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              ),
+              borderData: FlBorderData(show: false),
+              minX: 0,
+              maxX: 6,
+              minY: 0,
+              maxY: initialStock * 1.2,
+              lineBarsData: [
+                LineChartBarData(
+                  spots: spots,
+                  isCurved: true,
+                  color: Theme.of(context).colorScheme.primary,
+                  barWidth: 3,
+                  isStrokeCapRound: true,
+                  dotData: const FlDotData(show: true),
+                  belowBarData: BarAreaData(
+                    show: true,
+                    color:
+                        Theme.of(context).colorScheme.primary.withOpacity(0.15),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Gelir hesaplaması (Fiyat * Satış Adedi)
-    double currentPrice = double.tryParse(_priceController.text) ?? 0;
-    int currentSales = int.tryParse(_salesController.text) ?? 0;
-    double revenue = currentPrice * currentSales;
-
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.product.name),
@@ -216,7 +391,7 @@ class _SellerProductManagementScreenState
                   children: [
                     // Resim Ekle Butonu
                     GestureDetector(
-                      onTap: _pickImages,
+                      onTap: _showImageSourceActionSheet,
                       child: Container(
                         width: 100,
                         height: 100,
@@ -227,11 +402,7 @@ class _SellerProductManagementScreenState
                               .primary
                               .withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .primary
-                                  .withOpacity(0.3)),
+                          border: Border.all(color: Colors.white),
                         ),
                         child: Icon(Icons.add_a_photo,
                             color: Theme.of(context).colorScheme.primary),
@@ -247,6 +418,7 @@ class _SellerProductManagementScreenState
                             margin: const EdgeInsets.only(right: 12),
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.white),
                               image: DecorationImage(
                                 image: FileImage(File(entry.value.path)),
                                 fit: BoxFit.cover,
@@ -280,8 +452,7 @@ class _SellerProductManagementScreenState
                         margin: const EdgeInsets.only(right: 12),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(12),
-                          border:
-                              Border.all(color: Colors.white.withOpacity(0.2)),
+                          border: Border.all(color: Colors.white),
                           image: DecorationImage(
                             image: NetworkImage(url),
                             fit: BoxFit.cover,
@@ -301,7 +472,6 @@ class _SellerProductManagementScreenState
                     const TextInputType.numberWithOptions(decimal: true),
                 decoration: _buildInputDecoration(
                     'Birim Fiyat (₺)', Icons.price_change),
-                onChanged: (val) => setState(() {}),
                 validator: (v) => v!.isEmpty ? 'Fiyat giriniz' : null,
               ),
               const SizedBox(height: 16),
@@ -311,56 +481,61 @@ class _SellerProductManagementScreenState
                 controller: _stockController,
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
-                decoration: _buildInputDecoration(
-                    'Stok Miktarı', Icons.inventory,
-                    suffixText: widget.product.unit),
+                decoration:
+                    _buildInputDecoration('Stok Miktarı', Icons.inventory),
                 validator: (v) => v!.isEmpty ? 'Stok giriniz' : null,
+                onChanged: (val) {
+                  final double newStock = double.tryParse(val) ?? 0;
+                  // Stok değişince satış miktarını güncelle (Toplam = Stok + Satış sabit varsayımı)
+                  double newSales = _initialTotalQuantity - newStock;
+                  if (newSales < 0) newSales = 0;
+                  _salesController.text = newSales.toInt().toString();
+                  setState(() {}); // Grafiği güncelle
+                },
               ),
               const SizedBox(height: 16),
 
-              // Satış Adedi (Gelir için)
+              // Satış Adedi
               TextFormField(
                 controller: _salesController,
                 keyboardType: TextInputType.number,
                 decoration: _buildInputDecoration(
-                    'Toplam Satış Miktarı', Icons.shopping_cart,
-                    helperText: 'Gelir bu değere göre hesaplanır'),
-                onChanged: (val) => setState(() {}),
+                    'Toplam Satış Miktarı', Icons.shopping_cart),
                 validator: (v) => v!.isEmpty ? 'Satış adedi giriniz' : null,
               ),
               const SizedBox(height: 24),
 
-              // Gelir Gösterimi
-              Card(
-                color: Theme.of(context).colorScheme.primaryContainer,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  side: BorderSide(color: Colors.white.withOpacity(0.3)),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.monetization_on, size: 32),
-                      const SizedBox(width: 16),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Toplam Gelir'),
-                          Text(
-                            '${revenue.toStringAsFixed(2)} ₺',
-                            style: Theme.of(context)
-                                .textTheme
-                                .headlineSmall
-                                ?.copyWith(fontWeight: FontWeight.bold),
-                          ),
-                        ],
-                      ),
-                    ],
+              _buildStockHistoryChart(context),
+              const SizedBox(height: 24),
+
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      _inStock = !_inStock;
+                    });
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _inStock ? Colors.red : Colors.green,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                      side: const BorderSide(color: Colors.white),
+                    ),
+                  ),
+                  icon: Icon(_inStock
+                      ? Icons.pause_circle_filled
+                      : Icons.play_circle_filled),
+                  label: Text(
+                    _inStock ? 'Satışı Durdur' : 'Satışı Başlat',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                 ),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 16),
 
               SizedBox(
                 width: double.infinity,
@@ -368,6 +543,10 @@ class _SellerProductManagementScreenState
                   onPressed: _isLoading ? null : _updateProduct,
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                      side: const BorderSide(color: Colors.white),
+                    ),
                   ),
                   child: _isLoading
                       ? const CircularProgressIndicator()

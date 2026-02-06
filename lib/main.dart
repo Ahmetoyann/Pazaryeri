@@ -10,6 +10,8 @@ import 'presentation/screens/Customer/search_screen.dart';
 import 'presentation/screens/Customer/account_screen.dart';
 import 'presentation/screens/Customer/report_list_screen.dart';
 import 'presentation/screens/Customer/market_detail_screen.dart';
+import 'presentation/screens/Customer/my_questions_screen.dart';
+import 'presentation/screens/Customer/my_ratings_screen.dart';
 import 'presentation/viewmodels/home_viewmodel.dart';
 import 'presentation/viewmodels/auth_viewmodel.dart';
 import 'presentation/viewmodels/theme_viewmodel.dart';
@@ -119,7 +121,7 @@ class MyApp extends StatelessWidget {
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: theme.colorScheme.primary
-                                .withOpacity(isDark ? 0.4 : 0.0),
+                                .withOpacity(isDark ? 0.9 : 0.0),
                           ),
                         ),
                       ),
@@ -135,7 +137,7 @@ class MyApp extends StatelessWidget {
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: theme.colorScheme.tertiary
-                                .withOpacity(isDark ? 0.4 : 0.0),
+                                .withOpacity(isDark ? 0.0 : 0.0),
                           ),
                         ),
                       ),
@@ -144,21 +146,101 @@ class MyApp extends StatelessWidget {
                   ],
                 );
               },
-              home: SplashScreen(
-                nextScreen: showOnboarding
-                    ? OnboardingScreen(
-                        onDone: (ctx) => Navigator.of(ctx).pushReplacement(
-                          MaterialPageRoute(
-                              builder: (_) => const AuthWrapper()),
-                        ),
-                      )
-                    : const AuthWrapper(),
+              home: StartupConnectivityWrapper(
+                onConnected: () => SplashScreen(
+                  nextScreen: showOnboarding
+                      ? OnboardingScreen(
+                          onDone: (ctx) => Navigator.of(ctx).pushReplacement(
+                            MaterialPageRoute(
+                                builder: (_) => const AuthWrapper()),
+                          ),
+                        )
+                      : const AuthWrapper(),
+                ),
               ),
             ),
           );
         },
       ),
     );
+  }
+}
+
+class StartupConnectivityWrapper extends StatefulWidget {
+  final Widget Function() onConnected;
+
+  const StartupConnectivityWrapper({super.key, required this.onConnected});
+
+  @override
+  State<StartupConnectivityWrapper> createState() =>
+      _StartupConnectivityWrapperState();
+}
+
+class _StartupConnectivityWrapperState
+    extends State<StartupConnectivityWrapper> {
+  bool? _hasConnection;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkConnection();
+  }
+
+  Future<void> _checkConnection() async {
+    final result = await Connectivity().checkConnectivity();
+    final hasConnection = !result.contains(ConnectivityResult.none);
+
+    if (mounted) {
+      setState(() {
+        _hasConnection = hasConnection;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_hasConnection == null) {
+      // Kontrol sırasında şeffaf arka plan üzerinde loading (Arka plandaki gradient görünür)
+      return const Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_hasConnection == false) {
+      return Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.wifi_off, size: 80, color: Colors.white70),
+              const SizedBox(height: 20),
+              const Text(
+                'İnternet Bağlantısı Yok',
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white),
+              ),
+              const SizedBox(height: 10),
+              const Text('Lütfen bağlantınızı kontrol edin.',
+                  style: TextStyle(color: Colors.white70)),
+              const SizedBox(height: 30),
+              ElevatedButton(
+                onPressed: () {
+                  setState(() => _hasConnection = null);
+                  _checkConnection();
+                },
+                child: const Text('Yeniden Dene'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return widget.onConnected();
   }
 }
 
@@ -424,8 +506,8 @@ class _MainScaffoldState extends State<MainScaffold> {
   final _screens = const [
     HomeScreen(),
     SearchScreen(),
-    AccountScreen(),
     ReportListScreen(),
+    AccountScreen(),
   ];
 
   @override
@@ -444,7 +526,7 @@ class _MainScaffoldState extends State<MainScaffold> {
     NotificationService.instance.selectNotificationStream.stream
         .listen((payload) {
       if (payload != null && payload.isNotEmpty) {
-        _navigateToMarketDetail(payload);
+        _handleNotificationNavigation(payload);
       }
     });
   }
@@ -458,7 +540,7 @@ class _MainScaffoldState extends State<MainScaffold> {
       await homeVM.loadData();
     }
 
-    _navigateToMarketDetail(marketId);
+    _handleNotificationNavigation(marketId);
     NotificationService.instance.launchPayload = null;
   }
 
@@ -472,6 +554,84 @@ class _MainScaffoldState extends State<MainScaffold> {
       ),
       child: Icon(icon, size: 30),
     );
+  }
+
+  Widget _buildIconWithBadge(
+      BuildContext context, IconData icon, AuthViewModel authVM,
+      {bool isActive = false}) {
+    if (authVM.currentUser == null) {
+      return isActive ? _buildActiveIcon(context, icon) : Icon(icon, size: 30);
+    }
+
+    return StreamBuilder<List<Map<String, dynamic>>>(
+      stream: AuthService.instance.getUserNotifications(authVM.currentUser!.id),
+      builder: (context, snapshot) {
+        int unreadCount = 0;
+        if (snapshot.hasData) {
+          unreadCount = snapshot.data!.where((n) => n['read'] == false).length;
+        }
+
+        final mainIcon =
+            isActive ? _buildActiveIcon(context, icon) : Icon(icon, size: 30);
+
+        if (unreadCount == 0) return mainIcon;
+
+        return Stack(
+          clipBehavior: Clip.none,
+          children: [
+            mainIcon,
+            Positioned(
+              right: isActive ? 0 : -2,
+              top: isActive ? 0 : -2,
+              child: Container(
+                padding: const EdgeInsets.all(3),
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 1.5),
+                ),
+                constraints: const BoxConstraints(
+                  minWidth: 18,
+                  minHeight: 18,
+                ),
+                child: Center(
+                  child: Text(
+                    '$unreadCount',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _handleNotificationNavigation(String payload) {
+    // 1. Soru Yanıtı Bildirimi
+    if (payload == 'question_reply') {
+      navigatorKey.currentState?.push(
+        MaterialPageRoute(builder: (_) => const MyQuestionsScreen()),
+      );
+      return;
+    }
+
+    // 2. Değerlendirme Yanıtı Bildirimi
+    if (payload == 'review_reply') {
+      navigatorKey.currentState?.push(
+        MaterialPageRoute(builder: (_) => const MyRatingsScreen()),
+      );
+      return;
+    }
+
+    // 3. Pazar Bildirimi (Varsayılan olarak payload marketId kabul edilir)
+    _navigateToMarketDetail(payload);
   }
 
   void _navigateToMarketDetail(String marketId) {
@@ -498,14 +658,15 @@ class _MainScaffoldState extends State<MainScaffold> {
   @override
   Widget build(BuildContext context) {
     final langVM = Provider.of<LanguageViewModel>(context);
+    final authVM = Provider.of<AuthViewModel>(context);
 
     return Scaffold(
       extendBody: true,
       body: IndexedStack(index: _index, children: _screens),
       bottomNavigationBar: Padding(
-        padding: const EdgeInsets.only(left: 32, right: 32, bottom: 16),
+        padding: const EdgeInsets.only(left: 35, right: 35, bottom: 16),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(26),
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
             child: Container(
@@ -541,14 +702,16 @@ class _MainScaffoldState extends State<MainScaffold> {
                     label: langVM.translate('search_tab'),
                   ),
                   BottomNavigationBarItem(
-                    icon: const Icon(Icons.person_outline),
-                    activeIcon: _buildActiveIcon(context, Icons.person),
-                    label: langVM.translate('account_title'),
-                  ),
-                  BottomNavigationBarItem(
                     icon: const Icon(Icons.report_gmailerrorred_outlined),
                     activeIcon: _buildActiveIcon(context, Icons.report),
                     label: langVM.translate('report_tab'),
+                  ),
+                  BottomNavigationBarItem(
+                    icon: _buildIconWithBadge(context, Icons.menu, authVM,
+                        isActive: false),
+                    activeIcon: _buildIconWithBadge(context, Icons.menu, authVM,
+                        isActive: true),
+                    label: langVM.translate('menu_tab'),
                   ),
                 ],
               ),

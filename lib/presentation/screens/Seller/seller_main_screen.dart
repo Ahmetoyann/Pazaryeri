@@ -12,6 +12,7 @@ import 'seller_settings_screen.dart';
 import 'seller_stats_screen.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../Customer/notifications_screen.dart';
+import 'seller_questions_screen.dart';
 
 class SellerMainScreen extends StatefulWidget {
   final int initialIndex;
@@ -57,6 +58,123 @@ class _SellerMainScreenState extends State<SellerMainScreen> {
     );
   }
 
+  Widget _buildBottomNavIcon(BuildContext context, IconData icon,
+      AuthViewModel authVM, String? notificationType,
+      {bool isActive = false}) {
+    if (authVM.currentUser == null || notificationType == null) {
+      return isActive ? _buildActiveIcon(context, icon) : Icon(icon, size: 30);
+    }
+
+    return StreamBuilder<List<Map<String, dynamic>>>(
+      stream: AuthService.instance.getUserNotifications(authVM.currentUser!.id),
+      builder: (context, snapshot) {
+        int unreadCount = 0;
+        if (snapshot.hasData) {
+          // Sadece ilgili tipteki okunmamış bildirimleri say
+          unreadCount = snapshot.data!.where((n) {
+            final isUnread = n['read'] == false;
+            final type = n['metadata']?['type'];
+            return isUnread && type == notificationType;
+          }).length;
+        }
+
+        final mainIcon =
+            isActive ? _buildActiveIcon(context, icon) : Icon(icon, size: 30);
+
+        if (unreadCount == 0) return mainIcon;
+
+        return Stack(
+          clipBehavior: Clip.none,
+          children: [
+            mainIcon,
+            Positioned(
+              right: isActive ? 0 : -2,
+              top: isActive ? 0 : -2,
+              child: Container(
+                padding: const EdgeInsets.all(3),
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 1.5),
+                ),
+                constraints: const BoxConstraints(
+                  minWidth: 18,
+                  minHeight: 18,
+                ),
+                child: Center(
+                  child: Text(
+                    '$unreadCount',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildQuestionTabIcon(
+      BuildContext context, IconData icon, AuthViewModel authVM,
+      {bool isActive = false}) {
+    if (authVM.currentUser == null) {
+      return isActive ? _buildActiveIcon(context, icon) : Icon(icon, size: 30);
+    }
+
+    return StreamBuilder<int>(
+      stream: AuthService.instance
+          .getUnansweredQuestionsCount(authVM.currentUser!.id),
+      builder: (context, snapshot) {
+        int count = snapshot.data ?? 0;
+
+        final mainIcon =
+            isActive ? _buildActiveIcon(context, icon) : Icon(icon, size: 30);
+
+        if (count == 0) return mainIcon;
+
+        return Stack(
+          clipBehavior: Clip.none,
+          children: [
+            mainIcon,
+            Positioned(
+              right: isActive ? 0 : -2,
+              top: isActive ? 0 : -2,
+              child: Container(
+                padding: const EdgeInsets.all(3),
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 1.5),
+                ),
+                constraints: const BoxConstraints(
+                  minWidth: 18,
+                  minHeight: 18,
+                ),
+                child: Center(
+                  child: Text(
+                    '$count',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final langVM = Provider.of<LanguageViewModel>(context);
@@ -64,11 +182,10 @@ class _SellerMainScreenState extends State<SellerMainScreen> {
     final authVM = Provider.of<AuthViewModel>(context);
 
     final List<Widget> pages = [
-      SellerAddProductScreen(onProductAdded: () {
-        setState(() => _currentIndex = 1);
-      }),
       const SellerProductsScreen(),
       const SellerStatsScreen(),
+      const SellerAddProductScreen(),
+      const SellerQuestionsScreen(),
       const SellerReviewsScreen(),
     ];
 
@@ -153,7 +270,7 @@ class _SellerMainScreenState extends State<SellerMainScreen> {
         ),
       ),
       bottomNavigationBar: Padding(
-        padding: const EdgeInsets.only(left: 32, right: 32, bottom: 16),
+        padding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(24),
           child: BackdropFilter(
@@ -176,11 +293,6 @@ class _SellerMainScreenState extends State<SellerMainScreen> {
                 iconSize: 30,
                 items: [
                   BottomNavigationBarItem(
-                    icon: const Icon(Icons.add_circle_outline),
-                    activeIcon: _buildActiveIcon(context, Icons.add_circle),
-                    label: langVM.translate('add_product_tab'),
-                  ),
-                  BottomNavigationBarItem(
                     icon: const Icon(Icons.list_alt),
                     activeIcon: _buildActiveIcon(context, Icons.list_alt),
                     label: langVM.translate('my_products_tab'),
@@ -191,8 +303,26 @@ class _SellerMainScreenState extends State<SellerMainScreen> {
                     label: langVM.translate('statistics_tab'),
                   ),
                   BottomNavigationBarItem(
-                    icon: const Icon(Icons.star_outline),
-                    activeIcon: _buildActiveIcon(context, Icons.star),
+                    icon: const Icon(Icons.add_circle_outline),
+                    activeIcon: _buildActiveIcon(context, Icons.add_circle),
+                    label: langVM.translate('add_product_tab'),
+                  ),
+                  BottomNavigationBarItem(
+                    icon: _buildQuestionTabIcon(
+                        context, Icons.help_outline, authVM,
+                        isActive: false),
+                    activeIcon: _buildQuestionTabIcon(
+                        context, Icons.help, authVM,
+                        isActive: true),
+                    label: 'Sorular',
+                  ),
+                  BottomNavigationBarItem(
+                    icon: _buildBottomNavIcon(
+                        context, Icons.star_outline, authVM, 'new_review',
+                        isActive: false),
+                    activeIcon: _buildBottomNavIcon(
+                        context, Icons.star, authVM, 'new_review',
+                        isActive: true),
                     label: langVM.translate('reviews_tab'),
                   ),
                 ],

@@ -342,6 +342,10 @@ class AuthViewModel extends ChangeNotifier {
             {'profilePicture': downloadUrl}, _currentUser!.email);
         await AuthService.instance.updateProfilePicture(downloadUrl);
 
+        // Geçmiş yorum ve sorulardaki profil fotoğrafını güncelle
+        await AuthService.instance
+            .updateUserProfileInContent(_currentUser!.id, downloadUrl);
+
         // 3. Eski fotoğrafı sil (Eğer varsa ve Firebase Storage URL'i ise)
         if (oldPhotoUrl != null) {
           await AuthService.instance.deleteImageFromStorage(oldPhotoUrl);
@@ -431,6 +435,10 @@ class AuthViewModel extends ChangeNotifier {
       }, _currentUser!.email);
       await AuthService.instance.updateProfilePicture('');
 
+      // Geçmiş yorum ve sorulardaki profil fotoğrafını kaldır
+      await AuthService.instance
+          .updateUserProfileInContent(_currentUser!.id, '');
+
       // Eski fotoğrafı storage'dan da sil
       if (oldPhotoUrl != null) {
         await AuthService.instance.deleteImageFromStorage(oldPhotoUrl);
@@ -448,6 +456,12 @@ class AuthViewModel extends ChangeNotifier {
     String? newPassword,
   }) async {
     if (_currentUser != null) {
+      // İsim değişikliği kontrolü
+      final String oldName =
+          '${_currentUser!.firstName} ${_currentUser!.lastName}';
+      final String newName = '$firstName $lastName';
+      final bool nameChanged = oldName != newName;
+
       String currentEmail = _currentUser!.email;
       bool emailChanged = currentEmail != email;
 
@@ -473,6 +487,22 @@ class AuthViewModel extends ChangeNotifier {
         dateOfBirth: dateOfBirth.toIso8601String(),
         email: email,
       );
+
+      // İsim değiştiyse geçmiş içerikleri güncelle
+      if (nameChanged) {
+        await AuthService.instance
+            .updateUserNameInContent(_currentUser!.id, newName);
+      }
+    }
+  }
+
+  /// Hassas işlemler öncesi şifre doğrulaması yapar.
+  Future<void> reauthenticate(String password) async {
+    try {
+      await AuthService.instance.reauthenticate(password);
+    } catch (e) {
+      final message = e.toString().replaceAll('Exception: ', '');
+      throw message;
     }
   }
 
@@ -514,15 +544,31 @@ class AuthViewModel extends ChangeNotifier {
         if (change.type == DocumentChangeType.added) {
           final data = change.doc.data();
           if (data != null && data['read'] == false) {
+            // Bildirimin zamanını kontrol et (Eski bildirimleri tekrar popup olarak gösterme)
+            if (data['timestamp'] != null) {
+              final Timestamp ts = data['timestamp'];
+              // Eğer bildirim 5 dakikadan eskiyse yerel bildirim gösterme
+              if (DateTime.now().difference(ts.toDate()).inMinutes > 5) {
+                continue;
+              }
+            }
+
+            // Metadata'dan payload oluştur (Yönlendirme için)
+            String? payload;
+            if (data['metadata'] != null && data['metadata']['type'] != null) {
+              payload = data['metadata']['type'];
+            }
+
             // Bildirimi göster
             NotificationService.instance.showNotification(
               id: DateTime.now().millisecondsSinceEpoch % 10000,
               title: data['title'] ?? 'Bildirim',
               body: data['body'] ?? '',
+              payload: payload,
             );
 
             // Okundu olarak işaretle ki tekrar gelmesin
-            change.doc.reference.update({'read': true});
+            // change.doc.reference.update({'read': true}); // Kaldırıldı: Kullanıcı görmeden okundu işaretlenmemeli
           }
         }
       }

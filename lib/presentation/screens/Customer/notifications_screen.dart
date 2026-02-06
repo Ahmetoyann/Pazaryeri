@@ -6,6 +6,8 @@ import '../../viewmodels/auth_viewmodel.dart';
 import '../../viewmodels/language_viewmodel.dart';
 import '../../widgets/custom_app_bar.dart';
 import 'product_detail_screen.dart';
+import '../Seller/seller_questions_screen.dart';
+import '../Seller/seller_reviews_screen.dart';
 
 class NotificationsScreen extends StatelessWidget {
   const NotificationsScreen({super.key});
@@ -113,7 +115,9 @@ class NotificationsScreen extends StatelessWidget {
                 Color notificationColor = Theme.of(context).colorScheme.primary;
                 if (notification['metadata'] != null &&
                     notification['metadata'] is Map &&
-                    notification['metadata']['type'] == 'product_reply') {
+                    (notification['metadata']['type'] == 'product_reply' ||
+                        notification['metadata']['type'] == 'new_review' ||
+                        notification['metadata']['type'] == 'new_question')) {
                   notificationColor = Theme.of(context).colorScheme.secondary;
                 }
 
@@ -227,9 +231,24 @@ class NotificationsScreen extends StatelessWidget {
     }
 
     Color iconColor = Theme.of(context).colorScheme.primary;
-    if (notification['metadata'] != null &&
-        notification['metadata'] is Map &&
-        notification['metadata']['type'] == 'product_reply') {
+    final metadata = notification['metadata'];
+    final type = metadata is Map ? metadata['type'] : null;
+
+    // Buton metnini belirle
+    String buttonText = 'Ürünü Görüntüle';
+    if (type == 'new_question') {
+      buttonText = 'Soruyu Gör';
+    } else if (type == 'new_review') {
+      buttonText = 'Yorumu Gör';
+    } else if (type == 'question_reply' || type == 'review_reply') {
+      buttonText = 'Cevabı Gör';
+    }
+
+    if (type == 'product_reply' ||
+        type == 'new_review' ||
+        type == 'new_question' ||
+        type == 'question_reply' ||
+        type == 'review_reply') {
       iconColor = Theme.of(context).colorScheme.secondary;
     }
 
@@ -322,9 +341,14 @@ class NotificationsScreen extends StatelessWidget {
                       textAlign: TextAlign.center,
                     ),
                   ),
+                  // İçerik Önizlemesi (Soru veya Yorum)
+                  _buildContentPreview(context, notification['metadata']),
                   const SizedBox(height: 32),
-                  if (notification['metadata'] != null &&
-                      notification['metadata']['type'] == 'product_reply')
+                  if (type == 'product_reply' ||
+                      type == 'new_review' ||
+                      type == 'new_question' ||
+                      type == 'question_reply' ||
+                      type == 'review_reply')
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton.icon(
@@ -337,7 +361,7 @@ class NotificationsScreen extends StatelessWidget {
                               borderRadius: BorderRadius.circular(12)),
                         ),
                         icon: const Icon(Icons.visibility),
-                        label: const Text('Ürünü Görüntüle'),
+                        label: Text(buttonText),
                         onPressed: () {
                           Navigator.pop(ctx);
                           _handleNavigation(context, notification);
@@ -377,14 +401,186 @@ class NotificationsScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildContentPreview(BuildContext context, dynamic metadata) {
+    if (metadata == null || metadata is! Map) return const SizedBox.shrink();
+
+    final type = metadata['type'];
+    final questionId = metadata['questionId'];
+    final reviewId = metadata['reviewId'];
+
+    // Satıcı için: Yeni Soru Detayı
+    if (type == 'new_question' && questionId != null) {
+      return FutureBuilder<DocumentSnapshot>(
+        future: FirebaseFirestore.instance
+            .collection('product_questions')
+            .doc(questionId)
+            .get(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData || !snapshot.data!.exists) {
+            return const SizedBox.shrink();
+          }
+          final data = snapshot.data!.data() as Map<String, dynamic>;
+          return Container(
+            margin: const EdgeInsets.only(top: 16),
+            padding: const EdgeInsets.all(16),
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardColor,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Theme.of(context).dividerColor),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.help_outline,
+                        size: 20, color: Theme.of(context).colorScheme.primary),
+                    const SizedBox(width: 8),
+                    Text('Soru Detayı',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.primary)),
+                  ],
+                ),
+                const Divider(height: 24),
+                Text(data['question'] ?? '',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : Colors.black,
+                    )),
+              ],
+            ),
+          );
+        },
+      );
+    }
+
+    // Satıcı için: Yeni Değerlendirme Detayı
+    if (type == 'new_review' && reviewId != null) {
+      return FutureBuilder<DocumentSnapshot>(
+        future: FirebaseFirestore.instance
+            .collection('product_reviews')
+            .doc(reviewId)
+            .get(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData || !snapshot.data!.exists) {
+            return const SizedBox.shrink();
+          }
+          final data = snapshot.data!.data() as Map<String, dynamic>;
+          final rating = (data['rating'] as num?)?.toDouble() ?? 0.0;
+
+          return Container(
+            margin: const EdgeInsets.only(top: 16),
+            padding: const EdgeInsets.all(16),
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardColor,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Theme.of(context).dividerColor),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.star_outline,
+                        size: 20, color: Colors.amber),
+                    const SizedBox(width: 8),
+                    Text('Değerlendirme Detayı',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.amber[700])),
+                  ],
+                ),
+                const Divider(height: 24),
+                Row(
+                  children: List.generate(
+                      5,
+                      (index) => Icon(
+                            index < rating ? Icons.star : Icons.star_border,
+                            color: Colors.amber,
+                            size: 16,
+                          )),
+                ),
+                const SizedBox(height: 8),
+                Text(data['comment'] ?? '',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : Colors.black,
+                    )),
+              ],
+            ),
+          );
+        },
+      );
+    }
+
+    return const SizedBox.shrink();
+  }
+
   Future<void> _handleNavigation(
       BuildContext context, Map<String, dynamic> notification) async {
     if (notification['metadata'] == null) return;
     final metadata = notification['metadata'];
+    final type = metadata is Map ? metadata['type'] : null;
 
-    if (metadata is Map &&
-        metadata['type'] == 'product_reply' &&
-        metadata['productId'] != null) {
+    // Satıcı için yeni soru bildirimi ise Sorular sayfasına yönlendir
+    if (type == 'new_question') {
+      final langVM = Provider.of<LanguageViewModel>(context, listen: false);
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => Scaffold(
+            appBar:
+                CustomAppBar(title: Text(langVM.translate('questions_title'))),
+            body: SellerQuestionsScreen(
+              highlightQuestionId: metadata['questionId'],
+            ),
+          ),
+        ),
+      );
+      return;
+    }
+
+    // Satıcı için yeni yorum bildirimi ise Değerlendirmeler sayfasına yönlendir
+    if (type == 'new_review') {
+      final langVM = Provider.of<LanguageViewModel>(context, listen: false);
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => Scaffold(
+            appBar:
+                CustomAppBar(title: Text(langVM.translate('reviews_title'))),
+            body: SellerReviewsScreen(
+              highlightReviewId: metadata['reviewId'],
+            ),
+          ),
+        ),
+      );
+      return;
+    }
+
+    // Müşteri için soru/yorum yanıtı veya genel ürün bildirimi
+    if (metadata is Map && metadata['productId'] != null) {
       // Yükleniyor göstergesi
       showDialog(
         context: context,
@@ -421,12 +617,25 @@ class NotificationsScreen extends StatelessWidget {
             // Loading dialogunu kapat
             Navigator.of(context, rootNavigator: true).pop();
 
+            // Highlight ID'lerini belirle
+            String? highlightQuestionId;
+            String? highlightReviewId;
+
+            if (type == 'question_reply') {
+              highlightQuestionId = metadata['questionId'];
+            } else if (type == 'review_reply') {
+              highlightReviewId = metadata['reviewId'];
+            }
+
             Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (_) => ProductDetailScreen(
                   product: productData,
                   sellerName: sellerName,
+                  highlightQuestionId:
+                      highlightQuestionId ?? metadata['questionId'],
+                  highlightReviewId: highlightReviewId ?? metadata['reviewId'],
                 ),
               ),
             );

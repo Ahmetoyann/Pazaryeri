@@ -14,11 +14,15 @@ import 'customer_seller_detail_screen.dart';
 class ProductDetailScreen extends StatefulWidget {
   final Map<String, dynamic> product;
   final String sellerName;
+  final String? highlightReviewId;
+  final String? highlightQuestionId;
 
   const ProductDetailScreen({
     super.key,
     required this.product,
     required this.sellerName,
+    this.highlightReviewId,
+    this.highlightQuestionId,
   });
 
   @override
@@ -34,6 +38,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   int _currentImageIndex = 0;
   List<Map<String, dynamic>> _otherSellers = [];
   List<Map<String, dynamic>> _questions = [];
+  final Map<String, GlobalKey> _reviewKeys = {};
+  final Map<String, GlobalKey> _questionKeys = {};
 
   final Map<String, Color> _categoryColors = {
     'category_fruit': Colors.orange,
@@ -76,6 +82,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         _applyFilter();
         _isLoading = false;
       });
+
+      if (widget.highlightReviewId != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          Future.delayed(const Duration(milliseconds: 300), () {
+            _scrollToHighlightedItem(widget.highlightReviewId!, _reviewKeys);
+          });
+        });
+      }
     }
   }
 
@@ -109,6 +123,40 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       setState(() {
         _questions = questions;
       });
+
+      if (widget.highlightQuestionId != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          Future.delayed(const Duration(milliseconds: 300), () {
+            _scrollToHighlightedItem(
+                widget.highlightQuestionId!, _questionKeys);
+          });
+        });
+      }
+    }
+  }
+
+  void _scrollToHighlightedItem(String id, Map<String, GlobalKey> keys) {
+    final key = keys[id];
+    if (key != null && key.currentContext != null) {
+      Scrollable.ensureVisible(
+        key.currentContext!,
+        duration: const Duration(milliseconds: 800),
+        curve: Curves.easeInOutCubic,
+        alignment: 0.5,
+      );
+    } else {
+      // Eğer ilk denemede bulunamazsa (render gecikmesi), kısa süre sonra tekrar dene
+      Future.delayed(const Duration(milliseconds: 500), () {
+        final retryKey = keys[id];
+        if (retryKey != null && retryKey.currentContext != null) {
+          Scrollable.ensureVisible(
+            retryKey.currentContext!,
+            duration: const Duration(milliseconds: 800),
+            curve: Curves.easeInOutCubic,
+            alignment: 0.5,
+          );
+        }
+      });
     }
   }
 
@@ -124,7 +172,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: Colors.black,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -180,6 +228,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     controller: commentController,
                     decoration: InputDecoration(
                       hintText: langVM.translate('write_review_hint'),
+                      hintStyle:
+                          TextStyle(color: Colors.white.withOpacity(0.7)),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
@@ -196,7 +246,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       TextButton.icon(
                         onPressed: () async {
                           final XFile? image = await picker.pickImage(
-                              source: ImageSource.gallery);
+                            source: ImageSource.gallery,
+                            imageQuality: 70,
+                            maxWidth: 1024,
+                          );
                           if (image != null) {
                             setState(() => reviewImage = image);
                           }
@@ -310,7 +363,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: Colors.black,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -348,6 +401,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 controller: questionController,
                 decoration: InputDecoration(
                   hintText: 'Sorunuzu buraya yazın...',
+                  hintStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
@@ -642,6 +696,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     final authVM = Provider.of<AuthViewModel>(context);
     final product = widget.product;
     final bool inStock = product['inStock'];
+    final double stockQuantity =
+        (product['stockQuantity'] as num?)?.toDouble() ?? 0;
+    final bool isLowStock = inStock && stockQuantity > 0 && stockQuantity < 5;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final backgroundColor =
+        isDark ? Colors.white : Theme.of(context).colorScheme.primary;
+    final contentColor = isDark ? Colors.black : Colors.white;
 
     // Kategoriye göre stil belirle
     final category = product['category'] as String? ?? 'category_other';
@@ -683,30 +744,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => Scaffold(
-                              backgroundColor: Colors.black,
-                              appBar: AppBar(
-                                backgroundColor: Colors.black,
-                                iconTheme:
-                                    const IconThemeData(color: Colors.white),
-                              ),
-                              body: Center(
-                                child: PageView.builder(
-                                  controller: PageController(
-                                      initialPage: _currentImageIndex),
-                                  itemCount: images.length,
-                                  itemBuilder: (context, index) {
-                                    final img = images[index];
-                                    return InteractiveViewer(
-                                      child: img.startsWith('http')
-                                          ? Image.network(img,
-                                              fit: BoxFit.contain)
-                                          : Image.file(File(img),
-                                              fit: BoxFit.contain),
-                                    );
-                                  },
-                                ),
-                              ),
+                            builder: (context) => _FullScreenImageGallery(
+                              images: images,
+                              initialIndex: _currentImageIndex,
                             ),
                           ),
                         );
@@ -745,12 +785,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                                   img,
                                                   fit: BoxFit.cover,
                                                   errorBuilder: (context, error,
-                                                          stackTrace) =>
-                                                      Icon(categoryIcon,
-                                                          size: 64,
-                                                          color: categoryColor
-                                                              .withOpacity(
-                                                                  0.5)),
+                                                      stackTrace) {
+                                                    debugPrint(
+                                                        'Ürün resmi yükleme hatası: $error');
+                                                    return Icon(categoryIcon,
+                                                        size: 64,
+                                                        color: categoryColor
+                                                            .withOpacity(0.5));
+                                                  },
                                                 )
                                               : Image.file(
                                                   File(img),
@@ -856,22 +898,31 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: inStock
-                              ? Colors.green.withValues(alpha: 0.1)
-                              : Colors.red.withValues(alpha: 0.1),
+                          color: isLowStock
+                              ? Colors.orange.withValues(alpha: 0.1)
+                              : (inStock
+                                  ? Colors.green.withValues(alpha: 0.1)
+                                  : Colors.red.withValues(alpha: 0.1)),
                           borderRadius: BorderRadius.circular(4),
                           border: Border.all(
-                            color: inStock
-                                ? Colors.green.withValues(alpha: 0.5)
-                                : Colors.red.withValues(alpha: 0.5),
+                            color: isLowStock
+                                ? Colors.orange
+                                : (inStock
+                                    ? Colors.green.withValues(alpha: 0.5)
+                                    : Colors.red.withValues(alpha: 0.5)),
                           ),
                         ),
                         child: Text(
-                          langVM
-                              .translate(inStock ? 'in_stock' : 'out_of_stock'),
+                          isLowStock
+                              ? '${langVM.translate('critical_stock')} (${stockQuantity % 1 == 0 ? stockQuantity.toInt() : stockQuantity} ${langVM.translate(product['unit'] ?? 'unit_kg')})'
+                              : langVM.translate(
+                                  inStock ? 'in_stock' : 'out_of_stock'),
                           style: TextStyle(
                             fontSize: 12,
-                            color: inStock ? Colors.green : Colors.red,
+                            fontWeight: isLowStock ? FontWeight.bold : null,
+                            color: isLowStock
+                                ? Colors.orange
+                                : (inStock ? Colors.green : Colors.red),
                           ),
                         ),
                       ),
@@ -916,7 +967,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 12, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).cardColor,
+                          color: backgroundColor,
                           borderRadius: BorderRadius.circular(20),
                           border:
                               Border.all(color: Colors.grey.withOpacity(0.3)),
@@ -924,14 +975,16 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         child: DropdownButtonHideUnderline(
                           child: DropdownButton<int>(
                             value: _selectedRatingFilter,
-                            dropdownColor:
-                                Theme.of(context).popupMenuTheme.color,
+                            dropdownColor: backgroundColor,
+                            style: TextStyle(color: contentColor),
                             isDense: true,
-                            icon: const Icon(Icons.filter_list, size: 20),
+                            icon: Icon(Icons.filter_list,
+                                size: 20, color: contentColor),
                             items: [
-                              const DropdownMenuItem(
+                              DropdownMenuItem(
                                 value: 0,
-                                child: Text('Tümü'),
+                                child: Text('Tümü',
+                                    style: TextStyle(color: contentColor)),
                               ),
                               ...List.generate(5, (index) {
                                 final stars = 5 - index;
@@ -939,7 +992,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                   value: stars,
                                   child: Row(
                                     children: [
-                                      Text('$stars'),
+                                      Text('$stars',
+                                          style:
+                                              TextStyle(color: contentColor)),
                                       const SizedBox(width: 4),
                                       const Icon(Icons.star,
                                           size: 16, color: Colors.amber),
@@ -998,12 +1053,31 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       itemCount: _reviews.length,
                       itemBuilder: (context, index) {
                         final review = _reviews[index];
+                        final isHighlighted =
+                            widget.highlightReviewId == review['id'];
+
+                        if (!_reviewKeys.containsKey(review['id'])) {
+                          _reviewKeys[review['id']] = GlobalKey();
+                        }
+
                         return Card(
+                          key: _reviewKeys[review['id']],
                           margin: const EdgeInsets.only(bottom: 12),
+                          color: isHighlighted
+                              ? Theme.of(context)
+                                  .colorScheme
+                                  .primary
+                                  .withOpacity(0.1)
+                              : null,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
-                            side: BorderSide(
-                                color: Colors.white.withOpacity(0.3)),
+                            side: isHighlighted
+                                ? BorderSide(
+                                    color:
+                                        Theme.of(context).colorScheme.primary,
+                                    width: 2)
+                                : BorderSide(
+                                    color: Colors.white.withOpacity(0.3)),
                           ),
                           child: Padding(
                             padding: const EdgeInsets.all(12.0),
@@ -1318,12 +1392,31 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         final question = _questions[index];
                         final isCurrentUser = question['userId'] != null &&
                             question['userId'] == authVM.currentUser?.id;
+                        final isHighlighted =
+                            widget.highlightQuestionId == question['id'];
+
+                        if (!_questionKeys.containsKey(question['id'])) {
+                          _questionKeys[question['id']] = GlobalKey();
+                        }
+
                         return Card(
+                          key: _questionKeys[question['id']],
                           margin: const EdgeInsets.only(bottom: 12),
+                          color: isHighlighted
+                              ? Theme.of(context)
+                                  .colorScheme
+                                  .primary
+                                  .withOpacity(0.1)
+                              : null,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
-                            side: BorderSide(
-                                color: Colors.white.withOpacity(0.3)),
+                            side: isHighlighted
+                                ? BorderSide(
+                                    color:
+                                        Theme.of(context).colorScheme.primary,
+                                    width: 2)
+                                : BorderSide(
+                                    color: Colors.white.withOpacity(0.3)),
                           ),
                           child: Padding(
                             padding: const EdgeInsets.all(12.0),
@@ -1449,6 +1542,75 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         },
         tooltip: langVM.translate('add_review'),
         child: const Icon(Icons.rate_review),
+      ),
+    );
+  }
+}
+
+class _FullScreenImageGallery extends StatefulWidget {
+  final List<String> images;
+  final int initialIndex;
+
+  const _FullScreenImageGallery({
+    required this.images,
+    required this.initialIndex,
+  });
+
+  @override
+  State<_FullScreenImageGallery> createState() =>
+      _FullScreenImageGalleryState();
+}
+
+class _FullScreenImageGalleryState extends State<_FullScreenImageGallery> {
+  late PageController _pageController;
+  late int _currentIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+    _pageController = PageController(initialPage: widget.initialIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        iconTheme: const IconThemeData(color: Colors.white),
+        title: Text(
+          '${_currentIndex + 1} / ${widget.images.length}',
+          style: const TextStyle(color: Colors.white),
+        ),
+        centerTitle: true,
+      ),
+      body: PageView.builder(
+        controller: _pageController,
+        itemCount: widget.images.length,
+        onPageChanged: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
+        itemBuilder: (context, index) {
+          final img = widget.images[index];
+          return InteractiveViewer(
+            minScale: 0.5,
+            maxScale: 4.0,
+            child: Center(
+              child: img.startsWith('http')
+                  ? Image.network(img, fit: BoxFit.contain)
+                  : Image.file(File(img), fit: BoxFit.contain),
+            ),
+          );
+        },
       ),
     );
   }

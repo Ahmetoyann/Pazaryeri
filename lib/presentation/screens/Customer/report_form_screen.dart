@@ -1,12 +1,23 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import '../../../data/models/market.dart';
+import 'package:provider/provider.dart';
+import '../../viewmodels/language_viewmodel.dart';
 import '../../widgets/custom_app_bar.dart';
 
 class ReportFormScreen extends StatefulWidget {
-  final Market market;
-  const ReportFormScreen({super.key, required this.market});
+  final String? marketId;
+  final String? marketName;
+  final String? sellerId;
+  final String? sellerName;
+
+  const ReportFormScreen({
+    super.key,
+    this.marketId,
+    this.marketName,
+    this.sellerId,
+    this.sellerName,
+  });
 
   @override
   State<ReportFormScreen> createState() => _ReportFormScreenState();
@@ -124,10 +135,15 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final m = widget.market;
+    final langVM = context.watch<LanguageViewModel>();
+    final isSellerReport = widget.sellerId != null;
+    final title = isSellerReport
+        ? '${widget.sellerName} - ${langVM.translate('report_tab')}'
+        : '${widget.marketName} - ${langVM.translate('report_tab')}';
+
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: CustomAppBar(title: Text('Bildir: ${m.name}')),
+      appBar: CustomAppBar(title: Text(title)),
       body: Padding(
         padding: const EdgeInsets.fromLTRB(16, 110, 16, 16),
         child: SingleChildScrollView(

@@ -663,7 +663,8 @@ class AuthService {
 
   /// Satıcıya bildirim gönderir (Firestore'a yazar)
   Future<void> sendSellerNotification(
-      String sellerId, String title, String body) async {
+      String sellerId, String title, String body,
+      {Map<String, dynamic>? metadata}) async {
     try {
       await FirebaseFirestore.instance
           .collection('users')
@@ -674,6 +675,7 @@ class AuthService {
         'body': body,
         'timestamp': FieldValue.serverTimestamp(),
         'read': false,
+        if (metadata != null) 'metadata': metadata,
       });
     } catch (e) {
       debugPrint('Bildirim gönderilemedi: $e');
@@ -988,6 +990,78 @@ class AuthService {
     return allReviews;
   }
 
+  /// Kullanıcının yaptığı tüm ürün değerlendirmelerini getirir
+  Future<List<Map<String, dynamic>>> getUserProductReviews(
+      String userId) async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('product_reviews')
+          .where('userId', isEqualTo: userId)
+          .get();
+
+      // Her yorum için ürün detaylarını da çekmek üzere Future.wait kullanıyoruz
+      final reviews = await Future.wait(snapshot.docs.map((doc) async {
+        final data = doc.data();
+        data['id'] = doc.id;
+
+        // Ürün bilgilerini çek
+        if (data['productId'] != null) {
+          try {
+            final productDoc = await FirebaseFirestore.instance
+                .collection('products')
+                .doc(data['productId'])
+                .get();
+
+            if (productDoc.exists) {
+              final pData = productDoc.data();
+
+              // Ürün detay sayfasına yönlendirme için tüm veriyi sakla
+              if (pData != null) {
+                data['product'] = pData;
+                data['product']['id'] = productDoc.id;
+              }
+
+              data['productName'] = pData?['name'];
+              data['productImage'] = pData?['imagePath'];
+
+              // Satıcı ismini çek
+              if (pData?['sellerId'] != null) {
+                final sellerDoc = await FirebaseFirestore.instance
+                    .collection('users')
+                    .doc(pData!['sellerId'])
+                    .get();
+                if (sellerDoc.exists) {
+                  final sData = sellerDoc.data();
+                  data['sellerName'] = sData?['stallName'] ??
+                      '${sData?['firstName'] ?? ''} ${sData?['lastName'] ?? ''}'
+                          .trim();
+                }
+              }
+            } else {
+              data['productName'] = 'Silinmiş Ürün';
+            }
+          } catch (e) {
+            debugPrint('Yorum detayları yüklenirken hata: $e');
+          }
+        }
+
+        return data;
+      }));
+
+      // Tarihe göre sırala (Yeniden eskiye)
+      reviews.sort((a, b) {
+        final dateA = a['date'] ?? '';
+        final dateB = b['date'] ?? '';
+        return dateB.compareTo(dateA);
+      });
+
+      return reviews;
+    } catch (e) {
+      debugPrint('Kullanıcı değerlendirmeleri çekilirken hata: $e');
+      return [];
+    }
+  }
+
   Future<List<Map<String, dynamic>>> getAllProductReviews() async {
     try {
       final snapshot =
@@ -1019,27 +1093,51 @@ class AuthService {
         }
       }
 
+      String reviewId;
       // ID varsa onu kullan, yoksa Firestore oluştursun
       if (review.containsKey('id') && review['id'] != null) {
+        reviewId = review['id'];
         await FirebaseFirestore.instance
             .collection('product_reviews')
-            .doc(review['id'])
+            .doc(reviewId)
             .set(review);
       } else {
-        await FirebaseFirestore.instance
+        final docRef = await FirebaseFirestore.instance
             .collection('product_reviews')
             .add(review);
+        reviewId = docRef.id;
       }
 
       // Bildirim gönder
       if (sellerId != null) {
-        if (sellerId != null) {
-          await sendSellerNotification(sellerId, 'Yeni Ürün Yorumu 💬',
-              'Bir ürününüze yeni yorum yapıldı.');
-        }
+        await sendSellerNotification(sellerId, 'Yeni Ürün Yorumu 💬',
+            'Bir ürününüze yeni yorum yapıldı: "${review['comment']}"',
+            metadata: {
+              'type': 'new_review',
+              'productId': review['productId'],
+              'reviewId': reviewId,
+            });
       }
     } catch (e) {
       debugPrint('Ürün yorumu eklenirken hata: $e');
+      throw e;
+    }
+  }
+
+  /// Ürün yorumunu günceller
+  Future<void> updateProductReview(
+      String reviewId, String newComment, double newRating) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('product_reviews')
+          .doc(reviewId)
+          .update({
+        'comment': newComment,
+        'rating': newRating,
+        'isEdited': true,
+      });
+    } catch (e) {
+      debugPrint('Ürün yorumu güncellenirken hata: $e');
       throw e;
     }
   }
@@ -1100,8 +1198,9 @@ class AuthService {
           'Satıcı Yanıt Verdi 💬',
           'Satıcı yorumunuza yanıt verdi: "$reply"',
           metadata: {
-            'type': 'product_reply',
+            'type': 'review_reply',
             'productId': data['productId'],
+            'reviewId': reviewId,
           },
         );
       }
@@ -1137,6 +1236,121 @@ class AuthService {
       return questions;
     } catch (e) {
       debugPrint('Ürün soruları çekilirken hata: $e');
+      return [];
+    }
+  }
+
+  /// Satıcıya sorulan soruları getirir
+  Future<List<Map<String, dynamic>>> getSellerQuestions(String sellerId) async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('product_questions')
+          .where('sellerId', isEqualTo: sellerId)
+          .get();
+
+      final questions = snapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        return data;
+      }).toList();
+
+      // Tarihe göre sırala (Yeniden eskiye)
+      questions.sort((a, b) {
+        final dateA = a['date'] ?? '';
+        final dateB = b['date'] ?? '';
+        return dateB.compareTo(dateA);
+      });
+
+      return questions;
+    } catch (e) {
+      debugPrint('Satıcı soruları çekilirken hata: $e');
+      return [];
+    }
+  }
+
+  /// Satıcıya sorulan yanıtlanmamış soruların sayısını dinler
+  Stream<int> getUnansweredQuestionsCount(String sellerId) {
+    return FirebaseFirestore.instance
+        .collection('product_questions')
+        .where('sellerId', isEqualTo: sellerId)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.where((doc) {
+        final data = doc.data();
+        final reply = data['sellerReply'];
+        return reply == null || reply.toString().trim().isEmpty;
+      }).length;
+    });
+  }
+
+  /// Kullanıcının sorduğu tüm ürün sorularını getirir
+  Future<List<Map<String, dynamic>>> getUserProductQuestions(
+      String userId) async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('product_questions')
+          .where('userId', isEqualTo: userId)
+          .get();
+
+      // Her soru için ürün detaylarını da çekmek üzere Future.wait kullanıyoruz
+      final questions = await Future.wait(snapshot.docs.map((doc) async {
+        final data = doc.data();
+        data['id'] = doc.id;
+
+        // Ürün bilgilerini çek
+        if (data['productId'] != null) {
+          try {
+            final productDoc = await FirebaseFirestore.instance
+                .collection('products')
+                .doc(data['productId'])
+                .get();
+
+            if (productDoc.exists) {
+              final pData = productDoc.data();
+
+              // Ürün detay sayfasına yönlendirme için tüm veriyi sakla
+              if (pData != null) {
+                data['product'] = pData;
+                data['product']['id'] = productDoc.id;
+              }
+
+              data['productName'] = pData?['name'];
+              data['productImage'] = pData?['imagePath'];
+
+              // Satıcı ismini çek
+              if (pData?['sellerId'] != null) {
+                final sellerDoc = await FirebaseFirestore.instance
+                    .collection('users')
+                    .doc(pData!['sellerId'])
+                    .get();
+                if (sellerDoc.exists) {
+                  final sData = sellerDoc.data();
+                  data['sellerName'] = sData?['stallName'] ??
+                      '${sData?['firstName'] ?? ''} ${sData?['lastName'] ?? ''}'
+                          .trim();
+                }
+              }
+            } else {
+              data['productName'] = 'Silinmiş Ürün';
+            }
+          } catch (e) {
+            debugPrint('Soru detayları yüklenirken hata: $e');
+          }
+        }
+
+        return data;
+      }));
+
+      // Tarihe göre sırala (Yeniden eskiye)
+      questions.sort((a, b) {
+        final dateA = a['date'] ?? '';
+        final dateB = b['date'] ?? '';
+        return dateB.compareTo(dateA);
+      });
+
+      return questions;
+    } catch (e) {
+      debugPrint('Kullanıcı soruları çekilirken hata: $e');
       return [];
     }
   }
@@ -1198,8 +1412,9 @@ class AuthService {
           'Satıcı Sorunuzu Yanıtladı 💬',
           'Satıcı sorunuza yanıt verdi: "$reply"',
           metadata: {
-            'type': 'product_reply',
+            'type': 'question_reply',
             'productId': data['productId'],
+            'questionId': questionId,
           },
         );
       }
@@ -1223,16 +1438,38 @@ class AuthService {
         }
       }
 
-      await FirebaseFirestore.instance
+      final docRef = await FirebaseFirestore.instance
           .collection('product_questions')
           .add(question);
 
       if (sellerId != null) {
-        await sendSellerNotification(
-            sellerId, 'Yeni Ürün Sorusu ❓', 'Bir ürününüze yeni soru soruldu.');
+        await sendSellerNotification(sellerId, 'Yeni Ürün Sorusu ❓',
+            'Bir ürününüze yeni soru soruldu: "${question['question']}"',
+            metadata: {
+              'type': 'new_question',
+              'productId': question['productId'],
+              'questionId': docRef.id,
+            });
       }
     } catch (e) {
       debugPrint('Soru sorulurken hata: $e');
+      throw e;
+    }
+  }
+
+  /// Ürün sorusunu günceller
+  Future<void> updateProductQuestion(
+      String questionId, String newQuestion) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('product_questions')
+          .doc(questionId)
+          .update({
+        'question': newQuestion,
+        'isEdited': true,
+      });
+    } catch (e) {
+      debugPrint('Ürün sorusu güncellenirken hata: $e');
       throw e;
     }
   }
@@ -1380,13 +1617,24 @@ class AuthService {
   Future<String> uploadProductImage(File file) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) throw Exception('Kullanıcı oturumu açık değil');
+
+    final String fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
+
     final ref = FirebaseStorage.instance
         .ref()
         .child('products')
         .child(user.uid)
-        .child('${DateTime.now().millisecondsSinceEpoch}.jpg');
-    await ref.putFile(file);
-    return await ref.getDownloadURL();
+        .child(fileName);
+
+    final metadata = SettableMetadata(contentType: 'image/jpeg');
+    final UploadTask task = ref.putFile(file, metadata);
+    final TaskSnapshot snapshot = await task;
+
+    if (snapshot.state == TaskState.success) {
+      return await ref.getDownloadURL();
+    } else {
+      throw Exception('Resim yüklenemedi. Durum: ${snapshot.state}');
+    }
   }
 
   /// Yorum görselini Storage'a yükler
@@ -1557,6 +1805,111 @@ class AuthService {
       await prefs.setString(_keyDateOfBirth, userDataMap['dateOfBirth']!);
       await prefs.setString(_keyProfilePicture, userDataMap['profilePicture']!);
       await prefs.setString(_keySellerMarketId, userDataMap['sellerMarketId']!);
+    }
+  }
+
+  /// Kullanıcının profil fotoğrafı değiştiğinde, geçmiş yorumlardaki ve sorulardaki fotoğrafı da günceller.
+  Future<void> updateUserProfileInContent(
+      String userId, String newPhotoUrl) async {
+    WriteBatch batch = FirebaseFirestore.instance.batch();
+    int count = 0;
+
+    // 1. Yorumları Güncelle
+    final reviewsQuery = await FirebaseFirestore.instance
+        .collection('product_reviews')
+        .where('userId', isEqualTo: userId)
+        .get();
+
+    for (var doc in reviewsQuery.docs) {
+      batch.update(doc.reference, {'userProfilePicture': newPhotoUrl});
+      count++;
+      if (count >= 450) {
+        await batch.commit();
+        batch = FirebaseFirestore.instance.batch();
+        count = 0;
+      }
+    }
+
+    // 2. Soruları Güncelle
+    final questionsQuery = await FirebaseFirestore.instance
+        .collection('product_questions')
+        .where('userId', isEqualTo: userId)
+        .get();
+
+    for (var doc in questionsQuery.docs) {
+      batch.update(doc.reference, {'userProfilePicture': newPhotoUrl});
+      count++;
+      if (count >= 450) {
+        await batch.commit();
+        batch = FirebaseFirestore.instance.batch();
+        count = 0;
+      }
+    }
+
+    if (count > 0) {
+      await batch.commit();
+    }
+  }
+
+  /// Kullanıcının adı değiştiğinde, geçmiş yorumlardaki ve sorulardaki ismi de günceller.
+  Future<void> updateUserNameInContent(String userId, String newName) async {
+    WriteBatch batch = FirebaseFirestore.instance.batch();
+    int count = 0;
+
+    // 1. Yorumları Güncelle
+    final reviewsQuery = await FirebaseFirestore.instance
+        .collection('product_reviews')
+        .where('userId', isEqualTo: userId)
+        .get();
+
+    for (var doc in reviewsQuery.docs) {
+      batch.update(doc.reference, {'userName': newName});
+      count++;
+      if (count >= 450) {
+        await batch.commit();
+        batch = FirebaseFirestore.instance.batch();
+        count = 0;
+      }
+    }
+
+    // 2. Soruları Güncelle
+    final questionsQuery = await FirebaseFirestore.instance
+        .collection('product_questions')
+        .where('userId', isEqualTo: userId)
+        .get();
+
+    for (var doc in questionsQuery.docs) {
+      batch.update(doc.reference, {'userName': newName});
+      count++;
+      if (count >= 450) {
+        await batch.commit();
+        batch = FirebaseFirestore.instance.batch();
+        count = 0;
+      }
+    }
+
+    if (count > 0) {
+      await batch.commit();
+    }
+  }
+
+  /// Kullanıcıyı şifre ile yeniden doğrular (Hesap silme vb. işlemler için)
+  Future<void> reauthenticate(String password) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) throw Exception('Kullanıcı oturumu açık değil.');
+
+    AuthCredential credential = EmailAuthProvider.credential(
+      email: user.email!,
+      password: password,
+    );
+
+    try {
+      await user.reauthenticateWithCredential(credential);
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
+        throw Exception('Girdiğiniz şifre hatalı.');
+      }
+      throw Exception('Doğrulama başarısız: ${e.message}');
     }
   }
 }
