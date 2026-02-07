@@ -188,6 +188,7 @@ class AuthViewModel extends ChangeNotifier {
     required String lastName,
     required String phoneNumber,
     required String marketId,
+    String? profileImagePath,
   }) async {
     try {
       // 1. Firebase Auth ile kullanıcı oluştur
@@ -197,6 +198,11 @@ class AuthViewModel extends ChangeNotifier {
 
       if (user != null) {
         // 2. Kullanıcı bilgilerini güncelle (DisplayName)
+        String profileUrl = '';
+        if (profileImagePath != null) {
+          profileUrl = await AuthService.instance
+              .uploadProfilePictureToStorage(File(profileImagePath));
+        }
         await user.updateDisplayName('$firstName $lastName');
 
         // 3. Firestore'a satıcı detaylarını kaydet
@@ -208,6 +214,7 @@ class AuthViewModel extends ChangeNotifier {
           'isSeller': true, // Satıcı olarak işaretle
           'sellerMarketId': marketId, // Pazar yerini kaydet
           'dateOfBirth': DateTime.now().toIso8601String(),
+          'profilePicture': profileUrl,
           'createdAt': FieldValue.serverTimestamp(),
         }, email);
 

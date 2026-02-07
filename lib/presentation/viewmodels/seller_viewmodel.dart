@@ -183,7 +183,8 @@ class SellerViewModel extends ChangeNotifier {
       source: source,
       imageQuality:
           70, // %70 kalite (Gözle görülür fark olmadan boyutu düşürür)
-      maxWidth: 1024, // Genişliği maksimum 1024px ile sınırla
+      maxWidth: 800, // Genişliği maksimum 800px ile sınırla
+      maxHeight: 800, // Yüksekliği 800px ile sınırla
     );
     if (image != null) {
       _selectedImages.add(image);
@@ -459,7 +460,7 @@ class SellerProduct {
   final String? imagePath;
   final bool inStock;
   final int viewCount;
-  final int salesCount;
+  final double salesCount;
   final double stockQuantity;
   final String unit;
 
@@ -473,7 +474,7 @@ class SellerProduct {
     this.imagePath,
     this.inStock = true,
     this.viewCount = 0,
-    this.salesCount = 0,
+    this.salesCount = 0.0,
     this.stockQuantity = 0,
     this.unit = 'unit_kg',
   });
@@ -506,7 +507,7 @@ class SellerProduct {
       imagePath: map['imagePath'],
       inStock: map['inStock'] ?? true,
       viewCount: map['viewCount'] ?? 0,
-      salesCount: map['salesCount'] ?? 0,
+      salesCount: (map['salesCount'] as num?)?.toDouble() ?? 0.0,
       stockQuantity: (map['stockQuantity'] as num).toDouble(),
       unit: map['unit'] ?? 'unit_kg',
     );

@@ -6,9 +6,9 @@ import 'package:image_picker/image_picker.dart';
 import '../../viewmodels/language_viewmodel.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 import '../../viewmodels/auth_service.dart';
-import '../../widgets/status_message_widget.dart';
 import 'seller_products_view_screen.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../widgets/success_dialog.dart';
 import 'customer_seller_detail_screen.dart';
 
 class ProductDetailScreen extends StatefulWidget {
@@ -34,7 +34,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   List<Map<String, dynamic>> _allReviews = [];
   int _selectedRatingFilter = 0;
   bool _isLoading = true;
-  String? _successMessage;
   int _currentImageIndex = 0;
   List<Map<String, dynamic>> _otherSellers = [];
   List<Map<String, dynamic>> _questions = [];
@@ -337,10 +336,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         if (mounted) {
                           Navigator.pop(context);
                           _loadReviews();
-                          setState(() {
-                            _successMessage =
-                                langVM.translate('review_success');
-                          });
+                          await DialogService.showSuccess(
+                            context,
+                            message: langVM.translate('review_success'),
+                          );
                         }
                       },
                       child: Text(langVM.translate('send_button')),
@@ -427,6 +426,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
                     final newQuestion = {
                       'productId': widget.product['id'],
+                      'productName': widget.product['name'],
+                      'productImage': widget.product['imagePath'],
                       'userId': authVM.currentUser?.id ?? 'guest',
                       'userName':
                           '${authVM.currentUser?.firstName} ${authVM.currentUser?.lastName}',
@@ -438,8 +439,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     if (mounted) {
                       Navigator.pop(context);
                       _loadQuestions();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Sorunuz gönderildi.')),
+                      await DialogService.showSuccess(
+                        context,
+                        message: 'Sorunuz başarıyla gönderildi.',
                       );
                     }
                   },
@@ -730,13 +732,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (_successMessage != null)
-                    StatusMessageWidget(
-                      message: _successMessage!,
-                      type: StatusType.success,
-                      autoCloseDuration: const Duration(seconds: 3),
-                      onClose: () => setState(() => _successMessage = null),
-                    ),
                   // Product Header
                   GestureDetector(
                     onTap: () {
@@ -928,6 +923,26 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       ),
                     ],
                   ),
+                  if (product['description'] != null &&
+                      product['description'].toString().isNotEmpty) ...[
+                    const SizedBox(height: 24),
+                    Text(
+                      langVM.translate('product_desc_label'),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      product['description'],
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withOpacity(0.8),
+                          ),
+                    ),
+                  ],
                   const SizedBox(height: 16),
                   SizedBox(
                     width: double.infinity,
@@ -1582,35 +1597,115 @@ class _FullScreenImageGalleryState extends State<_FullScreenImageGallery> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: Text(
-          '${_currentIndex + 1} / ${widget.images.length}',
-          style: const TextStyle(color: Colors.white),
-        ),
-        centerTitle: true,
-      ),
-      body: PageView.builder(
-        controller: _pageController,
-        itemCount: widget.images.length,
-        onPageChanged: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-        itemBuilder: (context, index) {
-          final img = widget.images[index];
-          return InteractiveViewer(
-            minScale: 0.5,
-            maxScale: 4.0,
-            child: Center(
-              child: img.startsWith('http')
-                  ? Image.network(img, fit: BoxFit.contain)
-                  : Image.file(File(img), fit: BoxFit.contain),
+      body: Stack(
+        children: [
+          // Görsel Slider
+          PageView.builder(
+            controller: _pageController,
+            itemCount: widget.images.length,
+            onPageChanged: (index) {
+              setState(() {
+                _currentIndex = index;
+              });
+            },
+            itemBuilder: (context, index) {
+              final img = widget.images[index];
+              return InteractiveViewer(
+                minScale: 0.5,
+                maxScale: 4.0,
+                child: Center(
+                  child: img.startsWith('http')
+                      ? Image.network(img, fit: BoxFit.contain)
+                      : Image.file(File(img), fit: BoxFit.contain),
+                ),
+              );
+            },
+          ),
+
+          // Üst Kontrol Barı (Kapatma ve Sayaç)
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              padding: EdgeInsets.only(
+                top: MediaQuery.of(context).padding.top + 10,
+                bottom: 10,
+                left: 16,
+                right: 16,
+              ),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withOpacity(0.7),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Kapatma Butonu
+                  GestureDetector(
+                    onTap: () => Navigator.of(context).pop(),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.close,
+                          color: Colors.white, size: 24),
+                    ),
+                  ),
+                  // Sayaç
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '${_currentIndex + 1} / ${widget.images.length}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          );
-        },
+          ),
+
+          // Alt İndikatör (Noktalar)
+          if (widget.images.length > 1)
+            Positioned(
+              bottom: 30,
+              left: 0,
+              right: 0,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(widget.images.length, (index) {
+                  return AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    width: _currentIndex == index ? 12 : 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: _currentIndex == index
+                          ? Colors.white
+                          : Colors.white.withOpacity(0.4),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  );
+                }),
+              ),
+            ),
+        ],
       ),
     );
   }

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -5,6 +6,8 @@ import '../../viewmodels/auth_viewmodel.dart';
 import '../../viewmodels/auth_service.dart';
 import '../../viewmodels/language_viewmodel.dart';
 import '../../widgets/success_dialog.dart';
+import 'seller_product_management_screen.dart';
+import '../../viewmodels/seller_viewmodel.dart';
 
 class SellerQuestionsScreen extends StatefulWidget {
   final String? highlightQuestionId;
@@ -19,6 +22,7 @@ class _SellerQuestionsScreenState extends State<SellerQuestionsScreen> {
   List<Map<String, dynamic>> _filteredQuestions = [];
   bool _isLoading = true;
   String _filterType = 'unanswered'; // 'all', 'unanswered'
+  final Map<String, GlobalKey> _itemKeys = {};
 
   @override
   void initState() {
@@ -36,8 +40,41 @@ class _SellerQuestionsScreenState extends State<SellerQuestionsScreen> {
           _applyFilter();
           _isLoading = false;
         });
+
+        if (widget.highlightQuestionId != null) {
+          // Eğer vurgulanan soru mevcut filtrede yoksa (örn: yanıtlanmışsa), filtreyi 'all' yap
+          final existsInFilter = _filteredQuestions
+              .any((q) => q['id'] == widget.highlightQuestionId);
+          if (!existsInFilter) {
+            setState(() {
+              _filterType = 'all';
+              _applyFilter();
+            });
+          }
+
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _scrollToHighlightedItem();
+          });
+        }
       }
     }
+  }
+
+  void _scrollToHighlightedItem() {
+    final id = widget.highlightQuestionId;
+    if (id == null) return;
+
+    Future.delayed(const Duration(milliseconds: 500), () {
+      final key = _itemKeys[id];
+      if (key?.currentContext != null) {
+        Scrollable.ensureVisible(
+          key!.currentContext!,
+          duration: const Duration(milliseconds: 800),
+          curve: Curves.easeInOutCubic,
+          alignment: 0.5,
+        );
+      }
+    });
   }
 
   void _applyFilter() {
@@ -245,8 +282,14 @@ class _SellerQuestionsScreenState extends State<SellerQuestionsScreen> {
                             reply != null && reply.toString().isNotEmpty;
                         final isHighlighted =
                             widget.highlightQuestionId == question['id'];
+                        final productImage = question['productImage'];
+
+                        if (!_itemKeys.containsKey(question['id'])) {
+                          _itemKeys[question['id']] = GlobalKey();
+                        }
 
                         return Card(
+                          key: _itemKeys[question['id']],
                           margin: const EdgeInsets.only(bottom: 16),
                           color: isHighlighted
                               ? Theme.of(context)
@@ -264,86 +307,180 @@ class _SellerQuestionsScreenState extends State<SellerQuestionsScreen> {
                                 : BorderSide(
                                     color: Colors.white.withOpacity(0.3)),
                           ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        question['productName'] ?? 'Ürün',
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16,
-                                        ),
-                                      ),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(12),
+                            onTap: () {
+                              if (question['productData'] != null) {
+                                try {
+                                  final product = SellerProduct.fromMap(
+                                      question['productData']);
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          SellerProductManagementScreen(
+                                              product: product),
                                     ),
-                                    Text(
-                                      formattedDate,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurface
-                                            .withOpacity(0.6),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  question['question'] ?? '',
-                                  style: const TextStyle(fontSize: 15),
-                                ),
-                                const SizedBox(height: 12),
-                                if (hasReply)
-                                  Container(
-                                    padding: const EdgeInsets.all(12),
-                                    width: double.infinity,
-                                    decoration: BoxDecoration(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .primary
-                                          .withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          langVM
-                                              .translate('seller_reply_label'),
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 12,
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .primary,
+                                  );
+                                } catch (e) {
+                                  debugPrint('Ürün detayları açılamadı: $e');
+                                }
+                              }
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      if (productImage != null &&
+                                          productImage.toString().isNotEmpty)
+                                        Container(
+                                          width: 50,
+                                          height: 50,
+                                          margin:
+                                              const EdgeInsets.only(right: 12),
+                                          decoration: BoxDecoration(
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                            color: Colors.grey.withOpacity(0.2),
+                                          ),
+                                          child: ClipRRect(
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                            child: productImage
+                                                    .startsWith('http')
+                                                ? Image.network(
+                                                    productImage,
+                                                    fit: BoxFit.cover,
+                                                    errorBuilder: (_, __,
+                                                            ___) =>
+                                                        const Icon(Icons.image),
+                                                  )
+                                                : Image.file(
+                                                    File(productImage),
+                                                    fit: BoxFit.cover,
+                                                    errorBuilder: (_, __,
+                                                            ___) =>
+                                                        const Icon(Icons.image),
+                                                  ),
                                           ),
                                         ),
-                                        const SizedBox(height: 4),
-                                        Text(reply),
-                                      ],
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment
+                                                      .spaceBetween,
+                                              children: [
+                                                Expanded(
+                                                  child: Text(
+                                                    question['productName'] ??
+                                                        'Ürün Bilgisi Yok',
+                                                    style: TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      fontSize: 16,
+                                                      color: Theme.of(context)
+                                                          .colorScheme
+                                                          .primary,
+                                                    ),
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Text(
+                                                  formattedDate,
+                                                  style: TextStyle(
+                                                    fontSize: 12,
+                                                    color: Theme.of(context)
+                                                        .colorScheme
+                                                        .onSurface
+                                                        .withOpacity(0.6),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            if (question['userName'] != null)
+                                              Padding(
+                                                padding: const EdgeInsets.only(
+                                                    top: 4.0),
+                                                child: Text(
+                                                  'Soran: ${question['userName']}',
+                                                  style: TextStyle(
+                                                    fontSize: 13,
+                                                    color: Theme.of(context)
+                                                        .colorScheme
+                                                        .onSurface
+                                                        .withOpacity(0.7),
+                                                  ),
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    question['question'] ?? '',
+                                    style: const TextStyle(fontSize: 15),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  if (hasReply)
+                                    Container(
+                                      padding: const EdgeInsets.all(12),
+                                      width: double.infinity,
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary
+                                            .withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            langVM.translate(
+                                                'seller_reply_label'),
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 12,
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .primary,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(reply),
+                                        ],
+                                      ),
+                                    ),
+                                  const SizedBox(height: 8),
+                                  Align(
+                                    alignment: Alignment.centerRight,
+                                    child: TextButton.icon(
+                                      onPressed: () => _replyToQuestion(
+                                          question['id'],
+                                          hasReply ? reply : ''),
+                                      icon: const Icon(Icons.reply),
+                                      label: Text(hasReply
+                                          ? langVM.translate('update')
+                                          : langVM.translate('reply_button')),
                                     ),
                                   ),
-                                const SizedBox(height: 8),
-                                Align(
-                                  alignment: Alignment.centerRight,
-                                  child: TextButton.icon(
-                                    onPressed: () => _replyToQuestion(
-                                        question['id'], hasReply ? reply : ''),
-                                    icon: const Icon(Icons.reply),
-                                    label: Text(hasReply
-                                        ? langVM.translate('update')
-                                        : langVM.translate('reply_button')),
-                                  ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
                         );

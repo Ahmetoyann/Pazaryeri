@@ -327,6 +327,15 @@ class AuthService {
     if (user != null) {
       try {
         await user.updateDisplayName('$firstName $lastName');
+
+        // Firestore veritabanını da güncelle (Kalıcılık için)
+        await updateUserInDb({
+          'firstName': firstName,
+          'lastName': lastName,
+          'phoneNumber': phoneNumber,
+          'dateOfBirth': dateOfBirth,
+          'email': email,
+        }, email);
       } catch (e) {
         debugPrint('DisplayName güncellenemedi: $e');
       }
@@ -1248,11 +1257,39 @@ class AuthService {
           .where('sellerId', isEqualTo: sellerId)
           .get();
 
-      final questions = snapshot.docs.map((doc) {
-        final data = doc.data();
+      final questions = await Future.wait(snapshot.docs.map((doc) async {
+        // Veriyi değiştirilebilir bir kopya olarak alıyoruz
+        final data = Map<String, dynamic>.from(doc.data());
         data['id'] = doc.id;
+
+        if (data['productId'] != null) {
+          try {
+            final productDoc = await FirebaseFirestore.instance
+                .collection('products')
+                .doc(data['productId'])
+                .get();
+            if (productDoc.exists) {
+              final pData = productDoc.data();
+              if (pData != null) {
+                final fullData = Map<String, dynamic>.from(pData);
+                fullData['id'] = productDoc.id;
+                data['productData'] = fullData;
+              }
+              // Güncel ismi al, yoksa eskisine dokunma
+              data['productName'] =
+                  pData?['name'] ?? data['productName'] ?? 'Ürün Bilgisi Yok';
+              data['productImage'] =
+                  pData?['imagePath'] ?? data['productImage'];
+            } else {
+              // Ürün bulunamadıysa ve kayıtlı isim yoksa 'Silinmiş Ürün' yaz
+              data['productName'] = data['productName'] ?? 'Silinmiş Ürün';
+            }
+          } catch (e) {
+            debugPrint('Ürün bilgisi alınamadı: $e');
+          }
+        }
         return data;
-      }).toList();
+      }));
 
       // Tarihe göre sırala (Yeniden eskiye)
       questions.sort((a, b) {

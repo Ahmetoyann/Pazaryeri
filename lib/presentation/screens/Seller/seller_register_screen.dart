@@ -1,10 +1,11 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../viewmodels/language_viewmodel.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 import '../../viewmodels/seller_viewmodel.dart';
 import '../../../data/models/market.dart';
-import '../../widgets/status_message_widget.dart';
 import '../../widgets/success_dialog.dart';
 import '../../widgets/custom_app_bar.dart';
 
@@ -25,10 +26,10 @@ class _SellerRegisterScreenState extends State<SellerRegisterScreen> {
   final _marketController = TextEditingController();
 
   String? _selectedMarketId;
+  XFile? _profileImage;
   bool _isLoading = false;
   bool _isLoadingMarkets = true;
   bool _obscurePassword = true;
-  String? _errorMessage;
   List<Market> _markets = [];
 
   @override
@@ -63,18 +64,30 @@ class _SellerRegisterScreenState extends State<SellerRegisterScreen> {
     super.dispose();
   }
 
+  Future<void> _pickImage() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(
+      source: ImageSource.gallery,
+      // Spark Paketi İçin Kritik Ayarlar:
+      maxWidth: 800,
+      maxHeight: 800,
+      imageQuality: 70,
+    );
+    if (image != null) {
+      setState(() => _profileImage = image);
+    }
+  }
+
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
 
     if (_selectedMarketId == null) {
-      setState(() => _errorMessage = 'Lütfen bir pazar yeri seçiniz.');
+      await DialogService.showError(context,
+          message: 'Lütfen bir pazar yeri seçiniz.');
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+    setState(() => _isLoading = true);
 
     final authVM = Provider.of<AuthViewModel>(context, listen: false);
 
@@ -86,6 +99,7 @@ class _SellerRegisterScreenState extends State<SellerRegisterScreen> {
         lastName: _lastNameController.text.trim(),
         phoneNumber: _phoneController.text.trim(),
         marketId: _selectedMarketId!,
+        profileImagePath: _profileImage?.path,
       );
 
       if (mounted) {
@@ -103,7 +117,7 @@ class _SellerRegisterScreenState extends State<SellerRegisterScreen> {
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _errorMessage = 'Kayıt hatası: $e');
+        await DialogService.showError(context, message: 'Kayıt hatası: $e');
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -144,33 +158,35 @@ class _SellerRegisterScreenState extends State<SellerRegisterScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Container(
-                  height: 80,
-                  width: 80,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .secondary
-                        .withOpacity(0.1),
-                    border: Border.all(color: Colors.white.withOpacity(0.3)),
-                  ),
-                  child: Icon(
-                    Icons.person_add_alt_1,
-                    size: 40,
-                    color: Theme.of(context).colorScheme.secondary,
+                GestureDetector(
+                  onTap: _pickImage,
+                  child: Container(
+                    height: 100,
+                    width: 100,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .secondary
+                          .withOpacity(0.1),
+                      border: Border.all(color: Colors.white.withOpacity(0.3)),
+                      image: _profileImage != null
+                          ? DecorationImage(
+                              image: FileImage(File(_profileImage!.path)),
+                              fit: BoxFit.cover,
+                            )
+                          : null,
+                    ),
+                    child: _profileImage == null
+                        ? Icon(
+                            Icons.add_a_photo,
+                            size: 40,
+                            color: Theme.of(context).colorScheme.secondary,
+                          )
+                        : null,
                   ),
                 ),
                 const SizedBox(height: 24),
-                if (_errorMessage != null)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 16.0),
-                    child: StatusMessageWidget(
-                      message: _errorMessage!,
-                      type: StatusType.error,
-                      onClose: () => setState(() => _errorMessage = null),
-                    ),
-                  ),
                 Row(
                   children: [
                     Expanded(

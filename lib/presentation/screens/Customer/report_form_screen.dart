@@ -58,6 +58,9 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
                   Navigator.of(ctx).pop();
                   final XFile? image = await picker.pickImage(
                     source: ImageSource.camera,
+                    maxWidth: 800,
+                    maxHeight: 800,
+                    imageQuality: 70,
                   );
                   if (image != null) {
                     setState(() => _selectedImage = image);
@@ -72,6 +75,9 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
                   Navigator.of(ctx).pop();
                   final XFile? image = await picker.pickImage(
                     source: ImageSource.gallery,
+                    maxWidth: 800,
+                    maxHeight: 800,
+                    imageQuality: 70,
                   );
                   if (image != null) {
                     setState(() => _selectedImage = image);

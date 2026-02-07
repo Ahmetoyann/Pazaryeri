@@ -18,9 +18,9 @@ class SellerStatsScreen extends StatelessWidget {
     final totalViews =
         products.fold<int>(0, (sum, item) => sum + item.viewCount);
     final totalSales =
-        products.fold<int>(0, (sum, item) => sum + item.salesCount);
+        products.fold<double>(0.0, (sum, item) => sum + item.salesCount);
     final totalRevenue = products.fold<double>(
-        0, (sum, item) => sum + (item.salesCount * item.price));
+        0.0, (sum, item) => sum + (item.salesCount * item.price));
 
     // En çok görüntülenen 5 ürünü al
     final topProducts = List<SellerProduct>.from(products)
@@ -50,7 +50,9 @@ class SellerStatsScreen extends StatelessWidget {
                   child: _buildStatCard(
                     context,
                     title: langVM.translate('total_sales'),
-                    value: totalSales.toString(),
+                    value: totalSales % 1 == 0
+                        ? totalSales.toInt().toString()
+                        : totalSales.toStringAsFixed(1),
                     icon: Icons.shopping_cart,
                     color: Colors.green,
                   ),

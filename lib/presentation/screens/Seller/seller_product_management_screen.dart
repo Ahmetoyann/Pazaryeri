@@ -73,7 +73,8 @@ class _SellerProductManagementScreenState
     try {
       final List<XFile> images = await _picker.pickMultiImage(
         imageQuality: 70,
-        maxWidth: 1024,
+        maxWidth: 800,
+        maxHeight: 800,
       );
       if (images.isNotEmpty) {
         setState(() {
@@ -90,7 +91,8 @@ class _SellerProductManagementScreenState
       final XFile? image = await _picker.pickImage(
         source: ImageSource.camera,
         imageQuality: 70,
-        maxWidth: 1024,
+        maxWidth: 800,
+        maxHeight: 800,
       );
       if (image != null) {
         setState(() {
@@ -174,7 +176,7 @@ class _SellerProductManagementScreenState
     try {
       final double price = double.parse(_priceController.text);
       final double stock = double.parse(_stockController.text);
-      final int sales = int.parse(_salesController.text);
+      final double sales = double.parse(_salesController.text);
 
       // Stok 0 ise otomatik olarak satışı durdur
       if (stock <= 0) {
@@ -489,7 +491,9 @@ class _SellerProductManagementScreenState
                   // Stok değişince satış miktarını güncelle (Toplam = Stok + Satış sabit varsayımı)
                   double newSales = _initialTotalQuantity - newStock;
                   if (newSales < 0) newSales = 0;
-                  _salesController.text = newSales.toInt().toString();
+                  _salesController.text = newSales % 1 == 0
+                      ? newSales.toInt().toString()
+                      : newSales.toStringAsFixed(2);
                   setState(() {}); // Grafiği güncelle
                 },
               ),
@@ -498,7 +502,8 @@ class _SellerProductManagementScreenState
               // Satış Adedi
               TextFormField(
                 controller: _salesController,
-                keyboardType: TextInputType.number,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
                 decoration: _buildInputDecoration(
                     'Toplam Satış Miktarı', Icons.shopping_cart),
                 validator: (v) => v!.isEmpty ? 'Satış adedi giriniz' : null,

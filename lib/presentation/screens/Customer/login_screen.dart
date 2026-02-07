@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 import '../../viewmodels/language_viewmodel.dart';
-import '../../widgets/status_message_widget.dart';
+import '../../widgets/success_dialog.dart';
 
 class LoginScreen extends StatefulWidget {
   final VoidCallback onLoginSuccess;
@@ -16,12 +16,10 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   bool _isGuestLoading = false;
-  String? _errorMessage;
 
   Future<void> _loginWithGoogle() async {
     setState(() {
       _isLoading = true;
-      _errorMessage = null;
     });
     final authVM = Provider.of<AuthViewModel>(context, listen: false);
     final langVM = Provider.of<LanguageViewModel>(context, listen: false);
@@ -33,9 +31,10 @@ class _LoginScreenState extends State<LoginScreen> {
         Navigator.of(context).pop();
       }
     } catch (e) {
-      if (mounted)
-        setState(() =>
-            _errorMessage = '${langVM.translate('google_login_error')}: $e');
+      if (mounted) {
+        await DialogService.showError(context,
+            message: '${langVM.translate('google_login_error')}: $e');
+      }
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -46,7 +45,6 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _loginAsGuest() async {
     setState(() {
       _isGuestLoading = true;
-      _errorMessage = null;
     });
 
     // Animasyonun görünmesi için kısa bir gecikme
@@ -95,22 +93,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
               ),
               const SizedBox(height: 32),
-              if (_errorMessage != null) ...[
-                StatusMessageWidget(
-                  message: _errorMessage!,
-                  type: StatusType.error,
-                  onClose: () => setState(() => _errorMessage = null),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 16.0),
-                  child: TextButton.icon(
-                    onPressed: _loginWithGoogle,
-                    icon: const Icon(Icons.refresh),
-                    label: Text(langVM.translate('retry')),
-                    style: TextButton.styleFrom(foregroundColor: Colors.red),
-                  ),
-                ),
-              ],
               ElevatedButton.icon(
                 onPressed:
                     (_isLoading || _isGuestLoading) ? () {} : _loginWithGoogle,

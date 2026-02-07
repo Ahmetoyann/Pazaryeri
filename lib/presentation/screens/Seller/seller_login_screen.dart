@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../viewmodels/language_viewmodel.dart';
 import '../../viewmodels/auth_viewmodel.dart';
-import '../../widgets/status_message_widget.dart';
 import 'seller_register_screen.dart';
 import '../../widgets/success_dialog.dart';
 
@@ -20,7 +19,6 @@ class _SellerLoginScreenState extends State<SellerLoginScreen> {
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _rememberMe = true;
-  String? _errorMessage;
 
   @override
   void dispose() {
@@ -32,10 +30,7 @@ class _SellerLoginScreenState extends State<SellerLoginScreen> {
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+    setState(() => _isLoading = true);
     final authVM = Provider.of<AuthViewModel>(context, listen: false);
     final langVM = Provider.of<LanguageViewModel>(context, listen: false);
 
@@ -49,71 +44,125 @@ class _SellerLoginScreenState extends State<SellerLoginScreen> {
         Navigator.of(context).popUntil((route) => route.isFirst);
       }
     } catch (e) {
-      if (mounted)
-        setState(
-            () => _errorMessage = '${langVM.translate('error_prefix')}: $e');
+      if (mounted) {
+        await DialogService.showError(context,
+            message: '${langVM.translate('error_prefix')}: $e');
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  Future<void> _showForgotPasswordDialog() async {
+  Future<void> _showForgotPasswordSheet() async {
     final emailController = TextEditingController(text: _emailController.text);
+    final langVM = Provider.of<LanguageViewModel>(context, listen: false);
 
-    await showDialog(
+    await showModalBottomSheet(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Şifre Sıfırlama'),
-        content: Column(
+      isScrollControlled: true,
+      backgroundColor: Colors.black,
+      builder: (sheetContext) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 24,
+          top: 12,
+          left: 24,
+          right: 24,
+        ),
+        child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text('Şifrenizi sıfırlamak için e-posta adresinizi girin:'),
-            const SizedBox(height: 16),
-            TextField(
-              controller: emailController,
-              decoration: InputDecoration(
-                labelText: 'E-posta',
-                border: const OutlineInputBorder(),
-                prefixIcon: Icon(
-                  Icons.email,
-                  color: Theme.of(dialogContext).iconTheme.color,
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
+            ),
+            Text(
+              langVM.translate('forgot_password_title'),
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              langVM.translate('enter_email_message'),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                  color: Theme.of(context)
+                      .textTheme
+                      .bodyMedium
+                      ?.color
+                      ?.withOpacity(0.7)),
+            ),
+            const SizedBox(height: 24),
+            TextFormField(
+              controller: emailController,
+              autofocus: true,
+              decoration: _inputDecoration(
+                  langVM.translate('email_label'), Icons.email_outlined),
               keyboardType: TextInputType.emailAddress,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () async {
+                if (emailController.text.trim().isEmpty) return;
+                Navigator.pop(sheetContext);
+
+                try {
+                  await Provider.of<AuthViewModel>(context, listen: false)
+                      .resetPassword(emailController.text.trim());
+                  if (mounted) {
+                    await DialogService.showSuccess(
+                      context,
+                      message: langVM.translate('code_sent'),
+                    );
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                          content:
+                              Text('${langVM.translate('error_prefix')}: $e')),
+                    );
+                  }
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.secondary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
+                ),
+              ),
+              child: Text(
+                langVM.translate('send_button'),
+                style:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextButton(
+              onPressed: () => Navigator.pop(sheetContext),
+              child: Text(
+                langVM.translate('cancel'),
+                style:
+                    TextStyle(color: Theme.of(context).colorScheme.secondary),
+              ),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('İptal'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (emailController.text.trim().isEmpty) return;
-              Navigator.pop(dialogContext);
-
-              try {
-                await Provider.of<AuthViewModel>(context, listen: false)
-                    .resetPassword(emailController.text.trim());
-                if (mounted) {
-                  await DialogService.showSuccess(
-                    context,
-                    message:
-                        'Sıfırlama bağlantısı e-posta adresinize gönderildi.',
-                  );
-                }
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Hata: $e')),
-                  );
-                }
-              }
-            },
-            child: const Text('Gönder'),
-          ),
-        ],
       ),
     );
   }
@@ -182,23 +231,6 @@ class _SellerLoginScreenState extends State<SellerLoginScreen> {
                               ),
                     ),
                     const SizedBox(height: 32),
-                    if (_errorMessage != null) ...[
-                      StatusMessageWidget(
-                        message: _errorMessage!,
-                        type: StatusType.error,
-                        onClose: () => setState(() => _errorMessage = null),
-                      ),
-                      TextButton(
-                        onPressed: _showForgotPasswordDialog,
-                        child: Text(
-                          'Şifremi Unuttum',
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.secondary,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
@@ -230,17 +262,33 @@ class _SellerLoginScreenState extends State<SellerLoginScreen> {
                           : null,
                     ),
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Checkbox(
-                          value: _rememberMe,
-                          activeColor: Theme.of(context).colorScheme.secondary,
-                          onChanged: (val) {
-                            setState(() {
-                              _rememberMe = val ?? true;
-                            });
-                          },
+                        Row(
+                          children: [
+                            Checkbox(
+                              value: _rememberMe,
+                              activeColor:
+                                  Theme.of(context).colorScheme.secondary,
+                              onChanged: (val) {
+                                setState(() {
+                                  _rememberMe = val ?? true;
+                                });
+                              },
+                            ),
+                            Text(langVM.translate('remember_me')),
+                          ],
                         ),
-                        Text(langVM.translate('remember_me')),
+                        TextButton(
+                          onPressed: _showForgotPasswordSheet,
+                          child: Text(
+                            langVM.translate('forgot_password'),
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.secondary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 24),

@@ -18,8 +18,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late TextEditingController _firstNameController;
   late TextEditingController _lastNameController;
   late TextEditingController _phoneController;
-  final TextEditingController _dateController = TextEditingController();
-  DateTime? _selectedDate;
   bool _isLoading = false;
 
   @override
@@ -29,11 +27,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _firstNameController = TextEditingController(text: user?.firstName ?? '');
     _lastNameController = TextEditingController(text: user?.lastName ?? '');
     _phoneController = TextEditingController(text: user?.phoneNumber ?? '');
-    _selectedDate = user?.dateOfBirth;
-    if (_selectedDate != null) {
-      _dateController.text =
-          '${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}';
-    }
   }
 
   @override
@@ -41,7 +34,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _firstNameController.dispose();
     _lastNameController.dispose();
     _phoneController.dispose();
-    _dateController.dispose();
     super.dispose();
   }
 
@@ -53,17 +45,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
     setState(() => _isLoading = true);
     try {
-      if (_selectedDate == null) {
-        throw Exception('Lütfen doğum tarihi seçin.');
-      }
-
       final authVM = context.read<AuthViewModel>();
       await authVM.updateUserInfo(
         firstName: _firstNameController.text.trim(),
         lastName: _lastNameController.text.trim(),
         phoneNumber: _phoneController.text.trim(),
         email: authVM.currentUser?.email ?? '',
-        dateOfBirth: _selectedDate!,
+        dateOfBirth: authVM.currentUser?.dateOfBirth ?? DateTime.now(),
       );
       if (mounted) {
         await DialogService.showSuccess(
@@ -82,40 +70,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       if (mounted) {
         setState(() => _isLoading = false);
       }
-    }
-  }
-
-  Future<void> _changePassword() async {
-    final authVM = context.read<AuthViewModel>();
-    final email = authVM.currentUser?.email;
-    if (email != null) {
-      try {
-        await authVM.resetPassword(email);
-        if (mounted) {
-          await DialogService.showSuccess(
-            context,
-            message:
-                'Şifre sıfırlama bağlantısı e-posta adresinize gönderildi.',
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          await DialogService.showError(context, message: 'Hata: $e');
-        }
-      }
-    }
-  }
-
-  Future<void> _selectDate(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: _selectedDate ?? DateTime.now(),
-      firstDate: DateTime(1920),
-      lastDate: DateTime.now(),
-    );
-    if (picked != null && picked != _selectedDate) {
-      setState(() => _selectedDate = picked);
-      _dateController.text = '${picked.day}/${picked.month}/${picked.year}';
     }
   }
 
@@ -172,32 +126,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 inputFormatters: [_PhoneInputFormatter()],
                 validator: (v) =>
                     v!.isEmpty ? 'Telefon numarası boş olamaz' : null,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _dateController,
-                readOnly: true,
-                onTap: () => _selectDate(context),
-                decoration:
-                    _buildInputDecoration('Doğum Tarihi', Icons.calendar_today),
-                validator: (v) =>
-                    _selectedDate == null ? 'Lütfen doğum tarihi seçin.' : null,
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: _changePassword,
-                  icon: const Icon(Icons.lock_reset),
-                  label: const Text('Şifreyi Değiştir'),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                      side: BorderSide(color: Colors.white.withOpacity(0.3)),
-                    ),
-                  ),
-                ),
               ),
               const SizedBox(height: 24),
               SizedBox(

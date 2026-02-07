@@ -692,24 +692,25 @@ class _MainScaffoldState extends State<MainScaffold> {
                 iconSize: 30,
                 items: [
                   BottomNavigationBarItem(
-                    icon: const Icon(Icons.home_outlined),
-                    activeIcon: _buildActiveIcon(context, Icons.home),
+                    icon: const Icon(Icons.home_filled),
+                    activeIcon: _buildActiveIcon(context, Icons.home_filled),
                     label: langVM.translate('home_title'),
                   ),
                   BottomNavigationBarItem(
-                    icon: const Icon(Icons.search_outlined),
-                    activeIcon: _buildActiveIcon(context, Icons.search),
+                    icon: const Icon(Icons.search),
+                    activeIcon: _buildActiveIcon(context, Icons.search_rounded),
                     label: langVM.translate('search_tab'),
                   ),
                   BottomNavigationBarItem(
-                    icon: const Icon(Icons.report_gmailerrorred_outlined),
+                    icon: const Icon(Icons.report_gmailerrorred_rounded),
                     activeIcon: _buildActiveIcon(context, Icons.report),
                     label: langVM.translate('report_tab'),
                   ),
                   BottomNavigationBarItem(
                     icon: _buildIconWithBadge(context, Icons.menu, authVM,
                         isActive: false),
-                    activeIcon: _buildIconWithBadge(context, Icons.menu, authVM,
+                    activeIcon: _buildIconWithBadge(
+                        context, Icons.menu_open_sharp, authVM,
                         isActive: true),
                     label: langVM.translate('menu_tab'),
                   ),
