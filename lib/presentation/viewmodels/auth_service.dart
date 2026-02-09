@@ -1494,20 +1494,14 @@ class AuthService {
     }
   }
 
-  /// Ürün sorusunu günceller
-  Future<void> updateProductQuestion(
-      String questionId, String newQuestion) async {
+  /// Kullanıcının şifresini günceller
+  Future<void> updatePassword(String newPassword) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) throw Exception('Kullanıcı oturumu açık değil');
     try {
-      await FirebaseFirestore.instance
-          .collection('product_questions')
-          .doc(questionId)
-          .update({
-        'question': newQuestion,
-        'isEdited': true,
-      });
+      await user.updatePassword(newPassword);
     } catch (e) {
-      debugPrint('Ürün sorusu güncellenirken hata: $e');
-      throw e;
+      throw Exception('Şifre güncellenemedi: $e');
     }
   }
 
@@ -1696,11 +1690,22 @@ class AuthService {
           .where('sellerId', isEqualTo: sellerId)
           .get();
 
-      return snapshot.docs.map((doc) {
+      final products = snapshot.docs.map((doc) {
         final data = doc.data();
         data['id'] = doc.id;
         return data;
       }).toList();
+
+      // Tarihe göre sırala (Yeniden eskiye)
+      products.sort((a, b) {
+        final tA = a['createdAt'];
+        final tB = b['createdAt'];
+        if (tA is! Timestamp) return 1;
+        if (tB is! Timestamp) return -1;
+        return tB.compareTo(tA);
+      });
+
+      return products;
     } catch (e) {
       debugPrint('Ürünler çekilirken hata: $e');
       return [];
@@ -1723,6 +1728,21 @@ class AuthService {
   /// Yeni ürün ekler
   Future<String> addProductToDb(Map<String, dynamic> productData) async {
     try {
+      // Otomatik alanları ekle (Satıcı ID, Pazar ID, Tarih)
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        productData['sellerId'] = user.uid;
+      }
+
+      final prefs = await SharedPreferences.getInstance();
+      final marketId = prefs.getString(_keySellerMarketId);
+      if (marketId != null) {
+        productData['marketId'] = marketId;
+      }
+
+      productData['createdAt'] = FieldValue.serverTimestamp();
+      productData['updatedAt'] = FieldValue.serverTimestamp();
+
       final docRef = await FirebaseFirestore.instance
           .collection('products')
           .add(productData);
@@ -1750,6 +1770,7 @@ class AuthService {
   Future<void> updateProductInDb(
       String productId, Map<String, dynamic> data) async {
     try {
+      data['updatedAt'] = FieldValue.serverTimestamp();
       await FirebaseFirestore.instance
           .collection('products')
           .doc(productId)

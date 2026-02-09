@@ -39,6 +39,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   List<Map<String, dynamic>> _questions = [];
   final Map<String, GlobalKey> _reviewKeys = {};
   final Map<String, GlobalKey> _questionKeys = {};
+  String? _sellerDescription;
 
   final Map<String, Color> _categoryColors = {
     'category_fruit': Colors.orange,
@@ -70,6 +71,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     _loadReviews();
     _loadOtherSellers();
     _loadQuestions();
+    _loadSellerInfo();
   }
 
   Future<void> _loadReviews() async {
@@ -129,6 +131,18 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             _scrollToHighlightedItem(
                 widget.highlightQuestionId!, _questionKeys);
           });
+        });
+      }
+    }
+  }
+
+  Future<void> _loadSellerInfo() async {
+    if (widget.product['sellerId'] != null) {
+      final data = await AuthService.instance
+          .refreshUserData(widget.product['sellerId']);
+      if (mounted && data != null) {
+        setState(() {
+          _sellerDescription = data['stallDescription'];
         });
       }
     }
@@ -613,6 +627,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             sellerName: displayName,
                             sellerDescription: seller['stallDescription'] ?? '',
                             stallLocation: seller['stallLocation'] ?? '',
+                            stallHours: seller['stallHours'] ?? '',
+                            instagramLink: seller['instagramLink'],
+                            facebookLink: seller['facebookLink'],
                           ),
                         ),
                       );
@@ -923,6 +940,33 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       ),
                     ],
                   ),
+                  if (_sellerDescription != null &&
+                      _sellerDescription!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(Icons.location_on,
+                              size: 16,
+                              color: Theme.of(context).colorScheme.secondary),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              _sellerDescription!,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withOpacity(0.8),
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   if (product['description'] != null &&
                       product['description'].toString().isNotEmpty) ...[
                     const SizedBox(height: 24),

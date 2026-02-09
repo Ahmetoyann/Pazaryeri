@@ -6,16 +6,16 @@ Semt pazarları, ürün arama, doluluk oranları, satıcı yönetimi ve bildirim
 
 ### 👤 Müşteri Paneli
 - **Kullanıcı Yönetimi:**
-  - Giriş Yap / Kayıt Ol (E-posta & Şifre, Google ile Giriş).
+  - Giriş Yap / Kayıt Ol (Google ile Giriş).
   - **Misafir Modu:** Üye olmadan uygulamayı inceleme imkanı.
   - Profil Düzenleme: Fotoğraf yükleme, kişisel bilgileri güncelleme.
-  - Şifre Sıfırlama.
+
 - **Pazaryeri Keşfi:**
   - Konuma dayalı en yakın pazar listeleme.
   - İl/İlçe bazlı pazar filtreleme.
   - Pazar detayları, açık olduğu günler ve konum bilgisi.
 - **Alışveriş & Etkileşim:**
-  - **Ürün Arama:** Ürün ismine göre pazar ve satıcı arama.
+  - **Ürün Arama:** Pazar ve satıcı arama.
   - **Satıcılar:** Pazardaki satıcıları ve ürünlerini görüntüleme.
   - **Favoriler:** Pazar ve satıcıları favorilere ekleme.
   - **Değerlendirme:** Pazarlara ve ürünlere yorum yapma, puan verme.
@@ -32,12 +32,13 @@ Semt pazarları, ürün arama, doluluk oranları, satıcı yönetimi ve bildirim
   - Toplam görüntülenme, satış ve gelir takibi.
   - Grafiksel verilerle analiz.
 - **Müşteri İlişkileri:**
-  - Ürünlere yapılan yorumları görüntüleme ve yanıtlama.
+  - Ürünlere yapılan değerlendirmeleri görüntüleme.
   - Ürünlerle ilgili gelen soruları görüntüleme ve yanıtlama.
 - **Profil Yönetimi:**
-  - Tezgah adı, açıklama ve çalışma saatleri düzenleme.
+  - Tezgah adı, tarifi ve çalışma saatleri düzenleme.
   - Sosyal medya hesaplarını ekleme.
   - Pazar yeri seçimi ve değiştirme.
+  - Şifre Sıfırlama.
 
 ### ⚙️ Genel Özellikler
 - **Bildirimler:** Anlık bildirim sistemi (Firebase).

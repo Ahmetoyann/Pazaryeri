@@ -6,7 +6,7 @@ import '../../viewmodels/seller_viewmodel.dart';
 import '../../viewmodels/language_viewmodel.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 import '../../viewmodels/auth_service.dart';
-import '../Customer/edit_profile_screen.dart';
+import 'seller_edit_profile_screen.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/success_dialog.dart';
 
@@ -411,7 +411,8 @@ class _SellerSettingsScreenState extends State<SellerSettingsScreen> {
                             TextButton.icon(
                               onPressed: () {
                                 Navigator.of(context).push(MaterialPageRoute(
-                                    builder: (_) => const EditProfileScreen()));
+                                    builder: (_) =>
+                                        const SellerEditProfileScreen()));
                               },
                               icon: const Icon(Icons.edit, size: 18),
                               label: Text(langVM.translate('edit_profile')),

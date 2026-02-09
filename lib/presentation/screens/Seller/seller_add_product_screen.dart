@@ -26,6 +26,7 @@ class _SellerAddProductScreenState extends State<SellerAddProductScreen> {
   String? _selectedCategory;
   String _selectedUnit = 'unit_kg';
   bool _inStock = true;
+  bool _isLocalLoading = false;
 
   final List<String> _categories = [
     'category_fruit',
@@ -146,6 +147,9 @@ class _SellerAddProductScreenState extends State<SellerAddProductScreen> {
 
   Future<void> _handleFormSubmit(SellerViewModel sellerVM,
       LanguageViewModel langVM, bool stayOnPage) async {
+    // İşlem başlamadan önce klavyeyi kapat
+    FocusScope.of(context).unfocus();
+
     if (_formKey.currentState!.validate()) {
       // Stok kontrolü: 0 ise satışı durdur
       final double stock = double.tryParse(_stockController.text) ?? 0;
@@ -153,61 +157,97 @@ class _SellerAddProductScreenState extends State<SellerAddProductScreen> {
         _inStock = false;
       }
 
-      if (widget.productToEdit != null) {
-        // GÜNCELLEME İŞLEMİ
-        await sellerVM.updateProduct(
-          id: widget.productToEdit!.id,
-          name: _nameController.text,
-          description: _descController.text,
-          price: double.tryParse(_priceController.text) ?? 0,
-          category: _selectedCategory!,
-          stockQuantity: stock,
-          unit: _selectedUnit,
-          inStock: _inStock,
-          currentImagePath: widget.productToEdit!.imagePath,
-        );
+      setState(() => _isLocalLoading = true);
 
-        await sellerVM.loadProducts();
-
-        if (mounted) {
-          Navigator.pop(context);
-        }
-      } else {
-        // EKLEME İŞLEMİ
-        await sellerVM.addProduct(
-          name: _nameController.text,
-          description: _descController.text,
-          price: double.tryParse(_priceController.text) ?? 0,
-          category: _selectedCategory!,
-          stockQuantity: stock,
-          unit: _selectedUnit,
-          inStock: _inStock,
-        );
-
-        await sellerVM.loadProducts();
-
-        if (mounted) {
-          await DialogService.showSuccess(
-            context,
-            message: langVM.translate('success_product_added'),
+      try {
+        if (widget.productToEdit != null) {
+          // GÜNCELLEME İŞLEMİ
+          await sellerVM.updateProduct(
+            id: widget.productToEdit!.id,
+            name: _nameController.text,
+            description: _descController.text,
+            price: double.tryParse(_priceController.text) ?? 0,
+            category: _selectedCategory!,
+            stockQuantity: stock,
+            unit: _selectedUnit,
+            inStock: _inStock,
+            currentImagePath: widget.productToEdit!.imagePath,
           );
-          _nameController.clear();
-          _priceController.clear();
-          _stockController.text = '1';
-          _descController.clear();
-          setState(() {
-            _selectedCategory = null;
-            _selectedUnit = 'unit_kg';
-            _inStock = true;
-          });
-          // Görselleri temizle
-          while (sellerVM.selectedImages.isNotEmpty) {
-            sellerVM.removeImage(0);
-          }
 
-          if (!stayOnPage) {
-            widget.onProductAdded?.call();
+          await sellerVM.loadProducts();
+
+          if (mounted) {
+            setState(() => _isLocalLoading = false);
+            Navigator.pop(context);
           }
+        } else {
+          // EKLEME İŞLEMİ
+          await sellerVM.addProduct(
+            name: _nameController.text,
+            description: _descController.text,
+            price: double.tryParse(_priceController.text) ?? 0,
+            category: _selectedCategory!,
+            stockQuantity: stock,
+            unit: _selectedUnit,
+            inStock: _inStock,
+          );
+
+          await sellerVM.loadProducts();
+
+          if (mounted) {
+            await DialogService.showSuccess(
+              context,
+              message: langVM.translate('success_product_added'),
+            );
+
+            if (stayOnPage) {
+              _nameController.clear();
+              _priceController.clear();
+              _stockController.text = '1';
+              _descController.clear();
+              setState(() {
+                _selectedCategory = null;
+                _selectedUnit = 'unit_kg';
+                _inStock = true;
+              });
+              // Görselleri temizle
+              while (sellerVM.selectedImages.isNotEmpty) {
+                sellerVM.removeImage(0);
+              }
+              setState(() => _isLocalLoading = false);
+            } else {
+              // Eğer sayfa push edildiyse (örn: düzenleme veya yeni sayfa) geri dön
+              if (Navigator.canPop(context)) {
+                setState(() => _isLocalLoading = false);
+                widget.onProductAdded?.call();
+                Navigator.pop(context);
+              } else {
+                // Tab içindeyse (geri gidilecek yer yoksa) formu temizle
+                _nameController.clear();
+                _priceController.clear();
+                _stockController.text = '1';
+                _descController.clear();
+                setState(() {
+                  _selectedCategory = null;
+                  _selectedUnit = 'unit_kg';
+                  _inStock = true;
+                });
+                while (sellerVM.selectedImages.isNotEmpty) {
+                  sellerVM.removeImage(0);
+                }
+                setState(() => _isLocalLoading = false);
+                // Yönlendirme (Tab değişimi) için callback'i çağır
+                widget.onProductAdded?.call();
+              }
+            }
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() => _isLocalLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('${langVM.translate('error_prefix')}: $e')),
+          );
         }
       }
     }
@@ -561,7 +601,7 @@ class _SellerAddProductScreenState extends State<SellerAddProductScreen> {
                 if (widget.productToEdit == null) ...[
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: sellerVM.isLoading
+                      onPressed: _isLocalLoading
                           ? null
                           : () => _handleFormSubmit(sellerVM, langVM, true),
                       style: OutlinedButton.styleFrom(
@@ -579,10 +619,10 @@ class _SellerAddProductScreenState extends State<SellerAddProductScreen> {
                 ],
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: sellerVM.isLoading
+                    onPressed: _isLocalLoading
                         ? null
                         : () => _handleFormSubmit(sellerVM, langVM, false),
-                    child: sellerVM.isLoading
+                    child: _isLocalLoading
                         ? const SizedBox(
                             height: 20,
                             width: 20,

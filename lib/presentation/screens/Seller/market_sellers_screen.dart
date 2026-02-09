@@ -94,7 +94,9 @@ class _MarketSellersScreenState extends State<MarketSellersScreen> {
                     final description =
                         seller['stallDescription'] ?? 'Açıklama yok';
                     final stallLocation = seller['stallLocation'] ?? '';
-                    final stallHours = seller['stallHours'];
+                    final stallHours = seller['stallHours'] ?? '';
+                    final instagramLink = seller['instagramLink'];
+                    final facebookLink = seller['facebookLink'];
 
                     return Card(
                       margin: const EdgeInsets.only(bottom: 12),
@@ -134,7 +136,7 @@ class _MarketSellersScreenState extends State<MarketSellersScreen> {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
-                            if (stallHours != null && stallHours.isNotEmpty)
+                            if (stallHours.isNotEmpty)
                               Padding(
                                 padding: const EdgeInsets.only(top: 4.0),
                                 child: Row(
@@ -159,6 +161,9 @@ class _MarketSellersScreenState extends State<MarketSellersScreen> {
                                 sellerName: displayName,
                                 sellerDescription: description,
                                 stallLocation: stallLocation,
+                                stallHours: stallHours,
+                                instagramLink: instagramLink,
+                                facebookLink: facebookLink,
                               ),
                             ),
                           );

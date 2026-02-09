@@ -29,7 +29,6 @@ class _SellerProductManagementScreenState
   List<String> _existingImages = [];
   List<XFile> _newImages = [];
   final ImagePicker _picker = ImagePicker();
-  double _initialTotalQuantity = 0;
 
   @override
   void initState() {
@@ -41,8 +40,6 @@ class _SellerProductManagementScreenState
     _salesController =
         TextEditingController(text: widget.product.salesCount.toString());
     _inStock = widget.product.inStock;
-    _initialTotalQuantity =
-        widget.product.stockQuantity + widget.product.salesCount;
     _loadProductImages();
   }
 
@@ -487,13 +484,6 @@ class _SellerProductManagementScreenState
                     _buildInputDecoration('Stok Miktarı', Icons.inventory),
                 validator: (v) => v!.isEmpty ? 'Stok giriniz' : null,
                 onChanged: (val) {
-                  final double newStock = double.tryParse(val) ?? 0;
-                  // Stok değişince satış miktarını güncelle (Toplam = Stok + Satış sabit varsayımı)
-                  double newSales = _initialTotalQuantity - newStock;
-                  if (newSales < 0) newSales = 0;
-                  _salesController.text = newSales % 1 == 0
-                      ? newSales.toInt().toString()
-                      : newSales.toStringAsFixed(2);
                   setState(() {}); // Grafiği güncelle
                 },
               ),
@@ -507,6 +497,7 @@ class _SellerProductManagementScreenState
                 decoration: _buildInputDecoration(
                     'Toplam Satış Miktarı', Icons.shopping_cart),
                 validator: (v) => v!.isEmpty ? 'Satış adedi giriniz' : null,
+                onChanged: (val) => setState(() {}),
               ),
               const SizedBox(height: 24),
 

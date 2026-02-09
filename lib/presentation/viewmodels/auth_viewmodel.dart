@@ -513,6 +513,17 @@ class AuthViewModel extends ChangeNotifier {
     }
   }
 
+  /// Şifre değiştirme işlemi (Önce eski şifre doğrulanır, sonra yenisi atanır)
+  Future<void> changePassword(
+      String currentPassword, String newPassword) async {
+    try {
+      await reauthenticate(currentPassword);
+      await AuthService.instance.updatePassword(newPassword);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   /// Kullanıcı hesabını siler.
   Future<void> deleteAccount() async {
     if (_currentUser != null) {

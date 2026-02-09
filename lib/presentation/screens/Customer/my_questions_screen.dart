@@ -44,45 +44,6 @@ class _MyQuestionsScreenState extends State<MyQuestionsScreen> {
     }
   }
 
-  Future<void> _editQuestion(Map<String, dynamic> question) async {
-    final langVM = Provider.of<LanguageViewModel>(context, listen: false);
-    final questionController =
-        TextEditingController(text: question['question']);
-
-    await showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(langVM.translate('edit_question_title')),
-        content: TextField(
-          controller: questionController,
-          decoration: const InputDecoration(
-            border: OutlineInputBorder(),
-          ),
-          maxLines: 3,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(langVM.translate('cancel')),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              await AuthService.instance.updateProductQuestion(
-                question['id'],
-                questionController.text.trim(),
-              );
-              if (mounted) {
-                Navigator.pop(context);
-              }
-            },
-            child: Text(langVM.translate('update')),
-          ),
-        ],
-      ),
-    );
-    setState(() {});
-  }
-
   @override
   Widget build(BuildContext context) {
     final authVM = Provider.of<AuthViewModel>(context, listen: false);
@@ -262,17 +223,6 @@ class _MyQuestionsScreenState extends State<MyQuestionsScreen> {
                                         ),
                                       ],
                                     ),
-                                  ),
-                                  IconButton(
-                                    icon: Icon(
-                                      Icons.edit,
-                                      size: 20,
-                                      color:
-                                          Theme.of(context).colorScheme.primary,
-                                    ),
-                                    onPressed: () => _editQuestion(question),
-                                    padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(),
                                   ),
                                   IconButton(
                                     icon: Icon(

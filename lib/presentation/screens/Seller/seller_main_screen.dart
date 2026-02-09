@@ -184,7 +184,13 @@ class _SellerMainScreenState extends State<SellerMainScreen> {
     final List<Widget> pages = [
       const SellerProductsScreen(),
       const SellerStatsScreen(),
-      const SellerAddProductScreen(),
+      SellerAddProductScreen(
+        onProductAdded: () {
+          setState(() {
+            _currentIndex = 0;
+          });
+        },
+      ),
       const SellerQuestionsScreen(),
       const SellerReviewsScreen(),
     ];

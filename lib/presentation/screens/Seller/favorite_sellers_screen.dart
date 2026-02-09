@@ -70,6 +70,9 @@ class _FavoriteSellersScreenState extends State<FavoriteSellersScreen> {
                     final description =
                         seller['stallDescription'] ?? 'Açıklama yok';
                     final stallLocation = seller['stallLocation'] ?? '';
+                    final stallHours = seller['stallHours'] ?? '';
+                    final instagramLink = seller['instagramLink'];
+                    final facebookLink = seller['facebookLink'];
 
                     return Card(
                       margin: const EdgeInsets.only(bottom: 12),
@@ -116,6 +119,9 @@ class _FavoriteSellersScreenState extends State<FavoriteSellersScreen> {
                                 sellerName: displayName,
                                 sellerDescription: description,
                                 stallLocation: stallLocation,
+                                stallHours: stallHours,
+                                instagramLink: instagramLink,
+                                facebookLink: facebookLink,
                               ),
                             ),
                           );

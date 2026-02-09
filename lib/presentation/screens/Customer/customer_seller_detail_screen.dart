@@ -12,6 +12,9 @@ class CustomerSellerDetailScreen extends StatefulWidget {
   final String sellerName;
   final String sellerDescription;
   final String stallLocation;
+  final String stallHours;
+  final String? instagramLink;
+  final String? facebookLink;
 
   const CustomerSellerDetailScreen({
     super.key,
@@ -19,6 +22,9 @@ class CustomerSellerDetailScreen extends StatefulWidget {
     required this.sellerName,
     required this.sellerDescription,
     required this.stallLocation,
+    required this.stallHours,
+    this.instagramLink,
+    this.facebookLink,
   });
 
   @override
@@ -235,8 +241,84 @@ class _CustomerSellerDetailScreenState
                 ],
               ),
             ),
+            if (widget.stallHours.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: colorScheme.secondary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border:
+                      Border.all(color: colorScheme.secondary.withOpacity(0.3)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.access_time,
+                        size: 16, color: colorScheme.secondary),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        '${langVM.translate('stall_hours_label')}: ${widget.stallHours}',
+                        style: TextStyle(
+                          color: colorScheme.secondary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            if ((widget.instagramLink != null &&
+                    widget.instagramLink!.isNotEmpty) ||
+                (widget.facebookLink != null &&
+                    widget.facebookLink!.isNotEmpty)) ...[
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (widget.instagramLink != null &&
+                      widget.instagramLink!.isNotEmpty)
+                    _buildSocialButton(context, Icons.camera_alt_outlined,
+                        Colors.purple, widget.instagramLink!),
+                  if (widget.instagramLink != null &&
+                      widget.instagramLink!.isNotEmpty &&
+                      widget.facebookLink != null &&
+                      widget.facebookLink!.isNotEmpty)
+                    const SizedBox(width: 16),
+                  if (widget.facebookLink != null &&
+                      widget.facebookLink!.isNotEmpty)
+                    _buildSocialButton(context, Icons.facebook, Colors.blue,
+                        widget.facebookLink!),
+                ],
+              ),
+            ],
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildSocialButton(
+      BuildContext context, IconData icon, Color color, String url) {
+    return InkWell(
+      onTap: () {
+        // Linki açma işlemi (url_launcher paketi gerektirir)
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Link: $url')),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          shape: BoxShape.circle,
+          border: Border.all(color: color.withOpacity(0.5)),
+        ),
+        child: Icon(icon, color: color, size: 24),
       ),
     );
   }
