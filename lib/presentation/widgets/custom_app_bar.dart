@@ -7,6 +7,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final bool centerTitle;
   final Widget? leading;
   final bool automaticallyImplyLeading;
+  final PreferredSizeWidget? bottom;
 
   const CustomAppBar({
     super.key,
@@ -15,10 +16,14 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.centerTitle = true,
     this.leading,
     this.automaticallyImplyLeading = true,
+    this.bottom,
   });
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final contentColor = Theme.of(context).colorScheme.primary;
+
     return SafeArea(
       bottom: false,
       child: Container(
@@ -29,22 +34,24 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
           leading: leading,
           centerTitle: centerTitle,
           automaticallyImplyLeading: automaticallyImplyLeading,
-          backgroundColor: Colors.transparent,
+          backgroundColor: isDark ? Colors.black : Colors.white,
           elevation: 0,
+          scrolledUnderElevation: 0,
+          bottom: bottom,
           iconTheme: Theme.of(context).iconTheme.copyWith(
-                color: Colors.white,
+                color: contentColor,
               ),
           titleTextStyle: TextStyle(
-            color: Colors.white,
+            color: contentColor,
             fontWeight: FontWeight.w900,
             fontSize: 21,
             shadows: [
               Shadow(
                 offset: const Offset(0, 1),
                 blurRadius: 2,
-                color: Theme.of(context).brightness == Brightness.light
-                    ? Colors.white.withOpacity(0.2)
-                    : Colors.black.withOpacity(0.2),
+                color: isDark
+                    ? Colors.black.withOpacity(0.2)
+                    : Colors.white.withOpacity(0.2),
               ),
             ],
           ),
@@ -54,5 +61,6 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   }
 
   @override
-  Size get preferredSize => const Size.fromHeight(80);
+  Size get preferredSize =>
+      Size.fromHeight(80 + (bottom?.preferredSize.height ?? 0));
 }

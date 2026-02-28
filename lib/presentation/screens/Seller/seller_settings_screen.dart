@@ -9,6 +9,11 @@ import '../../viewmodels/auth_service.dart';
 import 'seller_edit_profile_screen.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/success_dialog.dart';
+import '../../widgets/custom_bottom_sheets.dart';
+import '../../widgets/custom_snackbars.dart';
+import '../../../core/constants/app_icons.dart';
+import '../../../presentation/widgets/svg_icon.dart';
+import '../../widgets/loading_overlay.dart';
 
 class SellerSettingsScreen extends StatefulWidget {
   const SellerSettingsScreen({super.key});
@@ -101,6 +106,11 @@ class _SellerSettingsScreenState extends State<SellerSettingsScreen> {
 
   @override
   void dispose() {
+    _nameController.removeListener(_checkForChanges);
+    _descController.removeListener(_checkForChanges);
+    _hoursController.removeListener(_checkForChanges);
+    _instagramController.removeListener(_checkForChanges);
+    _facebookController.removeListener(_checkForChanges);
     _nameController.dispose();
     _descController.dispose();
     _hoursController.dispose();
@@ -115,20 +125,23 @@ class _SellerSettingsScreenState extends State<SellerSettingsScreen> {
 
     if (image != null && mounted) {
       try {
-        await Provider.of<AuthViewModel>(context, listen: false)
-            .updateProfilePhoto(image.path);
-        if (mounted) {
-          final langVM = Provider.of<LanguageViewModel>(context, listen: false);
-          await DialogService.showSuccess(
-            context,
-            message: langVM.translate('success_settings_updated'),
-          );
-        }
+        await LoadingOverlay.show(
+          context,
+          asyncFunction: () async {
+            await Provider.of<AuthViewModel>(context, listen: false)
+                .updateProfilePhoto(image.path);
+          },
+        );
+
+        if (!mounted) return;
+        final langVM = Provider.of<LanguageViewModel>(context, listen: false);
+        await DialogService.showSuccess(
+          context,
+          message: langVM.translate('success_settings_updated'),
+        );
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Hata: $e')),
-          );
+          CustomSnackbars.showError(context, 'Fotoğraf güncellenemedi: $e');
         }
       }
     }
@@ -138,57 +151,31 @@ class _SellerSettingsScreenState extends State<SellerSettingsScreen> {
     final langVM = Provider.of<LanguageViewModel>(context, listen: false);
     final authVM = Provider.of<AuthViewModel>(context, listen: false);
 
-    showModalBottomSheet(
+    CustomBottomSheets.showImagePicker(
       context: context,
-      builder: (ctx) => SafeArea(
-        child: Wrap(
-          children: [
-            ListTile(
-              leading: const Icon(Icons.photo_camera),
-              title: Text(langVM.translate('camera')),
-              onTap: () {
-                Navigator.pop(ctx);
-                _pickImage(ImageSource.camera);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library),
-              title: Text(langVM.translate('gallery')),
-              onTap: () {
-                Navigator.pop(ctx);
-                _pickImage(ImageSource.gallery);
-              },
-            ),
-            if (authVM.currentUser?.profilePicturePath != null)
-              ListTile(
-                leading: Icon(Icons.delete,
-                    color: Theme.of(context).colorScheme.error),
-                title: Text(
-                  langVM.translate('remove_photo'),
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
-                ),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  authVM.removeProfilePhoto();
-                },
-              ),
-          ],
-        ),
-      ),
+      cameraText: langVM.translate('camera'),
+      galleryText: langVM.translate('gallery'),
+      removeText: langVM.translate('remove_photo'),
+      onCameraTap: () => _pickImage(ImageSource.camera),
+      onGalleryTap: () => _pickImage(ImageSource.gallery),
+      onRemoveTap: authVM.currentUser?.profilePicturePath != null
+          ? () => authVM.removeProfilePhoto()
+          : null,
     );
   }
 
-  Widget _buildInfoRow(IconData icon, String text) {
+  Widget _buildInfoRow(String iconPath, String text) {
     return Row(
       children: [
-        Icon(icon,
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-            size: 20),
+        SvgIcon(
+            iconPath: iconPath,
+            color: Theme.of(context).colorScheme.primary,
+            size: 24),
         const SizedBox(width: 12),
         Expanded(
           child: Text(
             text,
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
           ),
         ),
       ],
@@ -197,9 +184,10 @@ class _SellerSettingsScreenState extends State<SellerSettingsScreen> {
 
   Future<void> _showLogoutConfirmation() async {
     final langVM = Provider.of<LanguageViewModel>(context, listen: false);
+    final authVM = Provider.of<AuthViewModel>(context, listen: false);
 
-    final bool confirm = await DialogService.showConfirmation(
-      context,
+    final bool? confirm = await CustomBottomSheets.showConfirmation(
+      context: context,
       title: langVM.translate('logout_confirmation_title'),
       message: langVM.translate('logout_confirmation_message'),
       confirmText: langVM.translate('yes'),
@@ -208,9 +196,11 @@ class _SellerSettingsScreenState extends State<SellerSettingsScreen> {
     );
 
     if (confirm == true && mounted) {
-      setState(() => _isChanged = false);
-      Provider.of<AuthViewModel>(context, listen: false).logout();
-      Navigator.of(context).popUntil((route) => route.isFirst);
+      await LoadingOverlay.show(context, asyncFunction: () async {
+        authVM.logout();
+        if (mounted) setState(() => _isChanged = false);
+      });
+      if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
     }
   }
 
@@ -289,22 +279,31 @@ class _SellerSettingsScreenState extends State<SellerSettingsScreen> {
     });
   }
 
-  InputDecoration _buildInputDecoration(String label, IconData icon,
+  InputDecoration _buildInputDecoration(String label, String iconPath,
       {String? hintText}) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return InputDecoration(
       labelText: label,
       hintText: hintText,
-      prefixIcon: Icon(icon, color: Theme.of(context).colorScheme.secondary),
+      prefixIcon: Padding(
+          padding: const EdgeInsets.all(12),
+          child: SvgIcon(
+              iconPath: iconPath, color: theme.colorScheme.primary, size: 28)),
+      filled: true,
+      fillColor: isDark ? theme.cardColor : Colors.grey.shade50,
       border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(30),
-          borderSide: BorderSide(color: Colors.white.withOpacity(0.3))),
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: theme.dividerColor.withOpacity(0.2)),
+      ),
       enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(30),
-          borderSide: BorderSide(color: Colors.white.withOpacity(0.3))),
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: theme.dividerColor.withOpacity(0.2)),
+      ),
       focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(30),
-          borderSide:
-              BorderSide(color: Colors.white.withOpacity(0.5), width: 2)),
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: theme.colorScheme.primary, width: 1.5),
+      ),
     );
   }
 
@@ -313,7 +312,9 @@ class _SellerSettingsScreenState extends State<SellerSettingsScreen> {
     final langVM = Provider.of<LanguageViewModel>(context);
     final sellerVM = Provider.of<SellerViewModel>(context);
     final authVM = Provider.of<AuthViewModel>(context);
+    final theme = Theme.of(context);
     final userImage = authVM.currentUser?.profilePicturePath;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return PopScope(
       canPop: !_isChanged,
@@ -354,18 +355,17 @@ class _SellerSettingsScreenState extends State<SellerSettingsScreen> {
                     children: [
                       CircleAvatar(
                         radius: 50,
-                        backgroundColor: Colors.white,
+                        backgroundColor: theme.cardColor,
                         backgroundImage: userImage != null
                             ? (userImage.startsWith('http')
                                 ? NetworkImage(userImage)
                                 : FileImage(File(userImage))) as ImageProvider
                             : null,
                         child: userImage == null
-                            ? Icon(Icons.store,
-                                size: 50,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
+                            ? SvgIcon(
+                                iconPath: AppIcons.market,
+                                size: 60,
+                                color: theme.colorScheme.onSurface
                                     .withOpacity(0.4))
                             : null,
                       ),
@@ -380,9 +380,11 @@ class _SellerSettingsScreenState extends State<SellerSettingsScreen> {
                           onTap: () => _showImagePicker(context),
                           child: CircleAvatar(
                             radius: 18,
-                            backgroundColor: Theme.of(context).primaryColor,
-                            child: const Icon(Icons.camera_alt,
-                                size: 18, color: Colors.white),
+                            backgroundColor: theme.colorScheme.primary,
+                            child: SvgIcon(
+                                iconPath: AppIcons.camera,
+                                size: 22,
+                                color: theme.colorScheme.onPrimary),
                           ),
                         ),
                       ),
@@ -394,9 +396,15 @@ class _SellerSettingsScreenState extends State<SellerSettingsScreen> {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).cardColor,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.white.withOpacity(0.3)),
+                      color: isDark ? theme.cardColor : Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
                     child: Column(
                       children: [
@@ -406,7 +414,7 @@ class _SellerSettingsScreenState extends State<SellerSettingsScreen> {
                             Text(
                               langVM.translate('seller_details'),
                               style: const TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 16),
+                                  fontWeight: FontWeight.bold, fontSize: 17),
                             ),
                             TextButton.icon(
                               onPressed: () {
@@ -414,7 +422,10 @@ class _SellerSettingsScreenState extends State<SellerSettingsScreen> {
                                     builder: (_) =>
                                         const SellerEditProfileScreen()));
                               },
-                              icon: const Icon(Icons.edit, size: 18),
+                              icon: SvgIcon(
+                                  iconPath: AppIcons.edit,
+                                  size: 22,
+                                  color: theme.colorScheme.primary),
                               label: Text(langVM.translate('edit_profile')),
                               style: TextButton.styleFrom(
                                   visualDensity: VisualDensity.compact),
@@ -422,13 +433,14 @@ class _SellerSettingsScreenState extends State<SellerSettingsScreen> {
                           ],
                         ),
                         const Divider(height: 16),
-                        _buildInfoRow(Icons.person,
+                        _buildInfoRow(AppIcons.user,
                             '${authVM.currentUser!.firstName} ${authVM.currentUser!.lastName}'),
                         const Divider(height: 24),
-                        _buildInfoRow(Icons.email, authVM.currentUser!.email),
+                        _buildInfoRow(
+                            AppIcons.email, authVM.currentUser!.email),
                         const Divider(height: 24),
                         _buildInfoRow(
-                            Icons.phone, authVM.currentUser!.phoneNumber),
+                            AppIcons.phone, authVM.currentUser!.phoneNumber),
                       ],
                     ),
                   ),
@@ -437,7 +449,7 @@ class _SellerSettingsScreenState extends State<SellerSettingsScreen> {
                 TextFormField(
                   controller: _nameController,
                   decoration: _buildInputDecoration(
-                      langVM.translate('stall_name_label'), Icons.store),
+                      langVM.translate('stall_name_label'), AppIcons.market),
                   validator: (v) =>
                       v!.isEmpty ? langVM.translate('error_prefix') : null,
                 ),
@@ -447,7 +459,7 @@ class _SellerSettingsScreenState extends State<SellerSettingsScreen> {
                   readOnly: true,
                   onTap: _selectStallHours,
                   decoration: _buildInputDecoration(
-                      langVM.translate('stall_hours_label'), Icons.access_time,
+                      langVM.translate('stall_hours_label'), AppIcons.clock,
                       hintText: langVM.translate('stall_hours_hint')),
                 ),
                 const SizedBox(height: 16),
@@ -455,26 +467,25 @@ class _SellerSettingsScreenState extends State<SellerSettingsScreen> {
                   controller: _descController,
                   maxLines: 3,
                   decoration: _buildInputDecoration(
-                      langVM.translate('stall_desc_label'), Icons.description),
+                      langVM.translate('stall_desc_label'), AppIcons.info),
                 ),
                 const SizedBox(height: 24),
                 Text(
                   langVM.translate('social_media_title'),
                   style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 16),
+                      fontWeight: FontWeight.bold, fontSize: 17),
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _instagramController,
                   decoration: _buildInputDecoration(
-                      langVM.translate('instagram_label'),
-                      Icons.camera_alt_outlined),
+                      langVM.translate('instagram_label'), AppIcons.instagram),
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _facebookController,
                   decoration: _buildInputDecoration(
-                      langVM.translate('facebook_label'), Icons.facebook),
+                      langVM.translate('facebook_label'), AppIcons.facebook),
                 ),
                 const SizedBox(height: 24),
                 ElevatedButton(
@@ -482,23 +493,29 @@ class _SellerSettingsScreenState extends State<SellerSettingsScreen> {
                       ? null
                       : () async {
                           if (_formKey.currentState!.validate()) {
-                            await sellerVM.updateSellerProfile(
-                              name: _nameController.text,
-                              description: _descController.text,
-                            );
+                            await LoadingOverlay.show(
+                              context,
+                              asyncFunction: () async {
+                                await sellerVM.updateSellerProfile(
+                                  name: _nameController.text,
+                                  description: _descController.text,
+                                );
 
-                            // Firebase'e kaydet
-                            final authVM = Provider.of<AuthViewModel>(context,
-                                listen: false);
-                            if (authVM.currentUser != null) {
-                              await AuthService.instance.updateUserInDb({
-                                'stallName': _nameController.text,
-                                'stallDescription': _descController.text,
-                                'stallHours': _hoursController.text,
-                                'instagramLink': _instagramController.text,
-                                'facebookLink': _facebookController.text,
-                              }, authVM.currentUser!.email);
-                            }
+                                // Firebase'e kaydet
+                                final authVM = Provider.of<AuthViewModel>(
+                                    context,
+                                    listen: false);
+                                if (authVM.currentUser != null) {
+                                  await AuthService.instance.updateUserInDb({
+                                    'stallName': _nameController.text,
+                                    'stallDescription': _descController.text,
+                                    'stallHours': _hoursController.text,
+                                    'instagramLink': _instagramController.text,
+                                    'facebookLink': _facebookController.text,
+                                  }, authVM.currentUser!.email);
+                                }
+                              },
+                            );
 
                             if (mounted) {
                               setState(() {
@@ -519,6 +536,16 @@ class _SellerSettingsScreenState extends State<SellerSettingsScreen> {
                             }
                           }
                         },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.colorScheme.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    elevation: 4,
+                    shadowColor: theme.colorScheme.primary.withOpacity(0.4),
+                  ),
                   child: sellerVM.isLoading
                       ? const CircularProgressIndicator()
                       : Text(langVM.translate('save_changes')),
@@ -539,30 +566,53 @@ class _SellerSettingsScreenState extends State<SellerSettingsScreen> {
                     );
 
                     if (confirm && mounted) {
-                      setState(() => _isChanged = false);
-                      final authVM =
-                          Provider.of<AuthViewModel>(context, listen: false);
-                      // Mevcut pazar seçimini yerel hafızadan temizle
-                      await AuthService.instance.updateSellerMarketId('');
-                      authVM.setSellerMarketId('');
+                      await LoadingOverlay.show(
+                        context,
+                        asyncFunction: () async {
+                          setState(() => _isChanged = false);
+                          final authVM = Provider.of<AuthViewModel>(context,
+                              listen: false);
+
+                          // Firestore'dan pazar bilgisini sil
+                          if (authVM.currentUser != null) {
+                            await AuthService.instance.updateUserInDb({
+                              'sellerMarketId': '',
+                            }, authVM.currentUser!.email);
+
+                            // Ürünlerin pazar bilgisini de temizle
+                            await AuthService.instance
+                                .updateSellerProductsMarket(
+                                    authVM.currentUser!.id, '');
+                          }
+
+                          // Mevcut pazar seçimini yerel hafızadan temizle
+                          await AuthService.instance.updateSellerMarketId('');
+                          authVM.setSellerMarketId('');
+                        },
+                      );
+
                       if (mounted) {
                         Navigator.of(context)
                             .popUntil((route) => route.isFirst);
                       }
                     }
                   },
-                  icon: const Icon(Icons.swap_horiz, color: Colors.orange),
+                  icon: Icon(
+                    Icons.swap_horiz,
+                    color: theme.colorScheme.primary,
+                  ),
                   label: Text(
                     langVM.translate('change_market'),
-                    style: const TextStyle(
-                        color: Colors.orange, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                        color: theme.colorScheme.primary,
+                        fontWeight: FontWeight.bold),
                   ),
                   style: TextButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: Colors.orange.withOpacity(0.1),
+                    backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      side: BorderSide(color: Colors.white.withOpacity(0.3)),
+                      borderRadius: BorderRadius.circular(16),
+                      side: BorderSide.none,
                     ),
                   ),
                 ),
@@ -570,7 +620,10 @@ class _SellerSettingsScreenState extends State<SellerSettingsScreen> {
                 // Çıkış Yap Butonu
                 TextButton.icon(
                   onPressed: _showLogoutConfirmation,
-                  icon: const Icon(Icons.logout, color: Colors.red),
+                  icon: SvgIcon(
+                    iconPath: AppIcons.logout,
+                    color: Colors.red,
+                  ),
                   label: Text(
                     langVM.translate('logout'),
                     style: const TextStyle(
@@ -580,8 +633,8 @@ class _SellerSettingsScreenState extends State<SellerSettingsScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     backgroundColor: Colors.red.withOpacity(0.1),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      side: BorderSide(color: Colors.white.withOpacity(0.3)),
+                      borderRadius: BorderRadius.circular(16),
+                      side: BorderSide.none,
                     ),
                   ),
                 ),

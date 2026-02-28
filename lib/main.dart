@@ -2,16 +2,20 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter/services.dart';
 import 'dart:ui';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'presentation/screens/Customer/home_screen.dart';
 import 'presentation/screens/Customer/search_screen.dart';
-import 'presentation/screens/Customer/account_screen.dart';
 import 'presentation/screens/Customer/report_list_screen.dart';
 import 'presentation/screens/Customer/market_detail_screen.dart';
 import 'presentation/screens/Customer/my_questions_screen.dart';
-import 'presentation/screens/Customer/my_ratings_screen.dart';
+import 'presentation/screens/Customer/my_reviews_screen.dart';
+import 'presentation/screens/Customer/products_screen.dart';
+import 'presentation/screens/Customer/product_detail_screen.dart';
 import 'presentation/viewmodels/home_viewmodel.dart';
 import 'presentation/viewmodels/auth_viewmodel.dart';
 import 'presentation/viewmodels/theme_viewmodel.dart';
@@ -29,6 +33,10 @@ import 'presentation/screens/Seller/seller_market_selection_screen.dart';
 import 'presentation/screens/Seller/seller_main_screen.dart';
 import 'app_theme.dart';
 import 'presentation/widgets/success_dialog.dart';
+import 'core/constants/app_icons.dart';
+import 'presentation/widgets/svg_icon.dart';
+import 'presentation/widgets/side_menu_drawer.dart';
+import 'presentation/widgets/loading_overlay.dart';
 
 // Global navigasyon anahtarı
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -66,17 +74,76 @@ class MyApp extends StatelessWidget {
       ],
       child: Consumer3<ThemeViewModel, LanguageViewModel, AuthViewModel>(
         builder: (context, themeVM, languageVM, authVM, child) {
+          final baseTheme = AppTheme.darkTheme(themeVM.seedColor);
+          final modernTextTheme =
+              GoogleFonts.interTextTheme(baseTheme.textTheme);
+          final boldTheme = baseTheme.copyWith(
+            textTheme: modernTextTheme,
+          );
+
+          // Modern Light Tema
+          final lightBase = ThemeData(
+            useMaterial3: true,
+            brightness: Brightness.light,
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: Colors.orange,
+              primary: Colors.orange,
+              secondary: Colors.deepOrange,
+              surface: Colors.white,
+              onSurface: Colors.black87,
+              surfaceContainer: Colors.orange.shade50,
+            ),
+            scaffoldBackgroundColor: Colors.white,
+            cardTheme: CardThemeData(
+              color: Colors.orange.shade50,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: Colors.orange.withOpacity(0.1)),
+              ),
+            ),
+            appBarTheme: const AppBarTheme(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              centerTitle: true,
+              iconTheme: IconThemeData(color: Colors.black87),
+              titleTextStyle: TextStyle(
+                color: Colors.black87,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+              systemOverlayStyle: SystemUiOverlayStyle(
+                statusBarColor: Colors.transparent,
+                statusBarIconBrightness: Brightness.dark,
+                statusBarBrightness: Brightness.light,
+              ),
+            ),
+            inputDecorationTheme: InputDecorationTheme(
+              filled: true,
+              fillColor: Colors.grey.shade100,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          );
+          final lightTextTheme =
+              GoogleFonts.interTextTheme(lightBase.textTheme);
+          final finalLightTheme = lightBase.copyWith(
+            textTheme: lightTextTheme,
+          );
+
           return LifecycleManager(
             child: MaterialApp(
               navigatorKey: navigatorKey, // Key'i tanımla
               navigatorObservers: [KeyboardDismissObserver()],
               debugShowCheckedModeBanner: false,
               title: languageVM.translate('home_title'),
-              themeMode: themeVM.themeMode, // Tema modu (Sistem/Açık/Koyu)
-              theme: AppTheme.lightTheme(
-                  themeVM.seedColor), // Merkezi Aydınlık Tema
-              darkTheme: AppTheme.darkTheme(
-                  themeVM.seedColor), // Merkezi Karanlık Tema
+              themeMode: themeVM.themeMode,
+              theme: finalLightTheme,
+              darkTheme: boldTheme, // Merkezi Karanlık Tema
+              themeAnimationDuration: const Duration(milliseconds: 500),
+              themeAnimationCurve: Curves.easeInOut,
               locale: Locale(languageVM.currentLanguage),
               supportedLocales: const [Locale('tr', 'TR'), Locale('en', 'US')],
               localizationsDelegates: const [
@@ -85,59 +152,20 @@ class MyApp extends StatelessWidget {
                 GlobalCupertinoLocalizations.delegate,
               ],
               builder: (context, child) {
-                final theme = Theme.of(context);
-                final isDark = theme.brightness == Brightness.dark;
-
+                final isDark = Theme.of(context).brightness == Brightness.dark;
                 return Stack(
                   children: [
                     Positioned.fill(
-                      child: Container(
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 500),
+                        curve: Curves.easeInOut,
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                             colors: isDark
-                                ? [
-                                    const Color(0xFF121212), // Koyu gri
-                                    Colors.black,
-                                  ]
-                                : [
-                                    const Color(0xFF1B5E20), // Sabit koyu yeşil
-                                    const Color.fromRGBO(27, 94, 32, 1),
-                                  ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    // Modern ve yumuşak bir arka plan efekti için bulanık daireler
-                    Positioned(
-                      top: -100,
-                      right: -100,
-                      child: ImageFiltered(
-                        imageFilter: ImageFilter.blur(sigmaX: 60, sigmaY: 60),
-                        child: Container(
-                          width: 300,
-                          height: 300,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: theme.colorScheme.primary
-                                .withOpacity(isDark ? 0.9 : 0.0),
-                          ),
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      bottom: -50,
-                      left: -50,
-                      child: ImageFiltered(
-                        imageFilter: ImageFilter.blur(sigmaX: 60, sigmaY: 60),
-                        child: Container(
-                          width: 250,
-                          height: 250,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: theme.colorScheme.tertiary
-                                .withOpacity(isDark ? 0.0 : 0.0),
+                                ? [Colors.black, Colors.black]
+                                : [Colors.white, Colors.white],
                           ),
                         ),
                       ),
@@ -203,7 +231,7 @@ class _StartupConnectivityWrapperState
       // Kontrol sırasında şeffaf arka plan üzerinde loading (Arka plandaki gradient görünür)
       return const Scaffold(
         backgroundColor: Colors.transparent,
-        body: Center(child: CircularProgressIndicator()),
+        body: Center(child: CustomLoadingIndicator()),
       );
     }
 
@@ -269,6 +297,8 @@ class _GlobalConnectivityManagerState extends State<GlobalConnectivityManager> {
       } else if (_wasDisconnected) {
         _wasDisconnected = false;
         _showConnectionRestoredDialog();
+        // İnternet geldiğinde son başarısız işlemi tekrar dene
+        AuthService.instance.retryLastOperation();
       }
     });
   }
@@ -316,7 +346,7 @@ class _GlobalConnectivityManagerState extends State<GlobalConnectivityManager> {
 
     _isDialogShowing = true;
 
-    String message = 'Bağlantı sağlandı';
+    String message = 'Connection restored';
     try {
       final langVM = Provider.of<LanguageViewModel>(context, listen: false);
       final translated = langVM.translate('connection_restored');
@@ -423,10 +453,7 @@ class AuthWrapper extends StatelessWidget {
 
         return ConnectivityWrapper(
           child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 500),
-            transitionBuilder: (Widget child, Animation<double> animation) {
-              return FadeTransition(opacity: animation, child: child);
-            },
+            duration: Duration.zero,
             child: screen,
           ),
         );
@@ -475,6 +502,7 @@ class _HomeWrapperState extends State<_HomeWrapper> {
           if (mounted) {
             final authVM = Provider.of<AuthViewModel>(context, listen: false);
             authVM.checkFavoritesAndNotify(vm.nearbyMarkets);
+            authVM.checkFavoriteProductsPriceDrops(); // Fiyat düşüşü kontrolü
           }
         });
       }
@@ -502,12 +530,13 @@ class MainScaffold extends StatefulWidget {
 
 class _MainScaffoldState extends State<MainScaffold> {
   int _index = 0;
+  bool _isDrawerOpen = false;
 
   final _screens = const [
     HomeScreen(),
     SearchScreen(),
+    ProductsScreen(),
     ReportListScreen(),
-    AccountScreen(),
   ];
 
   @override
@@ -544,76 +573,14 @@ class _MainScaffoldState extends State<MainScaffold> {
     NotificationService.instance.launchPayload = null;
   }
 
-  Widget _buildActiveIcon(BuildContext context, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primary.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withOpacity(0.6)),
-      ),
-      child: Icon(icon, size: 30),
-    );
-  }
-
-  Widget _buildIconWithBadge(
-      BuildContext context, IconData icon, AuthViewModel authVM,
-      {bool isActive = false}) {
-    if (authVM.currentUser == null) {
-      return isActive ? _buildActiveIcon(context, icon) : Icon(icon, size: 30);
+  void _handleNotificationNavigation(String payload) {
+    // 0. Ürün Fiyat Düşüşü Bildirimi
+    if (payload.startsWith('product_')) {
+      final productId = payload.replaceFirst('product_', '');
+      _navigateToProductDetail(productId);
+      return;
     }
 
-    return StreamBuilder<List<Map<String, dynamic>>>(
-      stream: AuthService.instance.getUserNotifications(authVM.currentUser!.id),
-      builder: (context, snapshot) {
-        int unreadCount = 0;
-        if (snapshot.hasData) {
-          unreadCount = snapshot.data!.where((n) => n['read'] == false).length;
-        }
-
-        final mainIcon =
-            isActive ? _buildActiveIcon(context, icon) : Icon(icon, size: 30);
-
-        if (unreadCount == 0) return mainIcon;
-
-        return Stack(
-          clipBehavior: Clip.none,
-          children: [
-            mainIcon,
-            Positioned(
-              right: isActive ? 0 : -2,
-              top: isActive ? 0 : -2,
-              child: Container(
-                padding: const EdgeInsets.all(3),
-                decoration: BoxDecoration(
-                  color: Colors.red,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 1.5),
-                ),
-                constraints: const BoxConstraints(
-                  minWidth: 18,
-                  minHeight: 18,
-                ),
-                child: Center(
-                  child: Text(
-                    '$unreadCount',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _handleNotificationNavigation(String payload) {
     // 1. Soru Yanıtı Bildirimi
     if (payload == 'question_reply') {
       navigatorKey.currentState?.push(
@@ -625,7 +592,7 @@ class _MainScaffoldState extends State<MainScaffold> {
     // 2. Değerlendirme Yanıtı Bildirimi
     if (payload == 'review_reply') {
       navigatorKey.currentState?.push(
-        MaterialPageRoute(builder: (_) => const MyRatingsScreen()),
+        MaterialPageRoute(builder: (_) => const MyReviewsScreen()),
       );
       return;
     }
@@ -655,71 +622,181 @@ class _MainScaffoldState extends State<MainScaffold> {
     }
   }
 
+  Future<void> _navigateToProductDetail(String productId) async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('products')
+          .doc(productId)
+          .get();
+
+      if (doc.exists) {
+        final productData = doc.data()!;
+        productData['id'] = doc.id;
+
+        String sellerName = 'Satıcı';
+        if (productData['sellerId'] != null) {
+          final sellerDoc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(productData['sellerId'])
+              .get();
+          if (sellerDoc.exists) {
+            final sData = sellerDoc.data()!;
+            sellerName = sData['stallName'] ??
+                '${sData['firstName']} ${sData['lastName']}';
+          }
+        }
+
+        navigatorKey.currentState?.push(
+          MaterialPageRoute(
+            builder: (_) => ProductDetailScreen(
+              product: productData,
+              sellerName: sellerName,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Ürün detayına gidilemedi: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final langVM = Provider.of<LanguageViewModel>(context);
     final authVM = Provider.of<AuthViewModel>(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      extendBody: true,
-      body: IndexedStack(index: _index, children: _screens),
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.only(left: 35, right: 35, bottom: 16),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(26),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            child: Container(
-              padding: EdgeInsets.zero,
-              decoration: BoxDecoration(
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.black.withOpacity(0.2)
-                    : Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(24),
+        extendBody: true,
+        drawerScrimColor:
+            Colors.black.withOpacity(0.6), // Arka plan karartma rengi
+        onDrawerChanged: (isOpened) {
+          setState(() {
+            _isDrawerOpen = isOpened;
+          });
+        },
+        drawer: const SideMenuDrawer(),
+        body: Stack(
+          children: [
+            IndexedStack(index: _index, children: _screens),
+            // Drawer açıkken arka planı bulanıklaştır
+            if (_isDrawerOpen)
+              Positioned.fill(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3),
+                  child: Container(color: Colors.transparent),
+                ),
               ),
-              child: BottomNavigationBar(
-                currentIndex: _index,
-                onTap: (i) => setState(() => _index = i),
-                // Renkler ve stiller artık AppTheme içinden geliyor
-                // Ancak buradaki backgroundColor transparent olmalı çünkü
-                // üstteki Container blur efekti veriyor.
-                backgroundColor: Colors.transparent,
-                elevation: 0,
-                showSelectedLabels: false,
-                showUnselectedLabels: false,
-                selectedFontSize: 3,
-                unselectedFontSize: 0,
-                iconSize: 30,
-                items: [
-                  BottomNavigationBarItem(
-                    icon: const Icon(Icons.home_filled),
-                    activeIcon: _buildActiveIcon(context, Icons.home_filled),
-                    label: langVM.translate('home_title'),
-                  ),
-                  BottomNavigationBarItem(
-                    icon: const Icon(Icons.search),
-                    activeIcon: _buildActiveIcon(context, Icons.search_rounded),
-                    label: langVM.translate('search_tab'),
-                  ),
-                  BottomNavigationBarItem(
-                    icon: const Icon(Icons.report_gmailerrorred_rounded),
-                    activeIcon: _buildActiveIcon(context, Icons.report),
-                    label: langVM.translate('report_tab'),
-                  ),
-                  BottomNavigationBarItem(
-                    icon: _buildIconWithBadge(context, Icons.menu, authVM,
-                        isActive: false),
-                    activeIcon: _buildIconWithBadge(
-                        context, Icons.menu_open_sharp, authVM,
-                        isActive: true),
-                    label: langVM.translate('menu_tab'),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          ],
         ),
-      ),
-    );
+        bottomNavigationBar: _isDrawerOpen
+            ? null
+            : Container(
+                decoration: BoxDecoration(
+                  boxShadow: [
+                    BoxShadow(
+                      color: isDark
+                          ? Colors.white.withOpacity(0.2)
+                          : Colors.black.withOpacity(0.3),
+                      blurRadius: 20,
+                      offset: const Offset(0, -1),
+                    ),
+                  ],
+                ),
+                child: ClipRect(
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                    child: Container(
+                      padding: EdgeInsets.zero,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.black
+                            : Colors.white,
+                      ),
+                      child: BottomNavigationBar(
+                        currentIndex: _index,
+                        onTap: (i) => setState(() => _index = i),
+                        // Renkler ve stiller artık AppTheme içinden geliyor
+                        // Ancak buradaki backgroundColor transparent olmalı çünkü
+                        // üstteki Container blur efekti veriyor.
+                        backgroundColor: Colors.transparent,
+                        elevation: 0,
+                        type: BottomNavigationBarType.fixed,
+                        showSelectedLabels: true,
+                        showUnselectedLabels: true,
+                        selectedItemColor:
+                            Theme.of(context).colorScheme.primary,
+                        unselectedItemColor:
+                            Theme.of(context).brightness == Brightness.dark
+                                ? Colors.grey
+                                : Colors.grey,
+                        unselectedFontSize: 8,
+                        selectedFontSize: 10,
+                        iconSize: 24,
+                        items: [
+                          BottomNavigationBarItem(
+                            icon: Icon(
+                              Icons.storefront_outlined,
+                              color: Theme.of(context).brightness ==
+                                      Brightness.dark
+                                  ? Colors.grey
+                                  : Colors.grey,
+                              size: 34,
+                            ),
+                            activeIcon: Icon(Icons.storefront,
+                                color: Theme.of(context).colorScheme.primary,
+                                size: 38),
+                            label: langVM.translate('home_title'),
+                          ),
+                          BottomNavigationBarItem(
+                            icon: SvgIcon(
+                                iconPath: AppIcons.search,
+                                color: Theme.of(context).brightness ==
+                                        Brightness.dark
+                                    ? Colors.grey
+                                    : Colors.grey,
+                                size: 34),
+                            activeIcon: SvgIcon(
+                                iconPath: AppIcons.searchActive,
+                                color: Theme.of(context).colorScheme.primary,
+                                size: 38),
+                            label: langVM.translate('search_tab'),
+                          ),
+                          BottomNavigationBarItem(
+                            icon: SvgIcon(
+                                iconPath: AppIcons.products,
+                                color: Theme.of(context).brightness ==
+                                        Brightness.dark
+                                    ? Colors.grey
+                                    : Colors.grey,
+                                size: 34),
+                            activeIcon: SvgIcon(
+                                iconPath: AppIcons.productsActive,
+                                color: Theme.of(context).colorScheme.primary,
+                                size: 38),
+                            label: langVM.translate('products_tab'),
+                          ),
+                          BottomNavigationBarItem(
+                            icon: Icon(
+                              Icons.report_outlined,
+                              color: Theme.of(context).brightness ==
+                                      Brightness.dark
+                                  ? Colors.grey
+                                  : Colors.grey,
+                              size: 34,
+                            ),
+                            activeIcon: Icon(
+                              Icons.report,
+                              color: Theme.of(context).colorScheme.primary,
+                              size: 38,
+                            ),
+                            label: langVM.translate('report_tab'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ));
   }
 }

@@ -10,6 +10,7 @@ dependencies:
   flutter:
     sdk: flutter
   provider: ^6.0.6
+  http: ^1.2.0
   shared_preferences: ^2.3.2
   image_picker: ^1.0.7
   confetti: ^0.7.0
@@ -33,20 +34,21 @@ dependencies:
   fl_chart: ^1.1.1
   flutter_svg: ^2.2.3
   google_fonts: ^6.1.0
+  speech_to_text: ^7.0.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
-  flutter_launcher_icons: ^0.13.1
+  flutter_launcher_icons: ^0.14.4
 
 flutter:
   uses-material-design: true
   assets:
     - assets/data/markets.json
     - assets/images/
-    - assets/images/google_logo.svg.png
-    - assets/images/istockphoto-1177382633-612x612.jpg
+    - assets/icons/
+    - assets/images/google_logo.svg.png 
 
 flutter_icons:
   android: true

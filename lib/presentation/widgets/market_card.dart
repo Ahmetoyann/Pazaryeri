@@ -1,7 +1,10 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../data/models/market.dart';
 import '../viewmodels/language_viewmodel.dart';
+import '../../core/constants/app_icons.dart';
+import '../../presentation/widgets/svg_icon.dart';
 
 class MarketCard extends StatelessWidget {
   final Market market;
@@ -20,13 +23,35 @@ class MarketCard extends StatelessWidget {
   });
 
   Color _getOccupancyColor(double occupancy, ColorScheme colorScheme) {
-    if (occupancy <= 0.4) return colorScheme.primary;
-    if (occupancy <= 0.7) return colorScheme.secondary;
-    return colorScheme.error;
-    if (occupancy <= 0.25) return Colors.white;
-    if (occupancy <= 0.50) return Colors.yellow;
-    if (occupancy <= 0.75) return Colors.orange;
-    return Colors.red;
+    return colorScheme.primary;
+  }
+
+  // Saate göre dinamik doluluk oranı hesapla
+  double _calculateDynamicOccupancy(String marketId) {
+    final now = DateTime.now();
+    final hour = now.hour;
+
+    // Pazarın ID'sine göre tutarlı bir rastgelelik oluştur
+    // Böylece her render'da değişmez ama her pazar için farklı olur
+    final random = Random(marketId.hashCode + now.day);
+    final baseRandom = random.nextDouble() * 0.2; // %0-20 arası rastgelelik
+
+    // Saatlik baz doluluk oranları (0.0 - 1.0 arası)
+    double baseOccupancy = 0.1;
+
+    if (hour >= 8 && hour < 11)
+      baseOccupancy = 0.3; // Sabah sakin
+    else if (hour >= 11 && hour < 14)
+      baseOccupancy = 0.7; // Öğle yoğun
+    else if (hour >= 14 && hour < 17)
+      baseOccupancy = 0.5; // Öğleden sonra normal
+    else if (hour >= 17 && hour < 20)
+      baseOccupancy = 0.8; // Akşam iş çıkışı yoğun
+    else if (hour >= 20) baseOccupancy = 0.2; // Kapanışa doğru sakin
+
+    // Rastgelelik ekle ve 0.0-1.0 arasına sıkıştır
+    double finalOccupancy = (baseOccupancy + baseRandom).clamp(0.0, 1.0);
+    return finalOccupancy;
   }
 
   @override
@@ -52,7 +77,20 @@ class MarketCard extends StatelessWidget {
     final today = _todayTurkish();
     final isOpenToday = market.openDays.contains(today);
 
+    // Saat kontrolü: 05:00 - 20:30
+    final now = DateTime.now();
+    final currentMinutes = now.hour * 60 + now.minute;
+    final startMinutes = 5 * 60; // 05:00
+    final endMinutes = 20 * 60 + 30; // 20:30
+    final isBeforeOpening = isOpenToday && currentMinutes < startMinutes;
+    final isOpenNow = isOpenToday &&
+        currentMinutes >= startMinutes &&
+        currentMinutes <= endMinutes;
+
     final baseTag = heroTag ?? market.id;
+
+    // Dinamik doluluk oranı
+    final dynamicOccupancy = _calculateDynamicOccupancy(market.id);
 
     return GestureDetector(
       onTap: onTap,
@@ -74,7 +112,7 @@ class MarketCard extends StatelessWidget {
             ),
           ],
           border: Border.all(
-            color: Colors.white.withOpacity(0.3),
+            color: Colors.grey.withOpacity(0.4),
             width: 1,
           ),
         ),
@@ -91,17 +129,16 @@ class MarketCard extends StatelessWidget {
                   Hero(
                     tag: 'market_icon_$baseTag',
                     child: Container(
-                      padding: EdgeInsets.all(isHorizontal ? 8 : 10),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        Icons.storefront_rounded,
-                        color: theme.iconTheme.color,
-                        size: isHorizontal ? 20 : 24,
-                      ),
-                    ),
+                        padding: EdgeInsets.all(isHorizontal ? 8 : 10),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          Icons.storefront,
+                          color: Theme.of(context).colorScheme.primary,
+                          size: 24,
+                        )),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -126,12 +163,11 @@ class MarketCard extends StatelessWidget {
                         const SizedBox(height: 4),
                         Row(
                           children: [
-                            Icon(
-                              Icons.location_on_outlined,
-                              size: 14,
-                              color:
-                                  theme.colorScheme.onSurface.withOpacity(0.7),
-                            ),
+                            SvgIcon(
+                                iconPath: AppIcons.location,
+                                size: 14,
+                                color: theme.colorScheme.onSurface
+                                    .withOpacity(0.7)),
                             const SizedBox(width: 2),
                             Expanded(
                               child: Text(
@@ -154,39 +190,48 @@ class MarketCard extends StatelessWidget {
 
               if (showOccupancy) ...[
                 const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Icon(Icons.people_alt_outlined,
-                        size: 16,
-                        color: theme.colorScheme.onSurface.withOpacity(0.7)),
-                    const SizedBox(width: 6),
-                    Text(
-                      langVM.translate('occupancy_rate'),
-                      style: theme.textTheme.bodySmall,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: LinearProgressIndicator(
-                          value: market.occupancy,
-                          backgroundColor: theme.dividerColor.withOpacity(0.1),
-                          color: _getOccupancyColor(
-                              market.occupancy, theme.colorScheme),
-                          minHeight: 6,
+                TweenAnimationBuilder<double>(
+                  tween: Tween<double>(begin: 0.0, end: dynamicOccupancy),
+                  duration: const Duration(milliseconds: 1500),
+                  curve: Curves.easeOutCubic,
+                  builder: (context, value, child) {
+                    return Row(
+                      children: [
+                        Icon(Icons.people_alt_outlined,
+                            size: 16,
+                            color:
+                                theme.colorScheme.onSurface.withOpacity(0.7)),
+                        const SizedBox(width: 6),
+                        Text(
+                          langVM.translate('occupancy_rate'),
+                          style: theme.textTheme.bodySmall,
                         ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '%${(market.occupancy * 100).toInt()}',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: _getOccupancyColor(
-                            market.occupancy, theme.colorScheme),
-                      ),
-                    ),
-                  ],
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: LinearProgressIndicator(
+                              value: value,
+                              backgroundColor:
+                                  theme.dividerColor.withOpacity(0.1),
+                              color: _getOccupancyColor(
+                                  dynamicOccupancy, theme.colorScheme),
+                              minHeight: 6,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '%${(value * 100).toInt()}',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: _getOccupancyColor(
+                                dynamicOccupancy, theme.colorScheme),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ],
 
@@ -213,7 +258,7 @@ class MarketCard extends StatelessWidget {
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: isOpenToday
+                      color: isOpenNow
                           ? Colors.green.withOpacity(0.1)
                           : Colors.red.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(20),
@@ -221,21 +266,27 @@ class MarketCard extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
-                          isOpenToday
-                              ? Icons.check_circle
-                              : Icons.access_time_filled,
-                          size: 14,
-                          color: isOpenToday ? Colors.green : Colors.red,
-                        ),
+                        isOpenNow
+                            ? const SvgIcon(
+                                iconPath: AppIcons.check,
+                                size: 14,
+                                color: Colors.green,
+                              )
+                            : SvgIcon(
+                                iconPath: AppIcons.clock,
+                                size: 14,
+                                color: Colors.red,
+                              ),
                         const SizedBox(width: 6),
                         Text(
-                          isOpenToday
-                              ? langVM.translate('market_open_today')
-                              : langVM.translate('market_closed_today'),
+                          isBeforeOpening
+                              ? "05.00'te kurulacak"
+                              : (isOpenNow
+                                  ? langVM.translate('market_open_today')
+                                  : langVM.translate('market_closed_today')),
                           style: TextStyle(
-                            color: isOpenToday ? Colors.green : Colors.red,
-                            fontSize: 12,
+                            color: isOpenNow ? Colors.green : Colors.red,
+                            fontSize: isBeforeOpening ? 9 : 12,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -258,7 +309,7 @@ class MarketCard extends StatelessWidget {
                     child: Text(
                       '${(market.distanceInMeters / 1000).toStringAsFixed(1)} km',
                       style: theme.textTheme.bodySmall?.copyWith(
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w300,
                       ),
                     ),
                   ),

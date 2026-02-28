@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "943095534116-n4b07vvlec8f0q0vp2aloq302pc15vrg.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.ahmed.pazaryeri",
+            "certificate_hash": "5da4f0903dcda86f20a66bca0a7752da8f0a3857"
+          }
+        },
+        {
           "client_id": "943095534116-q31pjvt5qlltc90ebnnc760jhlv59e1h.apps.googleusercontent.com",
           "client_type": 3
         }

@@ -58,7 +58,7 @@ class _MarketSellersScreenState extends State<MarketSellersScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(
-                        Icons.store_mall_directory_outlined,
+                        Icons.storefront,
                         size: 64,
                         color: Theme.of(context)
                             .colorScheme

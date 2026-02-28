@@ -1042,7 +1042,6 @@ class MockMarketRepository implements MarketRepository {
         description: m.description,
         address: m.address,
         distanceInMeters: dist,
-        products: m.products,
       );
     }).toList();
 
@@ -1090,7 +1089,6 @@ class MockMarketRepository implements MarketRepository {
         city: city,
       ),
       distanceInMeters: 0,
-      products: [],
       openDays: openDays,
     );
   }
@@ -1209,7 +1207,6 @@ class FirestoreMarketRepository implements MarketRepository {
       description: data['description'] ?? '',
       address: address,
       distanceInMeters: dist,
-      products: List<String>.from(data['products'] ?? []),
       openDays: List<String>.from(data['openDays'] ?? []),
     );
   }
@@ -1250,10 +1247,6 @@ class JsonMarketRepository implements MarketRepository {
       final neighborhood = e['neighborhood'] as String? ?? '';
       final district = e['district'] as String? ?? '';
       final city = e['city'] as String? ?? '';
-      final products = (e['products'] as List<dynamic>?)
-              ?.map((p) => p.toString())
-              .toList() ??
-          [];
       final openDays = (e['openDays'] as List<dynamic>?)
               ?.map((d) => d.toString())
               .toList() ??
@@ -1275,7 +1268,6 @@ class JsonMarketRepository implements MarketRepository {
         description: description,
         address: address,
         distanceInMeters: 0, // Distance not calculated here
-        products: products,
         openDays: openDays,
       );
     }).toList();
@@ -1300,10 +1292,6 @@ class JsonMarketRepository implements MarketRepository {
         final neighborhood = e['neighborhood'] as String? ?? '';
         final district = e['district'] as String? ?? '';
         final city = e['city'] as String? ?? '';
-        final products = (e['products'] as List<dynamic>?)
-                ?.map((p) => p.toString())
-                .toList() ??
-            [];
         final openDays = (e['openDays'] as List<dynamic>?)
                 ?.map((d) => d.toString())
                 .toList() ??
@@ -1327,7 +1315,6 @@ class JsonMarketRepository implements MarketRepository {
           description: description,
           address: address,
           distanceInMeters: dist,
-          products: products,
           openDays: openDays,
         );
       }).toList();
@@ -1403,7 +1390,6 @@ class JsonMarketRepository implements MarketRepository {
                 lat,
                 lon,
               ),
-              products: ['meyve', 'sebze'],
               openDays: ['Cumartesi'],
             ),
           );

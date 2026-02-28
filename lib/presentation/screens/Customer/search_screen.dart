@@ -1,12 +1,17 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 import '../../../data/models/market.dart';
 import '../../viewmodels/home_viewmodel.dart';
 import '../../viewmodels/language_viewmodel.dart';
 import '../../widgets/market_card.dart';
 import 'market_detail_screen.dart';
 import '../../viewmodels/auth_service.dart';
-import '../../widgets/custom_app_bar.dart';
+import 'customer_seller_detail_screen.dart';
+import '../../viewmodels/seller_viewmodel.dart';
+import '../../../core/constants/app_icons.dart';
+import '../../../presentation/widgets/svg_icon.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -21,11 +26,33 @@ class _SearchScreenState extends State<SearchScreen> {
   bool _filterOpenToday = true;
   bool _filterWeekend = false;
   List<String> _recentSearches = [];
+  int _searchType = 0; // 0: Pazar, 1: Satıcı
+  List<Map<String, dynamic>> _sellerResults = [];
+  bool _isSearchingSellers = false;
+  List<Market> _allMarkets = [];
+  late stt.SpeechToText _speech;
+  bool _isListening = false;
 
   @override
   void initState() {
     super.initState();
+    _speech = stt.SpeechToText();
     _loadRecentSearches();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadMarkets());
+  }
+
+  Future<void> _loadMarkets() async {
+    try {
+      final sellerVM = Provider.of<SellerViewModel>(context, listen: false);
+      final markets = await sellerVM.getMarkets();
+      if (mounted) {
+        setState(() {
+          _allMarkets = markets;
+        });
+      }
+    } catch (e) {
+      debugPrint('Pazarlar yüklenemedi: $e');
+    }
   }
 
   Future<void> _loadRecentSearches() async {
@@ -59,6 +86,60 @@ class _SearchScreenState extends State<SearchScreen> {
     super.dispose();
   }
 
+  Future<void> _performSellerSearch(String query) async {
+    setState(() => _isSearchingSellers = true);
+    final results = await AuthService.instance.searchAllSellers(query);
+
+    if (results.isNotEmpty) {
+      await Future.wait(results.map((seller) async {
+        try {
+          final stats = await AuthService.instance.getSellerStats(seller['id']);
+          seller['rating'] = stats['averageRating'];
+          seller['reviewCount'] = stats['reviewCount'];
+        } catch (e) {
+          debugPrint('Puan çekilemedi: $e');
+        }
+      }));
+    }
+
+    if (mounted) {
+      setState(() {
+        _sellerResults = results;
+        _isSearchingSellers = false;
+      });
+    }
+  }
+
+  void _listen() async {
+    if (!_isListening) {
+      bool available = await _speech.initialize(
+        onStatus: (val) {
+          if (val == 'done' || val == 'notListening') {
+            if (mounted) setState(() => _isListening = false);
+            if (_query.isNotEmpty && _searchType == 1) {
+              _performSellerSearch(_query);
+            }
+          }
+        },
+        onError: (val) => setState(() => _isListening = false),
+      );
+      if (available) {
+        setState(() => _isListening = true);
+        _speech.listen(
+          onResult: (val) {
+            setState(() {
+              _searchController.text = val.recognizedWords;
+              _query = val.recognizedWords;
+            });
+          },
+        );
+      }
+    } else {
+      setState(() => _isListening = false);
+      _speech.stop();
+    }
+  }
+
   // Arama mantığı
   List<Market> _filterMarkets(List<Market> allMarkets) {
     if (_query.isEmpty && !_filterOpenToday && !_filterWeekend) {
@@ -88,13 +169,8 @@ class _SearchScreenState extends State<SearchScreen> {
             );
         final neighborhoodMatch =
             market.address.neighborhood.toLowerCase().contains(lowerQuery);
-        // Ürünlerde arama
-        final productMatch = market.products.any(
-          (p) => p.toLowerCase().contains(lowerQuery),
-        );
 
-        matchesQuery =
-            nameMatch || districtMatch || neighborhoodMatch || productMatch;
+        matchesQuery = nameMatch || districtMatch || neighborhoodMatch;
       }
 
       // 2. "Bugün Açık" Filtresi
@@ -114,6 +190,33 @@ class _SearchScreenState extends State<SearchScreen> {
     }).toList();
   }
 
+  // Saate göre dinamik doluluk oranı hesapla
+  double _calculateDynamicOccupancy(String marketId) {
+    final now = DateTime.now();
+    final hour = now.hour;
+
+    // Pazarın ID'sine göre tutarlı bir rastgelelik oluştur
+    final random = Random(marketId.hashCode + now.day);
+    final baseRandom = random.nextDouble() * 0.2; // %0-20 arası rastgelelik
+
+    // Saatlik baz doluluk oranları (0.0 - 1.0 arası)
+    double baseOccupancy = 0.1;
+
+    if (hour >= 8 && hour < 11)
+      baseOccupancy = 0.3; // Sabah sakin
+    else if (hour >= 11 && hour < 14)
+      baseOccupancy = 0.7; // Öğle yoğun
+    else if (hour >= 14 && hour < 17)
+      baseOccupancy = 0.5; // Öğleden sonra normal
+    else if (hour >= 17 && hour < 20)
+      baseOccupancy = 0.8; // Akşam iş çıkışı yoğun
+    else if (hour >= 20) baseOccupancy = 0.2; // Kapanışa doğru sakin
+
+    // Rastgelelik ekle ve 0.0-1.0 arasına sıkıştır
+    double finalOccupancy = (baseOccupancy + baseRandom).clamp(0.0, 1.0);
+    return finalOccupancy;
+  }
+
   @override
   Widget build(BuildContext context) {
     final homeVM = context.watch<HomeViewModel>();
@@ -126,206 +229,443 @@ class _SearchScreenState extends State<SearchScreen> {
     final sourceList = homeVM.nearbyMarkets;
     final results = _filterMarkets(sourceList);
 
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: CustomAppBar(title: Text(langVM.translate('search_tab'))),
-      body: Padding(
-        padding: const EdgeInsets.only(top: 110),
-        child: Column(
-          children: [
-            // Arama Çubuğu
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: TextField(
-                controller: _searchController,
-                onChanged: (val) {
-                  setState(() {
-                    _query = val;
-                  });
-                },
-                onSubmitted: (val) {
-                  _addToHistory(val);
-                },
-                decoration: InputDecoration(
-                  labelText: langVM.translate('search_placeholder'),
-                  prefixIcon: const Icon(Icons.search, color: Colors.white),
-                  suffixIcon: _query.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear),
-                          onPressed: () {
-                            _searchController.clear();
-                            setState(() {
-                              _query = '';
-                            });
-                          },
-                        )
-                      : null,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30),
-                    borderSide:
-                        BorderSide(color: Colors.white.withOpacity(0.3)),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30),
-                    borderSide:
-                        BorderSide(color: Colors.white.withOpacity(0.3)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30),
-                    borderSide: BorderSide(
-                        color: Colors.white.withOpacity(0.5), width: 2),
+    return Padding(
+      padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top + 16),
+      child: Column(
+        children: [
+          // Arama Çubuğu
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: TextField(
+              controller: _searchController,
+              onChanged: (val) {
+                setState(() {
+                  _query = val;
+                });
+                if (_searchType == 1) {
+                  _performSellerSearch(val);
+                }
+              },
+              onSubmitted: (val) {
+                _addToHistory(val);
+              },
+              decoration: InputDecoration(
+                labelText: langVM.translate('search_placeholder'),
+                prefixIcon: Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: SvgIcon(iconPath: AppIcons.search, color: Colors.grey),
+                ),
+                suffixIcon: _query.isNotEmpty
+                    ? IconButton(
+                        icon: SvgIcon(
+                            iconPath: AppIcons.close,
+                            size: 20,
+                            color: Theme.of(context).hintColor),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() {
+                            _query = '';
+                          });
+                        },
+                      )
+                    : IconButton(
+                        icon: Icon(_isListening ? Icons.mic : Icons.mic_none,
+                            color: _isListening
+                                ? Colors.redAccent
+                                : Theme.of(context).hintColor),
+                        onPressed: _listen,
+                      ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.grey.withOpacity(0.3)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.grey.withOpacity(0.3)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                      color: Colors.grey.withOpacity(0.8), width: 1.5),
+                ),
+                filled: true,
+                fillColor: Theme.of(context).cardColor,
+              ),
+            ),
+          ),
+
+          // Filtre Chip'leri
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                FilterChip(
+                  label: Text(langVM.translate('filter_open_today')),
+                  selected: _filterOpenToday,
+                  onSelected: (val) => setState(() => _filterOpenToday = val),
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  surfaceTintColor: Colors.transparent,
+                  shape: const StadiumBorder(),
+                  side: BorderSide(color: Colors.white.withOpacity(0.3)),
+                  labelStyle: const TextStyle(color: Colors.white),
+                  selectedColor: Theme.of(context).colorScheme.primary,
+                  checkmarkColor: Colors.white,
+                ),
+                const SizedBox(width: 8),
+                FilterChip(
+                  label: Text(langVM.translate('filter_weekend')),
+                  selected: _filterWeekend,
+                  onSelected: (val) => setState(() => _filterWeekend = val),
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  surfaceTintColor: Colors.transparent,
+                  shape: const StadiumBorder(),
+                  side: BorderSide(color: Colors.white.withOpacity(0.3)),
+                  labelStyle: const TextStyle(color: Colors.white),
+                  selectedColor: Theme.of(context).colorScheme.primary,
+                  checkmarkColor: Colors.white,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          // Kategori Sekmeleri (Pazar / Satıcı)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => _searchType = 0),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        color: _searchType == 0
+                            ? Theme.of(context).colorScheme.primary
+                            : Theme.of(context).cardColor,
+                        borderRadius: const BorderRadius.horizontal(
+                            left: Radius.circular(8)),
+                        border: Border.all(color: Colors.grey.withOpacity(0.3)),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        langVM.translate('market_tab'),
+                        style: TextStyle(
+                          color: _searchType == 0 ? Colors.white : Colors.grey,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
-
-            // Filtre Chip'leri
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  FilterChip(
-                    label: Text(langVM.translate('filter_open_today')),
-                    selected: _filterOpenToday,
-                    onSelected: (val) => setState(() => _filterOpenToday = val),
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    surfaceTintColor: Colors.transparent,
-                    shape: const StadiumBorder(),
-                    side: BorderSide(color: Colors.white.withOpacity(0.3)),
-                    labelStyle: const TextStyle(color: Colors.white),
-                    selectedColor: Theme.of(context).colorScheme.primary,
-                    checkmarkColor: Colors.white,
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      setState(() => _searchType = 1);
+                      _performSellerSearch(_query);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        color: _searchType == 1
+                            ? Theme.of(context).colorScheme.primary
+                            : Theme.of(context).cardColor,
+                        borderRadius: const BorderRadius.horizontal(
+                            right: Radius.circular(8)),
+                        border: Border.all(color: Colors.grey.withOpacity(0.3)),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        langVM.translate('seller_tab'),
+                        style: TextStyle(
+                          color: _searchType == 1 ? Colors.white : Colors.grey,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
                   ),
-                  const SizedBox(width: 8),
-                  FilterChip(
-                    label: Text(langVM.translate('filter_weekend')),
-                    selected: _filterWeekend,
-                    onSelected: (val) => setState(() => _filterWeekend = val),
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    surfaceTintColor: Colors.transparent,
-                    shape: const StadiumBorder(),
-                    side: BorderSide(color: Colors.white.withOpacity(0.3)),
-                    labelStyle: const TextStyle(color: Colors.white),
-                    selectedColor: Theme.of(context).colorScheme.primary,
-                    checkmarkColor: Colors.white,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          // Sonuç Listesi
+          Expanded(
+            child: _searchType == 0
+                ? _buildMarketList(results, langVM)
+                : _buildSellerList(langVM),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMarketList(List<Market> results, LanguageViewModel langVM) {
+    if (_query.isEmpty && !_filterOpenToday && !_filterWeekend) {
+      return Center(
+        child: _recentSearches.isEmpty
+            ? Text(
+                langVM.translate('search_initial_message'),
+                style: TextStyle(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.6)),
+              )
+            : _buildRecentSearchesList(langVM),
+      );
+    }
+    return results.isEmpty
+        ? Center(child: Text(langVM.translate('no_results')))
+        : ListView.separated(
+            padding: const EdgeInsets.all(16),
+            itemCount: results.length,
+            separatorBuilder: (context, index) => const SizedBox(height: 12),
+            itemBuilder: (context, index) {
+              final market = results[index];
+              final tag = '${market.id}_search';
+
+              // Gerçek doluluk oranı kullanımı
+              final occupancy = _calculateDynamicOccupancy(market.id);
+              Color statusColor;
+              Color contentColor = Colors.white;
+              IconData statusIcon;
+
+              if (occupancy <= 0.25) {
+                statusColor = Colors.white;
+                contentColor = Colors.black;
+                statusIcon = Icons.person_outline;
+              } else if (occupancy <= 0.50) {
+                statusColor = Colors.yellow;
+                contentColor = Colors.black;
+                statusIcon = Icons.person;
+              } else if (occupancy <= 0.75) {
+                statusColor = Colors.orange;
+                statusIcon = Icons.people_outline;
+              } else {
+                statusColor = Colors.red;
+                statusIcon = Icons.groups;
+              }
+
+              final statusText = '%${(occupancy * 100).toInt()}';
+
+              return Stack(
+                children: [
+                  MarketCard(
+                    market: market,
+                    heroTag: tag,
+                    isHorizontal: false,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              MarketDetailScreen(market: market, heroTag: tag),
+                        ),
+                      );
+                    },
+                  ),
+                  Positioned(
+                    top: 16,
+                    right: 16,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: statusColor.withValues(alpha: 0.9),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.2),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(statusIcon, size: 14, color: contentColor),
+                          const SizedBox(width: 4),
+                          Text(
+                            statusText,
+                            style: TextStyle(
+                              color: contentColor,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ],
+              );
+            },
+          );
+  }
+
+  Widget _buildSellerList(LanguageViewModel langVM) {
+    if (_isSearchingSellers) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_sellerResults.isEmpty) {
+      return Center(child: Text(langVM.translate('no_results')));
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: _sellerResults.length,
+      itemBuilder: (context, index) {
+        final seller = _sellerResults[index];
+        final displayName = seller['stallName'] ??
+            '${seller['firstName'] ?? ''} ${seller['lastName'] ?? ''}'.trim();
+        final description = seller['stallDescription'] ?? '';
+        final rating = (seller['rating'] as num?)?.toDouble() ?? 0.0;
+        final reviewCount = (seller['reviewCount'] as num?)?.toInt() ?? 0;
+
+        // Pazar ismini bul
+        String marketName = '';
+        final marketId = seller['sellerMarketId'];
+        if (marketId != null && _allMarkets.isNotEmpty) {
+          try {
+            final market = _allMarkets.firstWhere((m) => m.id == marketId);
+            marketName = market.name;
+          } catch (_) {}
+        }
+
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            color: isDark ? Theme.of(context).cardColor : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isDark
+                  ? Colors.white.withOpacity(0.1)
+                  : Colors.grey.withOpacity(0.1),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.2),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
               ),
-            ),
-            const SizedBox(height: 8),
-
-            // Sonuç Listesi
-            Expanded(
-              child: (_query.isEmpty && !_filterOpenToday && !_filterWeekend)
-                  ? Center(
-                      child: _recentSearches.isEmpty
-                          ? Text(
-                              langVM.translate('search_initial_message'),
-                              style: TextStyle(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurface
-                                      .withValues(alpha: 0.6)),
-                            )
-                          : _buildRecentSearchesList(langVM),
-                    )
-                  : results.isEmpty
-                      ? Center(child: Text(langVM.translate('no_results')))
-                      : ListView.separated(
-                          padding: const EdgeInsets.all(16),
-                          itemCount: results.length,
-                          separatorBuilder: (context, index) =>
-                              const SizedBox(height: 12),
-                          itemBuilder: (context, index) {
-                            final market = results[index];
-                            final tag = '${market.id}_search';
-
-                            // Gerçek doluluk oranı kullanımı
-                            final occupancy = market.occupancy;
-                            Color statusColor;
-                            Color contentColor = Colors.white;
-                            IconData statusIcon;
-
-                            if (occupancy <= 0.25) {
-                              statusColor = Colors.white;
-                              contentColor = Colors.black;
-                              statusIcon = Icons.person_outline;
-                            } else if (occupancy <= 0.50) {
-                              statusColor = Colors.yellow;
-                              contentColor = Colors.black;
-                              statusIcon = Icons.person;
-                            } else if (occupancy <= 0.75) {
-                              statusColor = Colors.orange;
-                              statusIcon = Icons.people_outline;
-                            } else {
-                              statusColor = Colors.red;
-                              statusIcon = Icons.groups;
-                            }
-
-                            final statusText = '%${(occupancy * 100).toInt()}';
-
-                            return Stack(
-                              children: [
-                                MarketCard(
-                                  market: market,
-                                  heroTag: tag,
-                                  isHorizontal: false,
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            MarketDetailScreen(
-                                                market: market, heroTag: tag),
-                                      ),
-                                    );
-                                  },
-                                ),
-                                Positioned(
-                                  top: 16,
-                                  right: 16,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 8, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: statusColor.withValues(alpha: 0.9),
-                                      borderRadius: BorderRadius.circular(12),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black
-                                              .withValues(alpha: 0.2),
-                                          blurRadius: 4,
-                                          offset: const Offset(0, 2),
-                                        ),
-                                      ],
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(statusIcon,
-                                            size: 14, color: contentColor),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          statusText,
-                                          style: TextStyle(
-                                            color: contentColor,
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            );
-                          },
+            ],
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: ListTile(
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              leading: CircleAvatar(
+                radius: 28,
+                backgroundColor:
+                    Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                backgroundImage: (seller['profilePicture'] != null &&
+                        seller['profilePicture'].isNotEmpty)
+                    ? NetworkImage(seller['profilePicture'])
+                    : null,
+                child: (seller['profilePicture'] == null ||
+                        seller['profilePicture'].isEmpty)
+                    ? Icon(
+                        Icons.storefront,
+                        color: Theme.of(context).colorScheme.primary,
+                        size: 28,
+                      )
+                    : null,
+              ),
+              title: Text(displayName,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 16)),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (description.isNotEmpty)
+                    Text(description,
+                        maxLines: 1, overflow: TextOverflow.ellipsis),
+                  if (rating > 0) ...[
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        const SvgIcon(
+                            iconPath: AppIcons.star,
+                            size: 14,
+                            color: Colors.amber),
+                        const SizedBox(width: 4),
+                        Text(
+                          rating.toStringAsFixed(1),
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 13),
                         ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '($reviewCount)',
+                          style: TextStyle(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withOpacity(0.6),
+                              fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ],
+                  if (marketName.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        SvgIcon(
+                            iconPath: AppIcons.market,
+                            size: 14,
+                            color: Theme.of(context).colorScheme.secondary),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            marketName,
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.secondary,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => CustomerSellerDetailScreen(
+                      sellerId: seller['id'],
+                      sellerName: displayName,
+                      sellerDescription: description,
+                      stallLocation: seller['stallLocation'] ?? '',
+                      stallHours: seller['stallHours'] ?? '',
+                      instagramLink: seller['instagramLink'],
+                      facebookLink: seller['facebookLink'],
+                      profilePicture: seller['profilePicture'],
+                      marketName: marketName.isNotEmpty ? marketName : null,
+                    ),
+                  ),
+                );
+              },
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -358,10 +698,12 @@ class _SearchScreenState extends State<SearchScreen> {
             itemBuilder: (context, index) {
               final term = _recentSearches[index];
               return ListTile(
-                leading: const Icon(Icons.history),
+                leading: const SvgIcon(
+                    iconPath: AppIcons.clock, size: 20, color: Colors.grey),
                 title: Text(term),
                 trailing: IconButton(
-                  icon: const Icon(Icons.close, size: 20),
+                  icon: const SvgIcon(
+                      iconPath: AppIcons.close, size: 20, color: Colors.grey),
                   onPressed: () => _removeFromHistory(term),
                 ),
                 onTap: () {

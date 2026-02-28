@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'custom_bottom_sheets.dart';
 
 class DialogService {
   /// Genel amaçlı durum diyaloğu gösterir.
@@ -12,35 +13,14 @@ class DialogService {
     VoidCallback? onDismiss,
     Duration duration = const Duration(seconds: 2),
   }) async {
-    // Dialogu göster
-    showDialog(
+    await CustomBottomSheets.showStatus(
       context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: color, size: 72),
-            const SizedBox(height: 16),
-            Text(
-              message,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
+      message: message,
+      icon: icon,
+      color: color,
+      onDismiss: onDismiss,
+      duration: duration,
     );
-
-    // Belirtilen süre kadar bekle
-    await Future.delayed(duration);
-
-    // Context hala geçerliyse dialogu kapat ve callback'i çalıştır
-    if (context.mounted) {
-      Navigator.of(context).pop(); // Dialogu kapat
-      onDismiss?.call();
-    }
   }
 
   /// Başarılı işlem sonrası yeşil tikli onay diyaloğu gösterir.
@@ -101,40 +81,14 @@ class DialogService {
     Color confirmColor = Colors.red,
     IconData icon = Icons.warning_amber_rounded,
   }) async {
-    final result = await showDialog<bool>(
+    final result = await CustomBottomSheets.showConfirmation(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: confirmColor.withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: confirmColor, size: 24),
-            ),
-            const SizedBox(width: 12),
-            Expanded(child: Text(title)),
-          ],
-        ),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: Text(cancelText),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: confirmColor,
-              foregroundColor: Colors.white,
-            ),
-            child: Text(confirmText),
-          ),
-        ],
-      ),
+      title: title,
+      message: message,
+      confirmText: confirmText,
+      cancelText: cancelText,
+      icon: icon,
+      confirmColor: confirmColor,
     );
     return result ?? false;
   }

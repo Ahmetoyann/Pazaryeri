@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 import '../../viewmodels/language_viewmodel.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/success_dialog.dart';
+import '../../widgets/custom_bottom_sheets.dart';
+import '../../../core/constants/app_icons.dart';
+import '../../../presentation/widgets/svg_icon.dart';
 
 class SellerEditProfileScreen extends StatefulWidget {
   const SellerEditProfileScreen({super.key});
@@ -100,89 +104,94 @@ class _SellerEditProfileScreenState extends State<SellerEditProfileScreen> {
     final langVM = Provider.of<LanguageViewModel>(context, listen: false);
     final theme = Theme.of(context);
 
-    showModalBottomSheet(
+    CustomBottomSheets.showContent(
       context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        decoration: BoxDecoration(
-          color: theme.cardColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(2),
+      title: langVM.translate('forgot_password_title'),
+      icon: Icons.lock_reset,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            langVM.translate('enter_email_message'),
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.grey),
+          ),
+          const SizedBox(height: 32),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    foregroundColor: theme.colorScheme.primary,
+                    side: BorderSide(
+                        color: theme.colorScheme.primary.withOpacity(0.5)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(langVM.translate('cancel')),
+                ),
               ),
-            ),
-            const SizedBox(height: 24),
-            Icon(Icons.lock_reset, size: 48, color: theme.colorScheme.primary),
-            const SizedBox(height: 16),
-            Text(
-              langVM.translate('forgot_password_title'),
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              langVM.translate('enter_email_message'),
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.grey),
-            ),
-            const SizedBox(height: 32),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _sendPasswordResetEmail();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: theme.colorScheme.primary.withOpacity(0.2),
+                    foregroundColor: theme.colorScheme.primary,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(
+                          color: theme.colorScheme.primary.withOpacity(0.5)),
                     ),
-                    child: Text(langVM.translate('cancel')),
                   ),
+                  child: Text(langVM.translate('send_code')),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      _sendPasswordResetEmail();
-                    },
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: Text(langVM.translate('send_code')),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
 
-  InputDecoration _buildInputDecoration(String label, IconData icon) {
+  InputDecoration _buildInputDecoration(String label, String iconPath) {
+    final theme = Theme.of(context);
     return InputDecoration(
       labelText: label,
-      prefixIcon: Icon(icon, color: Theme.of(context).colorScheme.secondary),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      prefixIcon: Padding(
+          padding: const EdgeInsets.all(12),
+          child: SvgIcon(
+              iconPath: iconPath,
+              color: theme.colorScheme.secondary,
+              size: 28)),
+      filled: true,
+      fillColor: theme.cardColor,
+      border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide:
+              BorderSide(color: theme.colorScheme.primary.withOpacity(0.5))),
+      enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide:
+              BorderSide(color: theme.colorScheme.primary.withOpacity(0.5))),
+      focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: theme.colorScheme.primary, width: 2)),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final langVM = Provider.of<LanguageViewModel>(context);
+    final theme = Theme.of(context);
 
     return Scaffold(
       appBar: CustomAppBar(
@@ -200,7 +209,7 @@ class _SellerEditProfileScreenState extends State<SellerEditProfileScreen> {
                 langVM.translate('personal_information'),
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
-                      color: Theme.of(context).primaryColor,
+                      color: theme.colorScheme.primary,
                     ),
               ),
               const SizedBox(height: 16),
@@ -210,7 +219,7 @@ class _SellerEditProfileScreenState extends State<SellerEditProfileScreen> {
                     child: TextFormField(
                       controller: _firstNameController,
                       decoration: _buildInputDecoration(
-                          langVM.translate('first_name'), Icons.person),
+                          langVM.translate('first_name'), AppIcons.user),
                       validator: (v) => v!.isEmpty
                           ? langVM.translate('error_required')
                           : null,
@@ -221,7 +230,7 @@ class _SellerEditProfileScreenState extends State<SellerEditProfileScreen> {
                     child: TextFormField(
                       controller: _lastNameController,
                       decoration: _buildInputDecoration(
-                          langVM.translate('last_name'), Icons.person_outline),
+                          langVM.translate('last_name'), AppIcons.user),
                       validator: (v) => v!.isEmpty
                           ? langVM.translate('error_required')
                           : null,
@@ -233,8 +242,10 @@ class _SellerEditProfileScreenState extends State<SellerEditProfileScreen> {
               TextFormField(
                 controller: _phoneController,
                 keyboardType: TextInputType.phone,
+                inputFormatters: [_PhoneInputFormatter()],
                 decoration: _buildInputDecoration(
-                    langVM.translate('phone_number'), Icons.phone),
+                        langVM.translate('phone_number'), AppIcons.phone)
+                    .copyWith(helperText: '5** *** ** **'),
                 validator: (v) =>
                     v!.isEmpty ? langVM.translate('error_required') : null,
               ),
@@ -244,10 +255,10 @@ class _SellerEditProfileScreenState extends State<SellerEditProfileScreen> {
                 keyboardType: TextInputType.emailAddress,
                 readOnly: true, // E-posta değişimi genellikle daha karmaşıktır
                 decoration: _buildInputDecoration(
-                        langVM.translate('email'), Icons.email)
+                        langVM.translate('email'), AppIcons.email)
                     .copyWith(
                   filled: true,
-                  fillColor: Theme.of(context).disabledColor.withOpacity(0.1),
+                  fillColor: theme.disabledColor.withOpacity(0.1),
                 ),
               ),
 
@@ -256,13 +267,16 @@ class _SellerEditProfileScreenState extends State<SellerEditProfileScreen> {
               // --- Şifre Değiştirme Butonu ---
               OutlinedButton.icon(
                 onPressed: _showResetPasswordBottomSheet,
-                icon: Icon(Icons.lock_reset,
-                    color: Theme.of(context).colorScheme.primary),
+                icon: SvgIcon(
+                    iconPath: AppIcons.lock,
+                    color: theme.colorScheme.primary,
+                    size: 28),
                 label: Text(langVM.translate('forgot_password_title')),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  side:
-                      BorderSide(color: Theme.of(context).colorScheme.primary),
+                  foregroundColor: theme.colorScheme.primary,
+                  side: BorderSide(
+                      color: theme.colorScheme.primary.withOpacity(0.5)),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -275,8 +289,13 @@ class _SellerEditProfileScreenState extends State<SellerEditProfileScreen> {
                 onPressed: _isLoading ? null : _saveProfile,
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
+                  backgroundColor: theme.colorScheme.primary.withOpacity(0.2),
+                  foregroundColor: theme.colorScheme.primary,
+                  elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(
+                        color: theme.colorScheme.primary.withOpacity(0.5)),
                   ),
                 ),
                 child: _isLoading
@@ -291,6 +310,78 @@ class _SellerEditProfileScreenState extends State<SellerEditProfileScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Telefon numarası formatlayıcı: (5XX) XXX XX XX
+class _PhoneInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    // Sadece rakamları al
+    final text = newValue.text.replaceAll(RegExp(r'\D'), '');
+
+    // Tamamen silindiyse boş döndür
+    if (text.isEmpty) {
+      return newValue.copyWith(text: '');
+    }
+
+    // Başta 0 varsa temizle
+    final cleanText = text.startsWith('0') ? text.substring(1) : text;
+
+    // Temizlendikten sonra boşsa (sadece 0 girildiyse) boş döndür
+    if (cleanText.isEmpty) {
+      return newValue.copyWith(text: '');
+    }
+
+    // Katı Kural: İlk rakam 5 olmak zorunda
+    if (!cleanText.startsWith('5')) {
+      return oldValue;
+    }
+
+    // Maksimum 10 hane
+    if (cleanText.length > 10) return oldValue;
+
+    final buffer = StringBuffer();
+
+    // (5XX)
+    buffer.write('(');
+    if (cleanText.length >= 3) {
+      buffer.write(cleanText.substring(0, 3));
+      buffer.write(') ');
+    } else {
+      buffer.write(cleanText);
+    }
+
+    // XXX
+    if (cleanText.length > 3) {
+      if (cleanText.length >= 6) {
+        buffer.write(cleanText.substring(3, 6));
+        buffer.write(' ');
+      } else {
+        buffer.write(cleanText.substring(3));
+      }
+    }
+
+    // XX
+    if (cleanText.length > 6) {
+      if (cleanText.length >= 8) {
+        buffer.write(cleanText.substring(6, 8));
+        buffer.write(' ');
+      } else {
+        buffer.write(cleanText.substring(6));
+      }
+    }
+
+    // XX
+    if (cleanText.length > 8) {
+      buffer.write(cleanText.substring(8));
+    }
+
+    return TextEditingValue(
+      text: buffer.toString(),
+      selection: TextSelection.collapsed(offset: buffer.length),
     );
   }
 }

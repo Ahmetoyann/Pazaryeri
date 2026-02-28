@@ -1,35 +1,51 @@
 import 'package:flutter/material.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:provider/provider.dart';
 import '../../viewmodels/language_viewmodel.dart';
 import '../../viewmodels/home_viewmodel.dart';
 import '../../viewmodels/auth_service.dart';
-import '../../widgets/custom_app_bar.dart';
 import '../../../data/models/market.dart';
+import 'my_reports_screen.dart';
 import 'report_form_screen.dart';
+import '../../widgets/custom_bottom_sheets.dart';
+import '../../../core/constants/app_icons.dart';
+import '../../widgets/svg_icon.dart';
+import '../../widgets/custom_text_field.dart';
+import '../../widgets/loading_overlay.dart';
+import '../../widgets/custom_app_bar.dart';
 
 class ReportListScreen extends StatelessWidget {
   const ReportListScreen({super.key});
 
   void _showMarketSelection(BuildContext context, {required bool isForSeller}) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => _MarketSelectionScreen(isForSeller: isForSeller),
-      ),
-    );
+    if (isForSeller) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const _SellerReportSelectionScreen(),
+        ),
+      );
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const _MarketSelectionScreen(),
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final langVM = context.watch<LanguageViewModel>();
 
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: CustomAppBar(title: Text(langVM.translate('report_tab'))),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
+    return SingleChildScrollView(
+      padding: EdgeInsets.fromLTRB(
+          16, MediaQuery.of(context).padding.top + 32, 16, 16),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Row(
             children: [
               Expanded(
                 child: _buildOptionCard(
@@ -53,7 +69,26 @@ class ReportListScreen extends StatelessWidget {
               ),
             ],
           ),
-        ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: _buildOptionCard(
+              context,
+              title: langVM.translate('report_history'),
+              icon: Icons.history,
+              color: Colors.purple,
+              height: 150,
+              iconSize: 36,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const MyReportsScreen()),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -64,57 +99,78 @@ class ReportListScreen extends StatelessWidget {
     required IconData icon,
     required Color color,
     required VoidCallback onTap,
+    double height = 200,
+    double iconSize = 48,
   }) {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Colors.white.withOpacity(0.3)),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      height: height,
+      decoration: BoxDecoration(
+        color: isDark ? Theme.of(context).cardColor : Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withOpacity(0.1)
+              : Colors.grey.withOpacity(0.1),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          height: 200,
-          padding: const EdgeInsets.all(12.0),
-          child: Stack(
-            children: [
-              Positioned(
-                top: 4,
-                right: 4,
-                child: Icon(
-                  Icons.arrow_outward,
-                  color: Colors.white.withOpacity(0.5),
-                  size: 24,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(24),
+          child: Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: Stack(
+              children: [
+                Positioned(
+                  top: 4,
+                  right: 4,
+                  child: Icon(
+                    Icons.arrow_outward,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withOpacity(0.2),
+                    size: 24,
+                  ),
                 ),
-              ),
-              Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: color.withOpacity(0.1),
-                        shape: BoxShape.circle,
+                Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: color.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(icon, size: iconSize, color: color),
                       ),
-                      child: Icon(icon, size: 48, color: color),
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      title,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                      const SizedBox(height: 20),
+                      Text(
+                        title,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -123,9 +179,7 @@ class ReportListScreen extends StatelessWidget {
 }
 
 class _MarketSelectionScreen extends StatefulWidget {
-  final bool isForSeller;
-
-  const _MarketSelectionScreen({required this.isForSeller});
+  const _MarketSelectionScreen({super.key});
 
   @override
   State<_MarketSelectionScreen> createState() => _MarketSelectionScreenState();
@@ -134,6 +188,16 @@ class _MarketSelectionScreen extends StatefulWidget {
 class _MarketSelectionScreenState extends State<_MarketSelectionScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  late stt.SpeechToText _speech;
+  bool _isListening = false;
+  String? _selectedCity;
+  String? _selectedDistrict;
+
+  @override
+  void initState() {
+    super.initState();
+    _speech = stt.SpeechToText();
+  }
 
   @override
   void dispose() {
@@ -141,24 +205,79 @@ class _MarketSelectionScreenState extends State<_MarketSelectionScreen> {
     super.dispose();
   }
 
+  void _listen() async {
+    if (!_isListening) {
+      bool available = await _speech.initialize(
+        onStatus: (val) {
+          if (val == 'done' || val == 'notListening') {
+            if (mounted) setState(() => _isListening = false);
+          }
+        },
+        onError: (val) => setState(() => _isListening = false),
+      );
+      if (available) {
+        setState(() => _isListening = true);
+        _speech.listen(
+          onResult: (val) {
+            setState(() {
+              _searchController.text = val.recognizedWords;
+              _searchQuery = val.recognizedWords;
+            });
+          },
+        );
+      }
+    } else {
+      setState(() => _isListening = false);
+      _speech.stop();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final langVM = context.watch<LanguageViewModel>();
     final homeVM = context.watch<HomeViewModel>();
 
-    final Set<Market> allMarkets = {};
-    allMarkets.addAll(homeVM.nearbyMarkets);
-    allMarkets.addAll(homeVM.provinceMarkets);
+    final nearbyMarketIds = homeVM.nearbyMarkets.map((m) => m.id).toSet();
+    final allMarkets =
+        <Market>{...homeVM.nearbyMarkets, ...homeVM.provinceMarkets}.toList();
 
-    final marketList = allMarkets.where((market) {
+    final cities = allMarkets.map((m) => m.address.city).toSet().toList()
+      ..sort();
+
+    List<String> districts = [];
+    if (_selectedCity != null) {
+      districts = allMarkets
+          .where((m) => m.address.city == _selectedCity)
+          .map((m) => m.address.district)
+          .toSet()
+          .toList()
+        ..sort();
+    }
+
+    final marketList = allMarkets.where((m) {
       final query = _searchQuery.toLowerCase();
-      return market.name.toLowerCase().contains(query) ||
-          market.address.district.toLowerCase().contains(query) ||
-          market.address.city.toLowerCase().contains(query);
+      final matchesSearch = m.name.toLowerCase().contains(query) ||
+          m.address.district.toLowerCase().contains(query) ||
+          m.address.city.toLowerCase().contains(query);
+      final matchesCity =
+          _selectedCity == null || m.address.city == _selectedCity;
+      final matchesDistrict =
+          _selectedDistrict == null || m.address.district == _selectedDistrict;
+      return matchesSearch && matchesCity && matchesDistrict;
     }).toList();
 
-    // Alfabetik sırala
-    marketList.sort((a, b) => a.name.compareTo(b.name));
+    // Sıralama: Yakındakiler en üstte, sonra alfabetik
+    marketList.sort((a, b) {
+      final isANearby = nearbyMarketIds.contains(a.id);
+      final isBNearby = nearbyMarketIds.contains(b.id);
+
+      if (isANearby && !isBNearby) return -1;
+      if (!isANearby && isBNearby) return 1;
+      if (isANearby && isBNearby) {
+        return a.distanceInMeters.compareTo(b.distanceInMeters);
+      }
+      return a.name.compareTo(b.name);
+    });
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -169,38 +288,78 @@ class _MarketSelectionScreenState extends State<_MarketSelectionScreen> {
         padding: const EdgeInsets.only(top: 110),
         child: Column(
           children: [
+            if (cities.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _buildDropdown(
+                        context,
+                        hint: langVM.translate('city'),
+                        value: _selectedCity,
+                        items: cities,
+                        onChanged: (val) {
+                          setState(() {
+                            _selectedCity = val;
+                            _selectedDistrict = null;
+                          });
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildDropdown(
+                        context,
+                        hint: 'İlçe',
+                        value: _selectedDistrict,
+                        items: districts,
+                        onChanged: (val) {
+                          setState(() {
+                            _selectedDistrict = val;
+                          });
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: TextField(
+              child: CustomTextField(
                 controller: _searchController,
                 onChanged: (value) {
                   setState(() {
                     _searchQuery = value;
                   });
                 },
-                decoration: InputDecoration(
-                  hintText: langVM.translate('search_placeholder'),
-                  hintStyle: const TextStyle(color: Colors.white),
-                  prefixIcon: const Icon(Icons.search, color: Colors.white),
-                  filled: true,
-                  fillColor: Theme.of(context).cardColor,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide:
-                        BorderSide(color: Colors.white.withOpacity(0.3)),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide:
-                        BorderSide(color: Colors.white.withOpacity(0.3)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(
-                        color: Colors.white.withOpacity(0.5), width: 2),
-                  ),
-                  contentPadding: EdgeInsets.zero,
+                hintText: langVM.translate('search_placeholder'),
+                prefixIcon: Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: SvgIcon(
+                      iconPath: AppIcons.search,
+                      color: Theme.of(context).hintColor),
                 ),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: SvgIcon(
+                            iconPath: AppIcons.close,
+                            color: Theme.of(context).hintColor,
+                            size: 20),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() {
+                            _searchQuery = '';
+                          });
+                        },
+                      )
+                    : IconButton(
+                        icon: Icon(_isListening ? Icons.mic : Icons.mic_none,
+                            color: _isListening
+                                ? Colors.redAccent
+                                : Theme.of(context).hintColor),
+                        onPressed: _listen,
+                      ),
               ),
             ),
             Expanded(
@@ -211,30 +370,53 @@ class _MarketSelectionScreenState extends State<_MarketSelectionScreen> {
                       itemCount: marketList.length,
                       itemBuilder: (context, index) {
                         final market = marketList[index];
-                        return Card(
+                        final isDark =
+                            Theme.of(context).brightness == Brightness.dark;
+
+                        return Container(
                           margin: const EdgeInsets.only(bottom: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            side: BorderSide(
-                                color: Colors.white.withOpacity(0.3)),
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? Theme.of(context).cardColor
+                                : Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: isDark
+                                  ? Colors.white.withOpacity(0.1)
+                                  : Colors.grey.withOpacity(0.1),
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
                           ),
-                          child: ListTile(
-                            leading: const Icon(Icons.location_on_outlined),
-                            title: Text(market.name),
-                            subtitle: Text(
-                                '${market.address.district}, ${market.address.city}'),
-                            trailing:
-                                const Icon(Icons.arrow_forward_ios, size: 16),
-                            onTap: () {
-                              if (widget.isForSeller) {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        _SellerSelectionScreen(market: market),
-                                  ),
-                                );
-                              } else {
+                          child: Material(
+                            color: Colors.transparent,
+                            child: ListTile(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              leading: Icon(
+                                nearbyMarketIds.contains(market.id)
+                                    ? Icons.near_me
+                                    : Icons.location_on_outlined,
+                                color: nearbyMarketIds.contains(market.id)
+                                    ? Theme.of(context).colorScheme.primary
+                                    : null,
+                              ),
+                              title: Text(
+                                market.name,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold),
+                              ),
+                              subtitle: Text(
+                                  '${market.address.district}, ${market.address.city} • ${(market.distanceInMeters / 1000).toStringAsFixed(1)} km'),
+                              trailing:
+                                  const Icon(Icons.arrow_forward_ios, size: 16),
+                              onTap: () {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
@@ -244,8 +426,8 @@ class _MarketSelectionScreenState extends State<_MarketSelectionScreen> {
                                     ),
                                   ),
                                 );
-                              }
-                            },
+                              },
+                            ),
                           ),
                         );
                       },
@@ -256,12 +438,157 @@ class _MarketSelectionScreenState extends State<_MarketSelectionScreen> {
       ),
     );
   }
+
+  Widget _buildDropdown(
+    BuildContext context, {
+    required String hint,
+    required String? value,
+    required List<String> items,
+    required Function(String?) onChanged,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: isDark ? Theme.of(context).cardColor : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withOpacity(0.1)
+              : Colors.grey.withOpacity(0.3),
+        ),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: value,
+          hint: Text(hint,
+              style:
+                  TextStyle(fontSize: 14, color: Theme.of(context).hintColor)),
+          isExpanded: true,
+          icon: const Icon(Icons.arrow_drop_down),
+          items: [
+            DropdownMenuItem<String>(
+              value: null,
+              child: Text('Tümü',
+                  style:
+                      TextStyle(color: Theme.of(context).colorScheme.primary)),
+            ),
+            ...items.map((item) => DropdownMenuItem(
+                  value: item,
+                  child: Text(item, overflow: TextOverflow.ellipsis),
+                )),
+          ],
+          onChanged: onChanged,
+        ),
+      ),
+    );
+  }
 }
 
-class _SellerSelectionScreen extends StatelessWidget {
-  final Market market;
+class _SellerReportSelectionScreen extends StatefulWidget {
+  const _SellerReportSelectionScreen();
 
-  const _SellerSelectionScreen({required this.market});
+  @override
+  State<_SellerReportSelectionScreen> createState() =>
+      _SellerReportSelectionScreenState();
+}
+
+class _SellerReportSelectionScreenState
+    extends State<_SellerReportSelectionScreen> {
+  Market? _selectedMarket;
+  final TextEditingController _marketController = TextEditingController();
+  List<Market> _markets = [];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final homeVM = Provider.of<HomeViewModel>(context, listen: false);
+      final markets =
+          <Market>{...homeVM.nearbyMarkets, ...homeVM.provinceMarkets}.toList();
+      markets.sort((a, b) => a.name.compareTo(b.name));
+      setState(() {
+        _markets = markets;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _marketController.dispose();
+    super.dispose();
+  }
+
+  void _showMarketPicker() {
+    CustomBottomSheets.showDraggable(
+      context: context,
+      initialChildSize: 0.7,
+      builder: (context, scrollController) {
+        return _MarketPickerSheet(
+          markets: _markets,
+          scrollController: scrollController,
+          onSelect: (market) {
+            setState(() {
+              _selectedMarket = market;
+              _marketController.text = market.name;
+            });
+            Navigator.pop(context);
+          },
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final langVM = context.watch<LanguageViewModel>();
+
+    return Scaffold(
+      extendBodyBehindAppBar: true,
+      appBar:
+          CustomAppBar(title: Text(langVM.translate('report_seller_option'))),
+      body: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 110, 16, 0),
+        child: Column(
+          children: [
+            CustomTextField(
+              controller: _marketController,
+              readOnly: true,
+              onTap: _showMarketPicker,
+              labelText: 'Pazar Yeri Seçiniz',
+              hintText: 'Pazar yeri aramak için dokunun',
+              suffixIcon: const Icon(Icons.arrow_drop_down),
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: _selectedMarket == null
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.storefront,
+                              size: 64, color: Colors.grey.withOpacity(0.5)),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Lütfen önce pazar yeri seçiniz.',
+                            style:
+                                TextStyle(color: Colors.grey.withOpacity(0.8)),
+                          ),
+                        ],
+                      ),
+                    )
+                  : _SellerList(market: _selectedMarket!),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SellerList extends StatelessWidget {
+  final Market market;
+  const _SellerList({required this.market});
 
   @override
   Widget build(BuildContext context) {
@@ -275,7 +602,7 @@ class _SellerSelectionScreen extends StatelessWidget {
         future: AuthService.instance.getMarketSellers(market.id),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: CustomLoadingIndicator());
           }
 
           if (snapshot.hasError) {
@@ -304,43 +631,307 @@ class _SellerSelectionScreen extends StatelessWidget {
                         .trim();
               }
 
-              return Card(
-                margin: const EdgeInsets.only(bottom: 16),
-                shape: RoundedRectangleBorder(
+              final isDark = Theme.of(context).brightness == Brightness.dark;
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: isDark ? Theme.of(context).cardColor : Colors.white,
                   borderRadius: BorderRadius.circular(16),
-                  side: BorderSide(color: Colors.white.withOpacity(0.3)),
+                  border: Border.all(
+                    color: isDark
+                        ? Colors.white.withOpacity(0.1)
+                        : Colors.grey.withOpacity(0.1),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
-                child: ListTile(
-                  contentPadding: const EdgeInsets.all(24),
-                  leading: const Icon(Icons.store, size: 40),
-                  title: Text(
-                    displayName,
-                    style: const TextStyle(
-                        fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: Text(
-                    seller['stallDescription'] ?? '',
-                    style: const TextStyle(fontSize: 16),
-                  ),
-                  trailing: const Icon(Icons.arrow_forward_ios),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ReportFormScreen(
-                          marketId: market.id,
-                          marketName: market.name,
-                          sellerId: seller['id'],
-                          sellerName: displayName,
+                child: Material(
+                  color: Colors.transparent,
+                  child: ListTile(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    leading: const CircleAvatar(child: Icon(Icons.store)),
+                    title: Text(
+                      displayName,
+                      style: const TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Text(
+                      seller['stallDescription'] ?? 'Açıklama yok',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ReportFormScreen(
+                            marketId: market.id,
+                            marketName: market.name,
+                            sellerId: seller['id'],
+                            sellerName: displayName,
+                          ),
                         ),
-                      ),
-                    );
-                  },
+                      );
+                    },
+                  ),
                 ),
               );
             },
           );
         },
+      ),
+    );
+  }
+}
+
+class _MarketPickerSheet extends StatefulWidget {
+  final List<Market> markets;
+  final ScrollController scrollController;
+  final Function(Market) onSelect;
+
+  const _MarketPickerSheet(
+      {required this.markets,
+      required this.scrollController,
+      required this.onSelect});
+
+  @override
+  State<_MarketPickerSheet> createState() => _MarketPickerSheetState();
+}
+
+class _MarketPickerSheetState extends State<_MarketPickerSheet> {
+  final TextEditingController _searchController = TextEditingController();
+  String _query = '';
+  late stt.SpeechToText _speech;
+  bool _isListening = false;
+  String? _selectedCity;
+  String? _selectedDistrict;
+
+  @override
+  void initState() {
+    super.initState();
+    _speech = stt.SpeechToText();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _listen() async {
+    if (!_isListening) {
+      bool available = await _speech.initialize(
+        onStatus: (val) {
+          if (val == 'done' || val == 'notListening') {
+            if (mounted) setState(() => _isListening = false);
+          }
+        },
+        onError: (val) => setState(() => _isListening = false),
+      );
+      if (available) {
+        setState(() => _isListening = true);
+        _speech.listen(
+          onResult: (val) {
+            setState(() {
+              _searchController.text = val.recognizedWords;
+              _query = val.recognizedWords;
+            });
+          },
+        );
+      }
+    } else {
+      setState(() => _isListening = false);
+      _speech.stop();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final langVM = Provider.of<LanguageViewModel>(context);
+    // HomeViewModel'den yakındaki pazarları al (eğer varsa)
+    final homeVM = Provider.of<HomeViewModel>(context, listen: false);
+    final nearbyMarketIds = homeVM.nearbyMarkets.map((m) => m.id).toSet();
+
+    final cities = widget.markets.map((m) => m.address.city).toSet().toList()
+      ..sort();
+
+    List<String> districts = [];
+    if (_selectedCity != null) {
+      districts = widget.markets
+          .where((m) => m.address.city == _selectedCity)
+          .map((m) => m.address.district)
+          .toSet()
+          .toList()
+        ..sort();
+    }
+
+    final filtered = widget.markets.where((m) {
+      final matchesSearch = m.name.toLowerCase().contains(_query.toLowerCase());
+      final matchesCity =
+          _selectedCity == null || m.address.city == _selectedCity;
+      final matchesDistrict =
+          _selectedDistrict == null || m.address.district == _selectedDistrict;
+      return matchesSearch && matchesCity && matchesDistrict;
+    }).toList();
+
+    // Sıralama: Yakındakiler en üstte, sonra alfabetik
+    filtered.sort((a, b) {
+      final isANearby = nearbyMarketIds.contains(a.id);
+      final isBNearby = nearbyMarketIds.contains(b.id);
+
+      if (isANearby && !isBNearby) return -1;
+      if (!isANearby && isBNearby) return 1;
+
+      // İkisi de yakındaysa mesafeye göre sırala
+      if (isANearby && isBNearby) {
+        return a.distanceInMeters.compareTo(b.distanceInMeters);
+      }
+
+      return a.name.compareTo(b.name);
+    });
+
+    return Column(
+      children: [
+        if (cities.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _buildDropdown(
+                    context,
+                    hint: langVM.translate('city'),
+                    value: _selectedCity,
+                    items: cities,
+                    onChanged: (val) {
+                      setState(() {
+                        _selectedCity = val;
+                        _selectedDistrict = null;
+                      });
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildDropdown(
+                    context,
+                    hint: 'İlçe',
+                    value: _selectedDistrict,
+                    items: districts,
+                    onChanged: (val) {
+                      setState(() {
+                        _selectedDistrict = val;
+                      });
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: CustomTextField(
+            controller: _searchController,
+            hintText: 'Pazar Ara...',
+            prefixIcon: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: SvgIcon(
+                  iconPath: AppIcons.search,
+                  color: Theme.of(context).hintColor),
+            ),
+            suffixIcon: IconButton(
+              icon: Icon(_isListening ? Icons.mic : Icons.mic_none,
+                  color: _isListening
+                      ? Colors.redAccent
+                      : Theme.of(context).hintColor),
+              onPressed: _listen,
+            ),
+            onChanged: (val) => setState(() => _query = val),
+          ),
+        ),
+        Expanded(
+          child: ListView.separated(
+            controller: widget.scrollController,
+            itemCount: filtered.length,
+            separatorBuilder: (_, __) => const Divider(height: 1),
+            itemBuilder: (context, index) {
+              final market = filtered[index];
+              return ListTile(
+                title: Row(
+                  children: [
+                    Expanded(
+                      child: Text(market.name, overflow: TextOverflow.ellipsis),
+                    ),
+                    if (nearbyMarketIds.contains(market.id))
+                      Padding(
+                        padding: const EdgeInsets.only(left: 8.0),
+                        child: Icon(Icons.near_me,
+                            size: 16,
+                            color: Theme.of(context).colorScheme.primary),
+                      ),
+                  ],
+                ),
+                subtitle: Text(
+                    '${market.address.district}, ${market.address.city} • ${(market.distanceInMeters / 1000).toStringAsFixed(1)} km'),
+                onTap: () => widget.onSelect(market),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDropdown(
+    BuildContext context, {
+    required String hint,
+    required String? value,
+    required List<String> items,
+    required Function(String?) onChanged,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: isDark ? Theme.of(context).cardColor : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withOpacity(0.1)
+              : Colors.grey.withOpacity(0.3),
+        ),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: value,
+          hint: Text(hint,
+              style:
+                  TextStyle(fontSize: 14, color: Theme.of(context).hintColor)),
+          isExpanded: true,
+          icon: const Icon(Icons.arrow_drop_down),
+          items: [
+            DropdownMenuItem<String>(
+              value: null,
+              child: Text('Tümü',
+                  style:
+                      TextStyle(color: Theme.of(context).colorScheme.primary)),
+            ),
+            ...items.map((item) => DropdownMenuItem(
+                  value: item,
+                  child: Text(item, overflow: TextOverflow.ellipsis),
+                )),
+          ],
+          onChanged: onChanged,
+        ),
       ),
     );
   }

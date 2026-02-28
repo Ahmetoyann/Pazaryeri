@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'auth_service.dart';
 
 class ThemeViewModel extends ChangeNotifier {
-  int _themeModeIndex = 0; // 0: System, 1: Light, 2: Dark
+  int _themeModeIndex = 1; // 0: System, 1: Light, 2: Dark (Başlangıç: Light)
   Color _seedColor = Colors.orange;
 
   ThemeMode get themeMode {
@@ -12,7 +12,8 @@ class ThemeViewModel extends ChangeNotifier {
       case 2:
         return ThemeMode.dark;
       default:
-        return ThemeMode.system;
+        return ThemeMode
+            .light; // Varsayılan (0) ayarı Light olarak değiştirildi
     }
   }
 

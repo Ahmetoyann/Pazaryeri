@@ -6,6 +6,11 @@ import '../../viewmodels/language_viewmodel.dart';
 import 'seller_add_product_screen.dart';
 import 'seller_product_management_screen.dart';
 import '../../widgets/success_dialog.dart';
+import '../../../core/constants/app_icons.dart';
+import '../../../presentation/widgets/svg_icon.dart';
+import '../../widgets/loading_overlay.dart';
+import '../../widgets/custom_bottom_sheets.dart';
+import '../../widgets/custom_snackbars.dart';
 
 class SellerProductsScreen extends StatefulWidget {
   const SellerProductsScreen({super.key});
@@ -27,6 +32,24 @@ class _SellerProductsScreenState extends State<SellerProductsScreen> {
     'category_spices',
     'category_fish',
     'category_clothing',
+    'category_electronics',
+    'category_second_hand',
+    'category_animals',
+    'category_home',
+    'category_toys',
+    'category_books',
+    'category_tools',
+    'category_plants',
+    'category_handmade',
+    'category_cosmetics',
+    'category_sports',
+    'category_automotive',
+    'category_antiques',
+    'category_jewelry',
+    'category_art',
+    'category_baby',
+    'category_music',
+    'category_office',
     'category_other',
   ];
 
@@ -38,17 +61,21 @@ class _SellerProductsScreenState extends State<SellerProductsScreen> {
 
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
   }
 
   void _onScroll() {
+    if (!mounted) return;
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 200) {
       // Listenin sonuna 200 piksel kala yeni verileri yükle
       final sellerVM = Provider.of<SellerViewModel>(context, listen: false);
       if (!sellerVM.isLoadingMore && sellerVM.hasMoreProducts) {
-        sellerVM.loadMoreProducts();
+        sellerVM.loadMoreProducts().catchError((e) {
+          debugPrint('Error loading more products: $e');
+        });
       }
     }
   }
@@ -58,9 +85,8 @@ class _SellerProductsScreenState extends State<SellerProductsScreen> {
     final sellerVM = Provider.of<SellerViewModel>(context);
     final langVM = Provider.of<LanguageViewModel>(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final backgroundColor =
-        isDark ? Colors.white : Theme.of(context).colorScheme.primary;
-    final contentColor = isDark ? Colors.black : Colors.white;
+    final backgroundColor = Theme.of(context).cardColor;
+    final contentColor = Theme.of(context).colorScheme.onSurface;
 
     return Column(
       children: [
@@ -71,7 +97,6 @@ class _SellerProductsScreenState extends State<SellerProductsScreen> {
             decoration: BoxDecoration(
               color: backgroundColor,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white.withOpacity(0.3)),
             ),
             child: DropdownButtonHideUnderline(
               child: DropdownButton<String>(
@@ -79,7 +104,6 @@ class _SellerProductsScreenState extends State<SellerProductsScreen> {
                 hint: Text(langVM.translate('filter_by_category'),
                     style: TextStyle(color: contentColor.withOpacity(0.7))),
                 isExpanded: true,
-                dropdownColor: backgroundColor,
                 icon: Icon(Icons.filter_list, color: contentColor),
                 style: TextStyle(color: contentColor, fontSize: 16),
                 items: [
@@ -112,7 +136,7 @@ class _SellerProductsScreenState extends State<SellerProductsScreen> {
 
   Widget _buildProductList(SellerViewModel sellerVM, LanguageViewModel langVM) {
     if (sellerVM.isLoading && sellerVM.myProducts.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(child: CustomLoadingIndicator());
     }
 
     if (sellerVM.myProducts.isEmpty) {
@@ -120,14 +144,15 @@ class _SellerProductsScreenState extends State<SellerProductsScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.inventory_2_outlined,
-                size: 64,
+            SvgIcon(
+                iconPath: AppIcons.inventory,
+                size: 72,
                 color:
                     Theme.of(context).colorScheme.onSurface.withOpacity(0.2)),
             const SizedBox(height: 16),
             Text("Henüz ürün eklemediniz.",
                 style: TextStyle(
-                    fontSize: 16,
+                    fontSize: 17,
                     color: Theme.of(context)
                         .colorScheme
                         .onSurface
@@ -138,7 +163,13 @@ class _SellerProductsScreenState extends State<SellerProductsScreen> {
     }
 
     return RefreshIndicator(
-      onRefresh: () => sellerVM.loadProducts(),
+      onRefresh: () async {
+        try {
+          await sellerVM.loadProducts();
+        } catch (e) {
+          debugPrint('Error refreshing products: $e');
+        }
+      },
       child: ListView.builder(
         controller: _scrollController,
         padding: const EdgeInsets.all(16),
@@ -150,151 +181,252 @@ class _SellerProductsScreenState extends State<SellerProductsScreen> {
             return sellerVM.isLoadingMore
                 ? const Padding(
                     padding: EdgeInsets.all(16.0),
-                    child: Center(child: CircularProgressIndicator()),
+                    child: Center(child: CustomLoadingIndicator(size: 40)),
                   )
-                : const SizedBox(height: 80); // Bottom bar boşluğu
+                : const SizedBox(height: 140);
           }
 
           final product = sellerVM.myProducts[index];
+          final theme = Theme.of(context);
+          final isDark = theme.brightness == Brightness.dark;
+
           return Dismissible(
             key: ValueKey(product.id),
             direction: DismissDirection.endToStart,
             background: Container(
               margin: const EdgeInsets.only(bottom: 16),
-              color: Theme.of(context).colorScheme.error,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.error,
+                borderRadius: BorderRadius.circular(16),
+              ),
               alignment: Alignment.centerRight,
               padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: const Icon(Icons.delete, color: Colors.white),
+              child: const SvgIcon(
+                  iconPath: AppIcons.delete, color: Colors.white, size: 28),
             ),
             confirmDismiss: (direction) async {
-              return await DialogService.showConfirmation(
-                context,
+              return await CustomBottomSheets.showConfirmation(
+                context: context,
                 title: langVM.translate('delete_product_title'),
                 message: langVM.translate('delete_product_confirm'),
                 confirmText: langVM.translate('yes'),
                 cancelText: langVM.translate('no'),
-                icon: Icons.delete_forever,
+                iconPath: AppIcons.delete,
               );
             },
-            onDismissed: (direction) {
-              sellerVM.removeProduct(product.id);
+            onDismissed: (direction) async {
+              await LoadingOverlay.show(
+                context,
+                asyncFunction: () async {
+                  try {
+                    await sellerVM.removeProduct(product.id);
+                  } catch (e) {
+                    debugPrint('Error removing product: $e');
+                  }
+                },
+              );
+
+              if (context.mounted) {
+                await DialogService.showSuccess(
+                  context,
+                  message: langVM.translate('success_product_deleted'),
+                );
+              }
             },
-            child: Card(
+            child: Container(
               margin: const EdgeInsets.only(bottom: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: BorderSide(color: Colors.white.withOpacity(0.3)),
-              ),
-              child: ListTile(
-                contentPadding: const EdgeInsets.all(8),
-                leading: Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
+              decoration: BoxDecoration(
+                color: isDark ? theme.cardColor : Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 15,
+                    offset: const Offset(0, 5),
                   ),
-                  child: product.imagePath != null &&
-                          product.imagePath!.isNotEmpty
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: product.imagePath!.startsWith('http')
-                              ? Image.network(
-                                  product.imagePath!,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    debugPrint(
-                                        'Satıcı panelinde resim hatası: $error');
-                                    return const Icon(Icons.error);
-                                  },
-                                )
-                              : Image.file(
-                                  File(product.imagePath!),
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) =>
-                                      const Icon(Icons.error),
-                                ),
-                        )
-                      : Icon(Icons.image,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withOpacity(0.4)),
-                ),
-                title: Text(
-                  product.name,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${product.price} ₺ / ${langVM.translate(product.unit ?? 'unit_kg')}',
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.primary,
-                        fontWeight: FontWeight.w500,
+                ],
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            SellerProductManagementScreen(product: product),
                       ),
-                    ),
-                    Text(
-                      '${langVM.translate('stock_quantity_label')}: ${product.stockQuantity} ${langVM.translate(product.unit ?? 'unit_kg')}',
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                  ],
-                ),
-                trailing: Switch(
-                  value: product.inStock,
-                  onChanged: (val) {
-                    sellerVM.toggleProductStock(product.id);
-                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Row(
-                          children: [
-                            Icon(
-                              val
-                                  ? Icons.check_circle
-                                  : Icons.remove_circle_outline,
-                              color: Colors.white,
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                langVM.translate(val
-                                    ? 'product_stock_active'
-                                    : 'product_stock_inactive'),
+                    );
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Row(
+                      children: [
+                        // Ürün Resmi
+                        Container(
+                          width: 80,
+                          height: 80,
+                          decoration: BoxDecoration(
+                            color:
+                                theme.colorScheme.onSurface.withOpacity(0.05),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: product.imagePath != null &&
+                                  product.imagePath!.isNotEmpty
+                              ? ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: product.imagePath!.startsWith('http')
+                                      ? Image.network(
+                                          product.imagePath!,
+                                          fit: BoxFit.cover,
+                                          errorBuilder:
+                                              (context, error, stackTrace) {
+                                            return const Icon(
+                                                Icons.broken_image,
+                                                color: Colors.grey);
+                                          },
+                                        )
+                                      : Image.file(
+                                          File(product.imagePath!),
+                                          fit: BoxFit.cover,
+                                          errorBuilder:
+                                              (context, error, stackTrace) =>
+                                                  const Icon(Icons.broken_image,
+                                                      color: Colors.grey),
+                                        ),
+                                )
+                              : Center(
+                                  child: SvgIcon(
+                                    iconPath: AppIcons.products,
+                                    color: theme.colorScheme.onSurface
+                                        .withOpacity(0.4),
+                                    size: 36,
+                                  ),
+                                ),
+                        ),
+                        const SizedBox(width: 16),
+                        // Bilgiler
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                product.name,
                                 style: const TextStyle(
-                                    fontWeight: FontWeight.bold),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 17,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '${product.price} ₺ / ${langVM.translate(product.unit ?? 'unit_kg')}',
+                                style: TextStyle(
+                                  color: theme.colorScheme.primary,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 15,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: product.stockQuantity > 0
+                                          ? theme.colorScheme.primary
+                                              .withOpacity(0.1)
+                                          : theme.colorScheme.error
+                                              .withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      '${langVM.translate('stock_quantity_label')}: ${product.stockQuantity.toInt()}',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                        color: product.stockQuantity > 0
+                                            ? theme.colorScheme.primary
+                                            : theme.colorScheme.error,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Switch
+                        Column(
+                          children: [
+                            Switch(
+                              value: product.inStock,
+                              onChanged: (val) async {
+                                if (!val) {
+                                  final bool confirm =
+                                      await DialogService.showConfirmation(
+                                    context,
+                                    title: 'Satışı Durdur',
+                                    message:
+                                        'Bu ürünün satışını durdurmak istediğinize emin misiniz?',
+                                    confirmText: langVM.translate('yes'),
+                                    cancelText: langVM.translate('no'),
+                                    icon: Icons.pause_circle_filled,
+                                    confirmColor: theme.colorScheme.primary,
+                                  );
+                                  if (!confirm) return;
+                                }
+
+                                await LoadingOverlay.show(
+                                  context,
+                                  asyncFunction: () async {
+                                    try {
+                                      await sellerVM
+                                          .toggleProductStock(product.id);
+                                      if (!context.mounted) return;
+
+                                      if (val) {
+                                        CustomSnackbars.showSuccess(
+                                            context,
+                                            langVM.translate(
+                                                'product_stock_active'));
+                                      } else {
+                                        CustomSnackbars.showInfo(
+                                            context,
+                                            langVM.translate(
+                                                'product_stock_inactive'));
+                                      }
+                                    } catch (e) {
+                                      debugPrint('Error toggling stock: $e');
+                                    }
+                                  },
+                                );
+                              },
+                              activeColor: theme.colorScheme.primary,
+                              activeTrackColor:
+                                  theme.colorScheme.primary.withOpacity(0.2),
+                              inactiveThumbColor: Colors.grey.shade400,
+                              inactiveTrackColor: Colors.grey.withOpacity(0.2),
+                            ),
+                            Text(
+                              product.inStock ? 'Aktif' : 'Pasif',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: product.inStock
+                                    ? theme.colorScheme.primary
+                                    : Colors.grey,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
                           ],
                         ),
-                        backgroundColor:
-                            val ? Colors.green : Colors.grey.shade700,
-                        behavior: SnackBarBehavior.floating,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12)),
-                        margin: const EdgeInsets.only(
-                            bottom: 100, left: 16, right: 16),
-                        duration: const Duration(seconds: 1),
-                      ),
-                    );
-                  },
-                  activeColor: Colors.white,
-                  inactiveThumbColor: Colors.white,
-                  inactiveTrackColor: Colors.white.withOpacity(0.5),
-                ),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          SellerProductManagementScreen(product: product),
+                      ],
                     ),
-                  );
-                },
+                  ),
+                ),
               ),
             ),
           );

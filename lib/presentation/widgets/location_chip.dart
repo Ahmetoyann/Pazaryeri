@@ -24,7 +24,8 @@ class LocationChip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.location_on, size: 24, color: Colors.white),
+            Icon(Icons.location_on,
+                size: 24, color: Theme.of(context).colorScheme.primary),
             const SizedBox(width: 8),
             if (address != null)
               Flexible(

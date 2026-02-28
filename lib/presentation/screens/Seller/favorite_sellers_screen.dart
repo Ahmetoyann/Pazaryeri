@@ -78,7 +78,12 @@ class _FavoriteSellersScreenState extends State<FavoriteSellersScreen> {
                       margin: const EdgeInsets.only(bottom: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(color: Colors.white.withOpacity(0.3)),
+                        side: BorderSide(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withOpacity(0.4),
+                            width: 1.5),
                       ),
                       child: ListTile(
                         leading: CircleAvatar(

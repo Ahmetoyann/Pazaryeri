@@ -5,6 +5,8 @@ import 'package:provider/provider.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 import '../../widgets/success_dialog.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../widgets/custom_text_field.dart';
+import '../../widgets/loading_overlay.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -73,28 +75,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
-  InputDecoration _buildInputDecoration(String label, IconData icon,
-      {String? helperText}) {
-    return InputDecoration(
-      labelText: label,
-      helperText: helperText,
-      helperStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
-      prefixIcon: Icon(icon, color: Theme.of(context).iconTheme.color),
-      border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(30),
-          borderSide: BorderSide(color: Colors.white.withOpacity(0.3))),
-      enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(30),
-          borderSide: BorderSide(color: Colors.white.withOpacity(0.3))),
-      focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(30),
-          borderSide:
-              BorderSide(color: Colors.white.withOpacity(0.5), width: 2)),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: const CustomAppBar(title: Text('Profili Düzenle')),
@@ -105,23 +88,27 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           key: _formKey,
           child: Column(
             children: [
-              TextFormField(
+              CustomTextField(
                 controller: _firstNameController,
-                decoration: _buildInputDecoration('İsim', Icons.person),
+                labelText: 'İsim',
+                prefixIcon:
+                    Icon(Icons.person, color: theme.colorScheme.primary),
                 validator: (v) => v!.isEmpty ? 'İsim boş olamaz' : null,
               ),
               const SizedBox(height: 16),
-              TextFormField(
+              CustomTextField(
                 controller: _lastNameController,
-                decoration:
-                    _buildInputDecoration('Soyisim', Icons.person_outline),
+                labelText: 'Soyisim',
+                prefixIcon: Icon(Icons.person_outline,
+                    color: theme.colorScheme.primary),
                 validator: (v) => v!.isEmpty ? 'Soyisim boş olamaz' : null,
               ),
               const SizedBox(height: 16),
-              TextFormField(
+              CustomTextField(
                 controller: _phoneController,
-                decoration:
-                    _buildInputDecoration('Telefon Numarası', Icons.phone),
+                labelText: 'Telefon Numarası',
+                prefixIcon: Icon(Icons.phone, color: theme.colorScheme.primary),
+                helperText: '5** *** ** **',
                 keyboardType: TextInputType.phone,
                 inputFormatters: [_PhoneInputFormatter()],
                 validator: (v) =>
@@ -134,12 +121,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   onPressed: _isLoading ? null : _saveProfile,
                   child: _isLoading
                       ? const SizedBox(
-                          height: 24,
-                          width: 24,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.5,
-                            color: Colors.white,
-                          ),
+                          height: 30,
+                          width: 30,
+                          child: CustomLoadingIndicator(size: 30),
                         )
                       : const Text(
                           'Kaydet',
@@ -162,8 +146,23 @@ class _PhoneInputFormatter extends TextInputFormatter {
     // Sadece rakamları al
     final text = newValue.text.replaceAll(RegExp(r'\D'), '');
 
+    // Tamamen silindiyse boş döndür
+    if (text.isEmpty) {
+      return newValue.copyWith(text: '');
+    }
+
     // Başta 0 varsa temizle
     final cleanText = text.startsWith('0') ? text.substring(1) : text;
+
+    // Temizlendikten sonra boşsa (sadece 0 girildiyse) boş döndür
+    if (cleanText.isEmpty) {
+      return newValue.copyWith(text: '');
+    }
+
+    // Katı Kural: İlk rakam 5 olmak zorunda
+    if (!cleanText.startsWith('5')) {
+      return oldValue;
+    }
 
     // Maksimum 10 hane
     if (cleanText.length > 10) return oldValue;
@@ -171,14 +170,12 @@ class _PhoneInputFormatter extends TextInputFormatter {
     final buffer = StringBuffer();
 
     // (5XX)
-    if (cleanText.isNotEmpty) {
-      buffer.write('(');
-      if (cleanText.length >= 3) {
-        buffer.write(cleanText.substring(0, 3));
-        buffer.write(') ');
-      } else {
-        buffer.write(cleanText);
-      }
+    buffer.write('(');
+    if (cleanText.length >= 3) {
+      buffer.write(cleanText.substring(0, 3));
+      buffer.write(') ');
+    } else {
+      buffer.write(cleanText);
     }
 
     // XXX

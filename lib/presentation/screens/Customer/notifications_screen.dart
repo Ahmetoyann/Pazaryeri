@@ -8,15 +8,80 @@ import '../../widgets/custom_app_bar.dart';
 import 'product_detail_screen.dart';
 import '../Seller/seller_questions_screen.dart';
 import '../Seller/seller_reviews_screen.dart';
+import '../../widgets/custom_bottom_sheets.dart';
+import '../../widgets/custom_snackbars.dart';
+import '../../../core/constants/app_icons.dart';
+import '../../../presentation/widgets/svg_icon.dart';
+import '../../widgets/loading_overlay.dart';
 
-class NotificationsScreen extends StatelessWidget {
+class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
+
+  @override
+  State<NotificationsScreen> createState() => _NotificationsScreenState();
+}
+
+class _NotificationsScreenState extends State<NotificationsScreen> {
+  String _filterType = 'all'; // 'all', 'read', 'unread'
+
+  // Seçim Modu Değişkenleri
+  bool _isSelectionMode = false;
+  final Set<String> _selectedIds = {};
+
+  void _toggleSelection(String id) {
+    setState(() {
+      if (_selectedIds.contains(id)) {
+        _selectedIds.remove(id);
+        if (_selectedIds.isEmpty) {
+          _isSelectionMode = false;
+        }
+      } else {
+        _selectedIds.add(id);
+      }
+    });
+  }
+
+  void _startSelection(String id) {
+    setState(() {
+      _isSelectionMode = true;
+      _selectedIds.add(id);
+    });
+  }
+
+  void _cancelSelection() {
+    setState(() {
+      _isSelectionMode = false;
+      _selectedIds.clear();
+    });
+  }
+
+  Future<void> _deleteSelected(String userId, LanguageViewModel langVM) async {
+    final confirm = await CustomBottomSheets.showConfirmation(
+      context: context,
+      title: langVM.translate('delete_selected_title'),
+      message:
+          '${_selectedIds.length} ${langVM.translate('delete_selected_confirm_suffix')}',
+      confirmText: langVM.translate('yes'),
+      cancelText: langVM.translate('no'),
+      iconPath: AppIcons.delete,
+    );
+
+    if (confirm == true) {
+      for (var id in _selectedIds) {
+        AuthService.instance.deleteNotification(userId, id);
+      }
+      _cancelSelection();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final authVM = Provider.of<AuthViewModel>(context);
     final langVM = Provider.of<LanguageViewModel>(context);
     final user = authVM.currentUser;
+
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     if (user == null) {
       return Scaffold(
@@ -26,194 +91,368 @@ class NotificationsScreen extends StatelessWidget {
       );
     }
 
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: CustomAppBar(
-        title: Text(langVM.translate('notifications_title')),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.done_all),
-            tooltip: langVM.translate('mark_all_read'),
-            onPressed: () async {
-              await AuthService.instance.markAllNotificationsAsRead(user.id);
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.delete_sweep),
-            tooltip: 'Tümünü Sil',
-            onPressed: () async {
-              final confirm = await showDialog<bool>(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('Tümünü Sil'),
-                  content: const Text(
-                      'Tüm bildirimleri silmek istediğinize emin misiniz?'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context, false),
-                      child: Text(langVM.translate('no')),
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        extendBodyBehindAppBar: true,
+        appBar: CustomAppBar(
+          leading: _isSelectionMode
+              ? Center(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? Colors.white.withOpacity(0.2)
+                          : Colors.black.withOpacity(0.05),
+                      shape: BoxShape.circle,
                     ),
-                    TextButton(
-                      onPressed: () => Navigator.pop(context, true),
-                      child: Text(
-                        langVM.translate('yes'),
-                        style: const TextStyle(color: Colors.red),
-                      ),
+                    child: IconButton(
+                      icon: Icon(Icons.close, color: theme.iconTheme.color),
+                      onPressed: _cancelSelection,
                     ),
-                  ],
-                ),
-              );
-
-              if (confirm == true) {
-                await AuthService.instance.deleteAllNotifications(user.id);
-              }
-            },
-          ),
-        ],
-      ),
-      body: Container(
-        padding: const EdgeInsets.only(top: 100),
-        child: StreamBuilder<List<Map<String, dynamic>>>(
-          stream: AuthService.instance.getUserNotifications(user.id),
-          builder: (_, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
-
-            if (!snapshot.hasData || snapshot.data!.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.notifications_off_outlined,
-                        size: 64, color: Colors.grey.withOpacity(0.5)),
-                    const SizedBox(height: 16),
-                    Text(langVM.translate('no_notifications'),
-                        style: TextStyle(color: Colors.grey.withOpacity(0.8))),
-                  ],
-                ),
-              );
-            }
-
-            final notifications = snapshot.data!;
-
-            return ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: notifications.length,
-              itemBuilder: (_, index) {
-                final notification = notifications[index];
-                final bool isRead = notification['read'] ?? false;
-                final Timestamp? timestamp = notification['timestamp'];
-                String timeText = '';
-
-                if (timestamp != null) {
-                  final dt = timestamp.toDate();
-                  timeText =
-                      '${dt.day}/${dt.month}/${dt.year} ${dt.hour}:${dt.minute.toString().padLeft(2, '0')}';
-                }
-
-                Color notificationColor = Theme.of(context).colorScheme.primary;
-                if (notification['metadata'] != null &&
-                    notification['metadata'] is Map &&
-                    (notification['metadata']['type'] == 'product_reply' ||
-                        notification['metadata']['type'] == 'new_review' ||
-                        notification['metadata']['type'] == 'new_question')) {
-                  notificationColor = Theme.of(context).colorScheme.secondary;
-                }
-
-                return Dismissible(
-                  key: Key(notification['id']),
-                  direction: DismissDirection.endToStart,
-                  background: Container(
-                    alignment: Alignment.centerRight,
-                    padding: const EdgeInsets.only(right: 20),
-                    color: Colors.red,
-                    child: const Icon(Icons.delete, color: Colors.white),
                   ),
-                  onDismissed: (direction) {
-                    AuthService.instance
-                        .deleteNotification(user.id, notification['id']);
-                  },
-                  child: Card(
-                    color: isRead
-                        ? Theme.of(context).cardColor
-                        : notificationColor.withOpacity(0.15),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      side: BorderSide(
-                          color: isRead
-                              ? Colors.white.withOpacity(0.3)
-                              : notificationColor.withOpacity(0.5)),
+                )
+              : null,
+          title: _isSelectionMode
+              ? Text(
+                  '${_selectedIds.length} ${langVM.translate('selected_count_suffix')}')
+              : Text(langVM.translate('notifications_title')),
+          bottom: TabBar(
+            indicatorColor: theme.colorScheme.primary,
+            labelColor: theme.colorScheme.primary,
+            unselectedLabelColor: theme.colorScheme.onSurface.withOpacity(0.6),
+            tabs: [
+              Tab(text: langVM.translate('seller_notifications_tab')),
+              Tab(text: langVM.translate('marketplace_notifications_tab')),
+            ],
+          ),
+          actions: _isSelectionMode
+              ? [
+                  Container(
+                    margin: const EdgeInsets.only(right: 16),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? Colors.white.withOpacity(0.1)
+                          : Colors.grey.withOpacity(0.1),
+                      shape: BoxShape.circle,
                     ),
-                    margin: const EdgeInsets.only(bottom: 12),
-                    child: ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: isRead
-                            ? Colors.grey.withOpacity(0.2)
-                            : notificationColor,
-                        child: Icon(
-                          Icons.notifications,
-                          color: isRead ? Colors.grey : Colors.white,
+                    child: IconButton(
+                      icon: const SvgIcon(
+                          iconPath: AppIcons.delete, color: Colors.red),
+                      tooltip: langVM.translate('delete_selected_title'),
+                      onPressed: () => _deleteSelected(user.id, langVM),
+                    ),
+                  ),
+                ]
+              : [
+                  Container(
+                    margin: const EdgeInsets.only(right: 8),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? Colors.white.withOpacity(0.1)
+                          : Colors.grey.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: PopupMenuButton<String>(
+                      icon: Icon(Icons.filter_list,
+                          color: theme.colorScheme.primary),
+                      tooltip: 'Filtrele',
+                      onSelected: (value) {
+                        setState(() {
+                          _filterType = value;
+                        });
+                      },
+                      itemBuilder: (context) => [
+                        PopupMenuItem(
+                          value: 'all',
+                          child: Text(langVM.translate('filter_all')),
                         ),
-                      ),
-                      title: Text(
-                        notification['title'] ?? '',
-                        style: TextStyle(
-                          fontWeight:
-                              isRead ? FontWeight.normal : FontWeight.bold,
+                        PopupMenuItem(
+                          value: 'unread',
+                          child: Text(langVM.translate('filter_unread')),
                         ),
-                      ),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: 4),
-                          Text(notification['body'] ?? ''),
-                          const SizedBox(height: 8),
-                          Text(
-                            timeText,
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withOpacity(0.5),
-                            ),
-                          ),
-                        ],
-                      ),
-                      trailing: !isRead
-                          ? Container(
-                              width: 12,
-                              height: 12,
-                              decoration: BoxDecoration(
-                                color: notificationColor,
-                                shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: notificationColor.withOpacity(0.4),
-                                    blurRadius: 4,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                            )
-                          : null,
-                      onTap: () async {
-                        if (!isRead) {
-                          AuthService.instance.markNotificationAsRead(
-                              user.id, notification['id']);
-                        }
-                        _showNotificationDetail(
-                            context, notification, timeText, langVM);
+                        PopupMenuItem(
+                          value: 'read',
+                          child: Text(langVM.translate('filter_read')),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    margin: const EdgeInsets.only(right: 16),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? Colors.white.withOpacity(0.1)
+                          : Colors.grey.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: IconButton(
+                      icon: Icon(Icons.done_all,
+                          color: theme.colorScheme.primary),
+                      tooltip: langVM.translate('mark_all_read'),
+                      onPressed: () async {
+                        await AuthService.instance
+                            .markAllNotificationsAsRead(user.id);
                       },
                     ),
                   ),
-                );
-              },
-            );
-          },
+                ],
+        ),
+        body: Container(
+          padding: const EdgeInsets.only(top: 150),
+          child: StreamBuilder<List<Map<String, dynamic>>>(
+            stream: AuthService.instance.getUserNotifications(user.id),
+            builder: (_, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CustomLoadingIndicator());
+              }
+
+              final notifications = snapshot.data ?? [];
+
+              // Filtreleme
+              List<Map<String, dynamic>> filteredList = notifications;
+              if (_filterType == 'unread') {
+                filteredList =
+                    notifications.where((n) => n['read'] == false).toList();
+              } else if (_filterType == 'read') {
+                filteredList =
+                    notifications.where((n) => n['read'] == true).toList();
+              }
+
+              // Bildirimleri filtrele
+              final sellerNotifications =
+                  filteredList.where((n) => _isSellerNotification(n)).toList();
+              final marketNotifications =
+                  filteredList.where((n) => !_isSellerNotification(n)).toList();
+
+              return TabBarView(
+                children: [
+                  _buildNotificationList(
+                      context, sellerNotifications, user.id, langVM),
+                  _buildNotificationList(
+                      context, marketNotifications, user.id, langVM),
+                ],
+              );
+            },
+          ),
         ),
       ),
+    );
+  }
+
+  bool _isSellerNotification(Map<String, dynamic> n) {
+    if (n['metadata'] != null && n['metadata'] is Map) {
+      final type = n['metadata']['type'];
+      return [
+        'question_reply',
+        'review_reply',
+        'new_question',
+        'new_review',
+        'new_seller_review',
+        'product_reply'
+      ].contains(type);
+    }
+    return false;
+  }
+
+  Widget _buildNotificationList(
+      BuildContext context,
+      List<Map<String, dynamic>> notifications,
+      String userId,
+      LanguageViewModel langVM) {
+    if (notifications.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.notifications_off_outlined,
+                size: 64, color: Colors.grey.withOpacity(0.5)),
+            const SizedBox(height: 16),
+            Text(langVM.translate('no_notifications'),
+                style: TextStyle(color: Colors.grey.withOpacity(0.8))),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: notifications.length,
+      itemBuilder: (_, index) {
+        final notification = notifications[index];
+        final id = notification['id'];
+        final isSelected = _selectedIds.contains(id);
+        final bool isRead = notification['read'] ?? false;
+        final Timestamp? timestamp = notification['timestamp'];
+        String timeText = '';
+
+        if (timestamp != null) {
+          final dt = timestamp.toDate();
+          timeText =
+              '${dt.day}/${dt.month}/${dt.year} ${dt.hour}:${dt.minute.toString().padLeft(2, '0')}';
+        }
+
+        Color notificationColor = Theme.of(context).colorScheme.primary;
+        if (_isSellerNotification(notification)) {
+          notificationColor = Theme.of(context).colorScheme.secondary;
+        }
+
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+
+        return Dismissible(
+          key: Key(id),
+          direction: _isSelectionMode
+              ? DismissDirection.none
+              : DismissDirection.endToStart,
+          background: Container(
+            alignment: Alignment.centerRight,
+            padding: const EdgeInsets.only(right: 20),
+            margin: const EdgeInsets.only(bottom: 16),
+            decoration: BoxDecoration(
+              color: Colors.red,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child:
+                const SvgIcon(iconPath: AppIcons.delete, color: Colors.white),
+          ),
+          onDismissed: (direction) {
+            AuthService.instance.deleteNotification(userId, id);
+          },
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 16),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
+                  : (isRead
+                      ? (isDark ? Theme.of(context).cardColor : Colors.white)
+                      : notificationColor.withOpacity(isDark ? 0.15 : 0.05)),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isSelected
+                    ? Theme.of(context).colorScheme.primary
+                    : (isRead
+                        ? (isDark
+                            ? Colors.white.withOpacity(0.1)
+                            : Colors.grey.withOpacity(0.1))
+                        : notificationColor.withOpacity(0.3)),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: () async {
+                  if (_isSelectionMode) {
+                    _toggleSelection(id);
+                  } else {
+                    if (!isRead) {
+                      AuthService.instance.markNotificationAsRead(userId, id);
+                    }
+                    _showNotificationDetail(
+                        context, notification, timeText, langVM);
+                  }
+                },
+                onLongPress: () {
+                  if (!_isSelectionMode) {
+                    _startSelection(id);
+                  }
+                },
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      CircleAvatar(
+                        backgroundColor: isSelected
+                            ? Theme.of(context).colorScheme.primary
+                            : (isRead
+                                ? (isDark
+                                    ? Colors.grey.withOpacity(0.2)
+                                    : Colors.grey.withOpacity(0.1))
+                                : notificationColor),
+                        child: isSelected
+                            ? const Icon(Icons.check, color: Colors.white)
+                            : Icon(
+                                Icons.notifications,
+                                color: isRead
+                                    ? (isDark
+                                        ? Colors.grey
+                                        : Colors.grey.shade600)
+                                    : Colors.white,
+                              ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              notification['title'] ?? '',
+                              style: TextStyle(
+                                fontWeight: isRead
+                                    ? FontWeight.normal
+                                    : FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              notification['body'] ?? '',
+                              style: TextStyle(
+                                color: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.color
+                                    ?.withOpacity(0.8),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              timeText,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withOpacity(0.5),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (!isRead)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 8.0, top: 8.0),
+                          child: Container(
+                            width: 12,
+                            height: 12,
+                            decoration: BoxDecoration(
+                              color: notificationColor,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: notificationColor.withOpacity(0.4),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -235,21 +474,15 @@ class NotificationsScreen extends StatelessWidget {
     final type = metadata is Map ? metadata['type'] : null;
 
     // Buton metnini belirle
-    String buttonText = 'Ürünü Görüntüle';
+    String buttonText = langVM.translate('view_product_button');
     if (type == 'new_question') {
-      buttonText = 'Soruyu Gör';
+      buttonText = langVM.translate('view_question_button');
     } else if (type == 'new_review') {
-      buttonText = 'Yorumu Gör';
+      buttonText = langVM.translate('view_review_button');
     } else if (type == 'question_reply' || type == 'review_reply') {
-      buttonText = 'Cevabı Gör';
-    }
-
-    if (type == 'product_reply' ||
-        type == 'new_review' ||
-        type == 'new_question' ||
-        type == 'question_reply' ||
-        type == 'review_reply') {
-      iconColor = Theme.of(context).colorScheme.secondary;
+      buttonText = langVM.translate('view_reply_button');
+    } else if (type == 'review_like') {
+      buttonText = langVM.translate('view_review_button');
     }
 
     showModalBottomSheet(
@@ -348,13 +581,14 @@ class NotificationsScreen extends StatelessWidget {
                       type == 'new_review' ||
                       type == 'new_question' ||
                       type == 'question_reply' ||
-                      type == 'review_reply')
+                      type == 'review_reply' ||
+                      type == 'review_like')
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
                           backgroundColor:
-                              Theme.of(context).colorScheme.secondary,
+                              Theme.of(context).colorScheme.primary,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
@@ -373,7 +607,7 @@ class NotificationsScreen extends StatelessWidget {
                     width: double.infinity,
                     child: TextButton(
                       onPressed: () => Navigator.pop(ctx),
-                      child: const Text('Kapat'),
+                      child: Text(langVM.translate('close_button')),
                     ),
                   ),
                 ],
@@ -383,7 +617,8 @@ class NotificationsScreen extends StatelessWidget {
               top: 4,
               right: 4,
               child: IconButton(
-                icon: const Icon(Icons.delete_outline, color: Colors.red),
+                icon:
+                    const SvgIcon(iconPath: AppIcons.delete, color: Colors.red),
                 onPressed: () async {
                   final authVM =
                       Provider.of<AuthViewModel>(context, listen: false);
@@ -407,6 +642,7 @@ class NotificationsScreen extends StatelessWidget {
     final type = metadata['type'];
     final questionId = metadata['questionId'];
     final reviewId = metadata['reviewId'];
+    final langVM = Provider.of<LanguageViewModel>(context, listen: false);
 
     // Satıcı için: Yeni Soru Detayı
     if (type == 'new_question' && questionId != null) {
@@ -444,7 +680,7 @@ class NotificationsScreen extends StatelessWidget {
                     Icon(Icons.help_outline,
                         size: 20, color: Theme.of(context).colorScheme.primary),
                     const SizedBox(width: 8),
-                    Text('Soru Detayı',
+                    Text(langVM.translate('question_detail_title'),
                         style: TextStyle(
                             fontWeight: FontWeight.bold,
                             color: Theme.of(context).colorScheme.primary)),
@@ -465,8 +701,8 @@ class NotificationsScreen extends StatelessWidget {
       );
     }
 
-    // Satıcı için: Yeni Değerlendirme Detayı
-    if (type == 'new_review' && reviewId != null) {
+    // Satıcı veya Kullanıcı için: Değerlendirme Detayı
+    if ((type == 'new_review' || type == 'review_like') && reviewId != null) {
       return FutureBuilder<DocumentSnapshot>(
         future: FirebaseFirestore.instance
             .collection('product_reviews')
@@ -503,7 +739,7 @@ class NotificationsScreen extends StatelessWidget {
                     const Icon(Icons.star_outline,
                         size: 20, color: Colors.amber),
                     const SizedBox(width: 8),
-                    Text('Değerlendirme Detayı',
+                    Text(langVM.translate('review_detail_title'),
                         style: TextStyle(
                             fontWeight: FontWeight.bold,
                             color: Colors.amber[700])),
@@ -542,6 +778,7 @@ class NotificationsScreen extends StatelessWidget {
     if (notification['metadata'] == null) return;
     final metadata = notification['metadata'];
     final type = metadata is Map ? metadata['type'] : null;
+    final langVM = Provider.of<LanguageViewModel>(context, listen: false);
 
     // Satıcı için yeni soru bildirimi ise Sorular sayfasına yönlendir
     if (type == 'new_question') {
@@ -585,7 +822,7 @@ class NotificationsScreen extends StatelessWidget {
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (ctx) => const Center(child: CircularProgressIndicator()),
+        builder: (ctx) => const Center(child: CustomLoadingIndicator()),
       );
 
       try {
@@ -600,7 +837,7 @@ class NotificationsScreen extends StatelessWidget {
           productData['id'] = doc.id;
 
           // Satıcı ismini çek (ProductDetailScreen için gerekli)
-          String sellerName = 'Satıcı';
+          String sellerName = langVM.translate('seller_default_name');
           if (productData['sellerId'] != null) {
             final sellerDoc = await FirebaseFirestore.instance
                 .collection('users')
@@ -625,6 +862,8 @@ class NotificationsScreen extends StatelessWidget {
               highlightQuestionId = metadata['questionId'];
             } else if (type == 'review_reply') {
               highlightReviewId = metadata['reviewId'];
+            } else if (type == 'review_like') {
+              highlightReviewId = metadata['reviewId'];
             }
 
             Navigator.push(
@@ -643,18 +882,15 @@ class NotificationsScreen extends StatelessWidget {
         } else {
           if (context.mounted) {
             Navigator.of(context, rootNavigator: true).pop();
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Ürün bulunamadı veya silinmiş.')),
-            );
+            CustomSnackbars.showError(
+                context, langVM.translate('product_not_found_error'));
           }
         }
       } catch (e) {
         debugPrint('Yönlendirme hatası: $e');
         if (context.mounted) {
           Navigator.of(context, rootNavigator: true).pop();
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Bir hata oluştu.')),
-          );
+          CustomSnackbars.showError(context, langVM.translate('generic_error'));
         }
       }
     }

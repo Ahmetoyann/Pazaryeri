@@ -31,29 +31,33 @@ class AuthViewModel extends ChangeNotifier {
   }
 
   Future<void> _checkAutoLogin() async {
-    // 1. Önce yerel veriyi (SharedPreferences) kontrol et
-    var userData = await AuthService.instance.getUserData();
+    try {
+      // 1. Önce yerel veriyi (SharedPreferences) kontrol et
+      var userData = await AuthService.instance.getUserData();
 
-    // 2. Yerel veri yoksa ama Firebase Auth oturumu açıksa (Senkronizasyon sorunu varsa)
-    if (userData == null) {
-      userData = await AuthService.instance.restoreSession();
-    }
-
-    if (userData != null) {
-      _setUserFromData(userData);
-      _isRemembered = true; // Kayıtlı veri varsa hatırlanmış demektir
-      _isSeller = await AuthService.instance.isSeller();
-
-      // Çoklu cihaz senkronizasyonu: İnternet varsa güncel veriyi çek
-      if (userData['id'] != null) {
-        _refreshUserProfile(userData['id']!);
+      // 2. Yerel veri yoksa ama Firebase Auth oturumu açıksa (Senkronizasyon sorunu varsa)
+      if (userData == null) {
+        userData = await AuthService.instance.restoreSession();
       }
 
-      // Favori pazarları dinlemeye başla
-      _startListeningToFavorites();
+      if (userData != null) {
+        _setUserFromData(userData);
+        _isRemembered = true; // Kayıtlı veri varsa hatırlanmış demektir
+        _isSeller = await AuthService.instance.isSeller();
 
-      // Bildirimleri dinle (Satıcı ve Müşteri)
-      _startNotificationListener();
+        // Çoklu cihaz senkronizasyonu: İnternet varsa güncel veriyi çek
+        if (userData['id'] != null) {
+          _refreshUserProfile(userData['id']!);
+        }
+
+        // Favori pazarları dinlemeye başla
+        _startListeningToFavorites();
+
+        // Bildirimleri dinle (Satıcı ve Müşteri)
+        _startNotificationListener();
+      }
+    } catch (e) {
+      debugPrint('Auto login error: $e');
     }
   }
 
@@ -641,6 +645,45 @@ class AuthViewModel extends ChangeNotifier {
       }
     } catch (e) {
       debugPrint('Favori bildirim hatası: $e');
+    }
+  }
+
+  /// Favori ürünlerin fiyatlarını kontrol et ve düşüş varsa bildirim gönder
+  Future<void> checkFavoriteProductsPriceDrops() async {
+    if (_currentUser == null) return;
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      // Favori ürünlerin güncel detaylarını çek
+      final favoriteProducts =
+          await AuthService.instance.fetchFavoriteProductsDetails();
+
+      if (favoriteProducts.isEmpty) return;
+
+      for (var product in favoriteProducts) {
+        final productId = product['id'];
+        final currentPrice = (product['price'] as num).toDouble();
+        final productName = product['name'];
+
+        final lastPriceKey = 'price_$productId';
+        final lastPrice = prefs.getDouble(lastPriceKey);
+
+        // Eğer eski fiyat varsa ve yeni fiyat daha düşükse bildirim gönder
+        if (lastPrice != null && currentPrice < lastPrice) {
+          await NotificationService.instance.showNotification(
+            id: productId.hashCode,
+            title: 'Fiyat Düştü! 📉',
+            body:
+                '$productName ürününün fiyatı düştü! Eski: $lastPrice₺, Yeni: $currentPrice₺',
+            payload: 'product_$productId', // Ürün detayına gitmek için prefix
+          );
+        }
+
+        // Fiyatı güncelle (Her durumda güncel fiyatı sakla)
+        await prefs.setDouble(lastPriceKey, currentPrice);
+      }
+    } catch (e) {
+      debugPrint('Fiyat düşüşü kontrolü hatası: $e');
     }
   }
 

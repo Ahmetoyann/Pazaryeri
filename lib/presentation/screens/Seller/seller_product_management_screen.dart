@@ -7,6 +7,11 @@ import 'package:fl_chart/fl_chart.dart';
 import '../../viewmodels/seller_viewmodel.dart';
 import '../../viewmodels/auth_service.dart';
 import 'seller_add_product_screen.dart';
+import '../../../core/constants/app_icons.dart';
+import '../../../presentation/widgets/svg_icon.dart';
+import '../../widgets/loading_overlay.dart';
+import '../../widgets/custom_snackbars.dart';
+import '../../widgets/custom_app_bar.dart';
 
 class SellerProductManagementScreen extends StatefulWidget {
   final SellerProduct product;
@@ -24,9 +29,9 @@ class _SellerProductManagementScreenState
   late TextEditingController _priceController;
   late TextEditingController _stockController;
   late TextEditingController _salesController;
-  bool _isLoading = false;
   bool _inStock = true;
   List<String> _existingImages = [];
+  List<String> _deletedImages = [];
   List<XFile> _newImages = [];
   final ImagePicker _picker = ImagePicker();
 
@@ -109,7 +114,8 @@ class _SellerProductManagementScreenState
           child: Wrap(
             children: <Widget>[
               ListTile(
-                leading: const Icon(Icons.photo_library),
+                leading: const SvgIcon(
+                    iconPath: AppIcons.gallery, color: Colors.grey),
                 title: const Text('Galeri'),
                 onTap: () {
                   Navigator.of(context).pop();
@@ -117,7 +123,8 @@ class _SellerProductManagementScreenState
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.photo_camera),
+                leading: const SvgIcon(
+                    iconPath: AppIcons.camera, color: Colors.grey),
                 title: const Text('Kamera'),
                 onTap: () {
                   Navigator.of(context).pop();
@@ -145,90 +152,106 @@ class _SellerProductManagementScreenState
     super.dispose();
   }
 
-  InputDecoration _buildInputDecoration(String label, IconData icon,
+  InputDecoration _buildInputDecoration(String label, String iconPath,
       {String? suffixText, String? helperText}) {
     final colorScheme = Theme.of(context).colorScheme;
     return InputDecoration(
       labelText: label,
-      prefixIcon: Icon(icon, color: colorScheme.primary),
+      prefixIcon: Padding(
+          padding: const EdgeInsets.all(12),
+          child: SvgIcon(
+              iconPath: iconPath, color: colorScheme.primary, size: 28)),
       suffixText: suffixText,
       helperText: helperText,
       border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(30),
-          borderSide: const BorderSide(color: Colors.white)),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: colorScheme.primary.withOpacity(0.5))),
       enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(30),
-          borderSide: const BorderSide(color: Colors.white)),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: colorScheme.primary.withOpacity(0.5))),
       focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(30),
-          borderSide: const BorderSide(color: Colors.white, width: 2)),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: colorScheme.primary, width: 2)),
     );
   }
 
   Future<void> _updateProduct() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _isLoading = true);
-
     try {
-      final double price = double.parse(_priceController.text);
-      final double stock = double.parse(_stockController.text);
-      final double sales = double.parse(_salesController.text);
+      await LoadingOverlay.show(
+        context,
+        asyncFunction: () async {
+          final double price = double.parse(_priceController.text);
+          final double stock = double.parse(_stockController.text);
+          final double sales = double.parse(_salesController.text);
 
-      // Stok 0 ise otomatik olarak satışı durdur
-      if (stock <= 0) {
-        _inStock = false;
-      }
-
-      // Yeni resimleri yükle
-      List<String> newImageUrls = [];
-      for (var image in _newImages) {
-        final file = File(image.path);
-        if (await file.exists()) {
-          try {
-            final url = await AuthService.instance.uploadProductImage(file);
-            newImageUrls.add(url);
-          } catch (e) {
-            throw Exception('Resim yüklenirken hata oluştu: $e');
+          // Stok 0 ise otomatik olarak satışı durdur
+          if (stock <= 0) {
+            _inStock = false;
           }
-        }
-      }
 
-      // Firestore güncellemesi
-      final Map<String, dynamic> updateData = {
-        'price': price,
-        'stockQuantity': stock,
-        'salesCount': sales,
-        'inStock': _inStock,
-      };
+          // Yeni resimleri yükle
+          List<String> newImageUrls = [];
+          for (var image in _newImages) {
+            final file = File(image.path);
+            if (await file.exists()) {
+              try {
+                final url = await AuthService.instance.uploadProductImage(file);
+                newImageUrls.add(url);
+              } catch (e) {
+                throw Exception('Resim yüklenirken hata oluştu: $e');
+              }
+            }
+          }
 
-      if (newImageUrls.isNotEmpty) {
-        updateData['images'] = FieldValue.arrayUnion(newImageUrls);
-      }
+          // Silinen resimleri Storage'dan temizle
+          for (String url in _deletedImages) {
+            await AuthService.instance.deleteImageFromStorage(url);
+          }
 
-      await AuthService.instance
-          .updateProductInDb(widget.product.id, updateData);
+          // Firestore güncellemesi
+          final Map<String, dynamic> updateData = {
+            'price': price,
+            'stockQuantity': stock,
+            'salesCount': sales,
+            'inStock': _inStock,
+          };
 
-      // ViewModel'i yenile (Listeyi ve istatistikleri güncellemek için)
+          // Resim listesini güncelle (Mevcut + Yeni)
+          List<String> finalImages = [..._existingImages, ...newImageUrls];
+          updateData['images'] = finalImages;
+
+          // Ana resim kontrolü (Eğer hiç resim kalmadıysa veya ana resim silindiyse)
+          if (finalImages.isNotEmpty) {
+            if (widget.product.imagePath == null ||
+                !finalImages.contains(widget.product.imagePath)) {
+              updateData['imagePath'] = finalImages.first;
+            }
+          } else {
+            updateData['imagePath'] = null;
+          }
+
+          await AuthService.instance
+              .updateProductInDb(widget.product.id, updateData);
+
+          // ViewModel'i yenile (Listeyi ve istatistikleri güncellemek için)
+          if (mounted) {
+            await Provider.of<SellerViewModel>(context, listen: false)
+                .loadProducts();
+          }
+        },
+      );
+
       if (mounted) {
-        await Provider.of<SellerViewModel>(context, listen: false)
-            .loadProducts();
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content: Text('Ürün bilgileri ve istatistikler güncellendi')),
-          );
-          Navigator.pop(context);
-        }
+        CustomSnackbars.showSuccess(
+            context, 'Ürün bilgileri ve istatistikler güncellendi');
+        Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Hata: $e')),
-        );
+        CustomSnackbars.showError(context, 'Hata: $e');
       }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -260,7 +283,8 @@ class _SellerProductManagementScreenState
           decoration: BoxDecoration(
             color: Theme.of(context).cardColor,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white),
+            border: Border.all(
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.5)),
           ),
           child: LineChart(
             LineChartData(
@@ -277,7 +301,7 @@ class _SellerProductManagementScreenState
                           padding: const EdgeInsets.only(top: 8),
                           child: Text('Başlangıç',
                               style: TextStyle(
-                                fontSize: 12,
+                                fontSize: 13,
                                 fontWeight: FontWeight.bold,
                                 color: Theme.of(context).colorScheme.onSurface,
                               )),
@@ -288,7 +312,7 @@ class _SellerProductManagementScreenState
                           padding: const EdgeInsets.only(top: 8),
                           child: Text('Bugün',
                               style: TextStyle(
-                                fontSize: 12,
+                                fontSize: 13,
                                 fontWeight: FontWeight.bold,
                                 color: Theme.of(context).colorScheme.onSurface,
                               )),
@@ -305,7 +329,7 @@ class _SellerProductManagementScreenState
                     getTitlesWidget: (value, meta) {
                       return Text(value.toInt().toString(),
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: 13,
                             fontWeight: FontWeight.bold,
                             color: Theme.of(context).colorScheme.onSurface,
                           ));
@@ -347,11 +371,11 @@ class _SellerProductManagementScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
+      appBar: CustomAppBar(
         title: Text(widget.product.name),
         actions: [
           IconButton(
-            icon: const Icon(Icons.edit),
+            icon: const SvgIcon(iconPath: AppIcons.edit, size: 28),
             tooltip: 'Detaylı Düzenle',
             onPressed: () {
               // İsim, resim vb. değiştirmek için eski sayfaya yönlendir
@@ -395,15 +419,22 @@ class _SellerProductManagementScreenState
                         width: 100,
                         height: 100,
                         margin: const EdgeInsets.only(right: 12),
+                        alignment: Alignment.center,
                         decoration: BoxDecoration(
                           color: Theme.of(context)
                               .colorScheme
                               .primary
                               .withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.white),
+                          border: Border.all(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .primary
+                                  .withOpacity(0.5)),
                         ),
-                        child: Icon(Icons.add_a_photo,
+                        child: SvgIcon(
+                            iconPath: AppIcons.camera,
+                            size: 36,
                             color: Theme.of(context).colorScheme.primary),
                       ),
                     ),
@@ -417,7 +448,11 @@ class _SellerProductManagementScreenState
                             margin: const EdgeInsets.only(right: 12),
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.white),
+                              border: Border.all(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .primary
+                                      .withOpacity(0.5)),
                               image: DecorationImage(
                                 image: FileImage(File(entry.value.path)),
                                 fit: BoxFit.cover,
@@ -435,8 +470,10 @@ class _SellerProductManagementScreenState
                                   color: Colors.red,
                                   shape: BoxShape.circle,
                                 ),
-                                child: const Icon(Icons.close,
-                                    size: 12, color: Colors.white),
+                                child: const SvgIcon(
+                                    iconPath: AppIcons.close,
+                                    size: 16,
+                                    color: Colors.white),
                               ),
                             ),
                           ),
@@ -444,19 +481,61 @@ class _SellerProductManagementScreenState
                       );
                     }),
                     // Mevcut Resimler
-                    ..._existingImages.map((url) {
-                      return Container(
-                        width: 100,
-                        height: 100,
-                        margin: const EdgeInsets.only(right: 12),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.white),
-                          image: DecorationImage(
-                            image: NetworkImage(url),
-                            fit: BoxFit.cover,
+                    ..._existingImages.asMap().entries.map((entry) {
+                      final int index = entry.key;
+                      final String url = entry.value;
+                      return Stack(
+                        children: [
+                          Container(
+                            width: 100,
+                            height: 100,
+                            margin: const EdgeInsets.only(right: 12),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .primary
+                                      .withOpacity(0.5)),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(11),
+                              child: Image.network(
+                                url,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return const Center(
+                                    child: Icon(Icons.broken_image,
+                                        color: Colors.grey),
+                                  );
+                                },
+                              ),
+                            ),
                           ),
-                        ),
+                          Positioned(
+                            top: 4,
+                            right: 16,
+                            child: GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _deletedImages.add(url);
+                                  _existingImages.removeAt(index);
+                                });
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: const BoxDecoration(
+                                  color: Colors.red,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const SvgIcon(
+                                    iconPath: AppIcons.close,
+                                    size: 16,
+                                    color: Colors.white),
+                              ),
+                            ),
+                          ),
+                        ],
                       );
                     }),
                   ],
@@ -469,8 +548,8 @@ class _SellerProductManagementScreenState
                 controller: _priceController,
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
-                decoration: _buildInputDecoration(
-                    'Birim Fiyat (₺)', Icons.price_change),
+                decoration: _buildInputDecoration('Birim Fiyat (₺)',
+                    AppIcons.products), // Fiyat ikonu yok, products kullandım
                 validator: (v) => v!.isEmpty ? 'Fiyat giriniz' : null,
               ),
               const SizedBox(height: 16),
@@ -481,7 +560,7 @@ class _SellerProductManagementScreenState
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
                 decoration:
-                    _buildInputDecoration('Stok Miktarı', Icons.inventory),
+                    _buildInputDecoration('Stok Miktarı', AppIcons.inventory),
                 validator: (v) => v!.isEmpty ? 'Stok giriniz' : null,
                 onChanged: (val) {
                   setState(() {}); // Grafiği güncelle
@@ -495,7 +574,7 @@ class _SellerProductManagementScreenState
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
                 decoration: _buildInputDecoration(
-                    'Toplam Satış Miktarı', Icons.shopping_cart),
+                    'Toplam Satış Miktarı', AppIcons.basket),
                 validator: (v) => v!.isEmpty ? 'Satış adedi giriniz' : null,
                 onChanged: (val) => setState(() {}),
               ),
@@ -513,12 +592,19 @@ class _SellerProductManagementScreenState
                     });
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _inStock ? Colors.red : Colors.green,
-                    foregroundColor: Colors.white,
+                    backgroundColor: _inStock
+                        ? Colors.red.withOpacity(0.2)
+                        : Colors.green.withOpacity(0.2),
+                    foregroundColor: _inStock ? Colors.red : Colors.green,
+                    elevation: 0,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                      side: const BorderSide(color: Colors.white),
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withOpacity(0.5)),
                     ),
                   ),
                   icon: Icon(_inStock
@@ -527,7 +613,7 @@ class _SellerProductManagementScreenState
                   label: Text(
                     _inStock ? 'Satışı Durdur' : 'Satışı Başlat',
                     style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 16),
+                        fontWeight: FontWeight.bold, fontSize: 17),
                   ),
                 ),
               ),
@@ -536,17 +622,23 @@ class _SellerProductManagementScreenState
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _isLoading ? null : _updateProduct,
+                  onPressed: _updateProduct,
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor:
+                        Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                    foregroundColor: Theme.of(context).colorScheme.primary,
+                    elevation: 0,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                      side: const BorderSide(color: Colors.white),
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withOpacity(0.5)),
                     ),
                   ),
-                  child: _isLoading
-                      ? const CircularProgressIndicator()
-                      : const Text('Güncelle'),
+                  child: const Text('Güncelle'),
                 ),
               ),
             ],

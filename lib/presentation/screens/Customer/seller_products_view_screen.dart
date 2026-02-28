@@ -3,8 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../viewmodels/auth_service.dart';
 import '../../viewmodels/language_viewmodel.dart';
+import '../../viewmodels/seller_viewmodel.dart';
 import 'product_detail_screen.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../widgets/custom_snackbars.dart';
+import '../../../core/constants/app_icons.dart';
+import '../../widgets/svg_icon.dart';
 
 class SellerProductsViewScreen extends StatefulWidget {
   final Map<String, dynamic> seller;
@@ -29,6 +33,7 @@ class _SellerProductsViewScreenState extends State<SellerProductsViewScreen> {
   int _reviewCount = 0;
   String _sortOption = 'default';
   bool _isFavorite = false;
+  String? _marketName;
 
   @override
   void dispose() {
@@ -41,6 +46,27 @@ class _SellerProductsViewScreenState extends State<SellerProductsViewScreen> {
     super.initState();
     _loadProducts();
     _checkFavoriteStatus();
+    _loadMarketInfo();
+  }
+
+  Future<void> _loadMarketInfo() async {
+    final marketId = widget.seller['sellerMarketId'];
+    if (marketId != null && marketId.toString().isNotEmpty) {
+      try {
+        final sellerVM = Provider.of<SellerViewModel>(context, listen: false);
+        final markets = await sellerVM.getMarkets();
+        try {
+          final market = markets.firstWhere((m) => m.id == marketId);
+          if (mounted) {
+            setState(() {
+              _marketName = market.name;
+            });
+          }
+        } catch (_) {}
+      } catch (e) {
+        debugPrint('Pazar bilgisi yüklenemedi: $e');
+      }
+    }
   }
 
   Future<void> _checkFavoriteStatus() async {
@@ -56,9 +82,7 @@ class _SellerProductsViewScreenState extends State<SellerProductsViewScreen> {
     final langVM = Provider.of<LanguageViewModel>(context, listen: false);
 
     if (AuthService.instance.currentUserId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(langVM.translate('guest_message'))),
-      );
+      CustomSnackbars.showWarning(context, langVM.translate('guest_message'));
       return;
     }
 
@@ -68,13 +92,11 @@ class _SellerProductsViewScreenState extends State<SellerProductsViewScreen> {
       setState(() {
         _isFavorite = !_isFavorite;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(langVM.translate(_isFavorite
-              ? 'seller_added_to_favorites'
-              : 'seller_removed_from_favorites')),
-          duration: const Duration(seconds: 1),
-        ),
+      CustomSnackbars.showSuccess(
+        context,
+        langVM.translate(_isFavorite
+            ? 'seller_added_to_favorites'
+            : 'seller_removed_from_favorites'),
       );
     }
   }
@@ -229,6 +251,40 @@ class _SellerProductsViewScreenState extends State<SellerProductsViewScreen> {
                           ),
                         ),
                       ),
+                      if (_marketName != null)
+                        Container(
+                          margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .primary
+                                    .withOpacity(0.3)),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.storefront,
+                                  color: Theme.of(context).colorScheme.primary),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  'Bu satıcı şu an $_marketName pazarında satış yapıyor.',
+                                  style: TextStyle(
+                                    color:
+                                        Theme.of(context).colorScheme.onSurface,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       // Arama Çubuğu
                       Padding(
                         padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
@@ -236,23 +292,48 @@ class _SellerProductsViewScreenState extends State<SellerProductsViewScreen> {
                           controller: _searchController,
                           decoration: InputDecoration(
                             hintText: 'Ürün ara...',
-                            hintStyle: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.6)),
-                            prefixIcon: Icon(Icons.search,
-                                color: Colors.white.withValues(alpha: 0.6)),
+                            hintStyle:
+                                TextStyle(color: Theme.of(context).hintColor),
+                            prefixIcon: Padding(
+                              padding: const EdgeInsets.all(12.0),
+                              child: SvgIcon(
+                                  iconPath: AppIcons.search,
+                                  color: Theme.of(context).hintColor),
+                            ),
+                            suffixIcon: _searchQuery.isNotEmpty
+                                ? IconButton(
+                                    icon: SvgIcon(
+                                        iconPath: AppIcons.close,
+                                        size: 20,
+                                        color: Theme.of(context).hintColor),
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      setState(() {
+                                        _searchQuery = '';
+                                        _applyFilters();
+                                      });
+                                    },
+                                  )
+                                : IconButton(
+                                    icon: Icon(Icons.mic,
+                                        color: Theme.of(context).hintColor),
+                                    onPressed: () {
+                                      CustomSnackbars.showInfo(
+                                          context, 'Sesli arama yakında...');
+                                    },
+                                  ),
                             border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(
-                                    color: Colors.white.withOpacity(0.3))),
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide.none),
                             enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(
-                                    color: Colors.white.withOpacity(0.3))),
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide.none),
                             focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(8),
                                 borderSide: BorderSide(
-                                    color: Colors.white.withOpacity(0.5),
-                                    width: 2)),
+                                    color:
+                                        Theme.of(context).colorScheme.primary,
+                                    width: 1.5)),
                             filled: true,
                             fillColor: Theme.of(context).cardColor,
                           ),
@@ -285,8 +366,6 @@ class _SellerProductsViewScreenState extends State<SellerProductsViewScreen> {
                                     child: DropdownButton<String>(
                                       value: _selectedCategory,
                                       isExpanded: true,
-                                      dropdownColor: const Color(0xFF1B5E20)
-                                          .withValues(alpha: 0.95),
                                       style: const TextStyle(
                                           color: Colors.white, fontSize: 13),
                                       icon: const Icon(Icons.filter_list,
@@ -326,8 +405,6 @@ class _SellerProductsViewScreenState extends State<SellerProductsViewScreen> {
                                   child: DropdownButton<String>(
                                     value: _sortOption,
                                     isExpanded: true,
-                                    dropdownColor: const Color(0xFF1B5E20)
-                                        .withValues(alpha: 0.95),
                                     style: const TextStyle(
                                         color: Colors.white, fontSize: 13),
                                     icon: const Icon(Icons.sort,
@@ -415,10 +492,6 @@ class _SellerProductsViewScreenState extends State<SellerProductsViewScreen> {
                                             : const Icon(Icons.remove_circle,
                                                 color: Colors.red, size: 20),
                                         onTap: () {
-                                          // Görüntülenme sayısını artır
-                                          AuthService.instance
-                                              .incrementProductViewCount(
-                                                  product['id']);
                                           Navigator.push(
                                             context,
                                             MaterialPageRoute(

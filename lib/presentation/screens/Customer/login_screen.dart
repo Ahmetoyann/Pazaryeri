@@ -1,9 +1,12 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/presentation/widgets/svg_icon.dart';
 import 'package:provider/provider.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 import '../../viewmodels/language_viewmodel.dart';
 import '../../widgets/success_dialog.dart';
+import '../../widgets/loading_overlay.dart';
+import '../../../core/constants/app_icons.dart';
 
 class LoginScreen extends StatefulWidget {
   final VoidCallback onLoginSuccess;
@@ -14,49 +17,95 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  bool _isLoading = false;
-  bool _isGuestLoading = false;
-
   Future<void> _loginWithGoogle() async {
-    setState(() {
-      _isLoading = true;
-    });
     final authVM = Provider.of<AuthViewModel>(context, listen: false);
     final langVM = Provider.of<LanguageViewModel>(context, listen: false);
 
-    try {
-      final success = await authVM.loginWithGoogle();
-      if (success && mounted) {
-        widget.onLoginSuccess();
-        Navigator.of(context).pop();
-      }
-    } catch (e) {
-      if (mounted) {
-        await DialogService.showError(context,
-            message: '${langVM.translate('google_login_error')}: $e');
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
+    await LoadingOverlay.show(
+      context,
+      asyncFunction: () async {
+        try {
+          final success = await authVM.loginWithGoogle();
+          if (success && mounted) {
+            widget.onLoginSuccess();
+            Navigator.of(context).pop();
+          }
+        } catch (e) {
+          if (mounted) {
+            // Hata mesajını overlay kapandıktan sonra göster
+            Future.delayed(const Duration(milliseconds: 100), () {
+              DialogService.showError(context,
+                  message: '${langVM.translate('google_login_error')}: $e');
+            });
+          }
+        }
+      },
+    );
   }
 
   Future<void> _loginAsGuest() async {
-    setState(() {
-      _isGuestLoading = true;
-    });
+    await LoadingOverlay.show(
+      context,
+      asyncFunction: () async {
+        Provider.of<AuthViewModel>(context, listen: false).enterAsGuest();
+        widget.onLoginSuccess();
+        Navigator.of(context).pop();
+      },
+    );
+  }
 
-    // Animasyonun görünmesi için kısa bir gecikme
-    await Future.delayed(const Duration(milliseconds: 800));
-
-    if (mounted) {
-      Provider.of<AuthViewModel>(context, listen: false).enterAsGuest();
-      widget.onLoginSuccess();
-      Navigator.of(context).pop();
-      // Genellikle sayfa değişeceği için false yapmaya gerek kalmayabilir ama güvenli taraf:
-      if (mounted) setState(() => _isGuestLoading = false);
-    }
+  Widget _buildLoginButton(BuildContext context,
+      {required String title,
+      required Widget icon,
+      required Color color,
+      required VoidCallback onTap}) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            color,
+            color.withOpacity(0.7),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.4),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+        border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 18),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                icon,
+                const SizedBox(width: 12),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    letterSpacing: 1,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -64,6 +113,15 @@ class _LoginScreenState extends State<LoginScreen> {
     final langVM = Provider.of<LanguageViewModel>(context);
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
@@ -73,16 +131,30 @@ class _LoginScreenState extends State<LoginScreen> {
             children: [
               Center(
                 child: Container(
-                  height: MediaQuery.of(context).size.width * 0.35,
-                  width: MediaQuery.of(context).size.width * 0.35,
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Theme.of(context).cardColor,
-                    border: Border.all(color: Colors.white.withOpacity(0.3)),
-                  ),
-                  child: Image.asset('assets/images/copilot_ikon.png'),
-                ),
+                    height: MediaQuery.of(context).size.width * 0.35,
+                    width: MediaQuery.of(context).size.width * 0.35,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Theme.of(context).cardColor,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Theme.of(context).shadowColor.withOpacity(0.1),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                      border: Border.all(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withOpacity(0.27)),
+                    ),
+                    child: SvgIcon(
+                      iconPath: AppIcons.user,
+                      size: MediaQuery.of(context).size.width * 0.24,
+                      color: Theme.of(context).colorScheme.primary,
+                    )),
               ),
               const SizedBox(height: 16),
               Text(
@@ -93,79 +165,24 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
               ),
               const SizedBox(height: 32),
-              ElevatedButton.icon(
-                onPressed:
-                    (_isLoading || _isGuestLoading) ? () {} : _loginWithGoogle,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color.fromARGB(255, 27, 94, 32),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
-                    side: BorderSide(color: Colors.white.withOpacity(0.4)),
-                  ),
+              _buildLoginButton(
+                context,
+                title: langVM.translate('google_login'),
+                icon: Image.asset(
+                  'assets/images/google_logo.svg.png',
+                  height: 24,
                 ),
-                icon: _isLoading
-                    ? const SizedBox(
-                        height: 24,
-                        width: 24,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2.5,
-                          color: Colors.white,
-                        ),
-                      )
-                    : Image.asset(
-                        'assets/images/google_logo.svg.png',
-                        height: 24,
-                      ),
-                label: Text(
-                  langVM.translate('google_login'),
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+                color: const Color.fromARGB(255, 27, 94, 32),
+                onTap: _loginWithGoogle,
               ),
               const SizedBox(height: 24),
-              Container(
-                child: ElevatedButton(
-                  onPressed:
-                      (_isLoading || _isGuestLoading) ? () {} : _loginAsGuest,
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                      side: BorderSide(color: Colors.white.withOpacity(0.3)),
-                    ),
-                  ),
-                  child: _isGuestLoading
-                      ? const SizedBox(
-                          height: 24,
-                          width: 24,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.5,
-                            color: Colors.white,
-                          ),
-                        )
-                      : Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              langVM.translate('continue_guest'),
-                              style: const TextStyle(
-                                fontSize: 16,
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            const Icon(
-                              Icons.arrow_forward_rounded,
-                              color: Colors.white,
-                            ),
-                          ],
-                        ),
-                ),
+              _buildLoginButton(
+                context,
+                title: langVM.translate('continue_guest'),
+                icon: const Icon(Icons.arrow_forward_ios,
+                    color: Colors.white, size: 24),
+                color: Theme.of(context).colorScheme.primary,
+                onTap: _loginAsGuest,
               ),
             ],
           ),

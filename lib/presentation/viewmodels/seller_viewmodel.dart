@@ -17,6 +17,7 @@ class SellerViewModel extends ChangeNotifier {
 
   SellerViewModel(this._marketRepository) {
     _loadMockData();
+    _loadReplyTemplates();
   }
 
   Market? _selectedMarket;
@@ -51,6 +52,10 @@ class SellerViewModel extends ChangeNotifier {
   static const int _productsLimit = 10;
 
   static const String _keyMockProducts = 'mock_products_data';
+
+  List<String> _replyTemplates = [];
+  List<String> get replyTemplates => List.unmodifiable(_replyTemplates);
+  static const String _keyReplyTemplates = 'seller_reply_templates';
 
   // --- MOCK VERİ (GEÇİCİ VERİTABANI) ---
   // Firestore yerine bu listeyi kullanıyoruz.
@@ -152,6 +157,27 @@ class SellerViewModel extends ChangeNotifier {
     final String jsonString =
         json.encode(_mockDatabase.map((e) => e.toMap()).toList());
     await prefs.setString(_keyMockProducts, jsonString);
+  }
+
+  Future<void> _loadReplyTemplates() async {
+    final prefs = await SharedPreferences.getInstance();
+    _replyTemplates = prefs.getStringList(_keyReplyTemplates) ?? [];
+    notifyListeners();
+  }
+
+  Future<void> addReplyTemplate(String template) async {
+    if (_replyTemplates.contains(template)) return;
+    _replyTemplates.add(template);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_keyReplyTemplates, _replyTemplates);
+    notifyListeners();
+  }
+
+  Future<void> removeReplyTemplate(String template) async {
+    _replyTemplates.remove(template);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_keyReplyTemplates, _replyTemplates);
+    notifyListeners();
   }
 
   // Pazar Seçimi
@@ -293,7 +319,9 @@ class SellerViewModel extends ChangeNotifier {
         imageUrl = await AuthService.instance
             .uploadProductImage(File(_selectedImages.first.path));
       } catch (e) {
-        debugPrint('Resim yükleme hatası: $e');
+        _isLoading = false;
+        notifyListeners();
+        throw Exception('Resim yüklenirken bir sorun oluştu: $e');
       }
     }
 
@@ -369,7 +397,23 @@ class SellerViewModel extends ChangeNotifier {
         imageUrl = await AuthService.instance
             .uploadProductImage(File(_selectedImages.first.path));
       } catch (e) {
-        debugPrint('Resim yükleme hatası: $e');
+        _isLoading = false;
+        notifyListeners();
+
+        // İnternet hatası ise işlemi tekrar deneme kuyruğuna ekle
+        if (e.toString().contains('İnternet Bağlantısı Yok')) {
+          AuthService.instance.setRetryOperation(() => addProduct(
+                name: name,
+                description: description,
+                price: price,
+                category: category,
+                stockQuantity: stockQuantity,
+                unit: unit,
+                inStock: inStock,
+              ));
+        }
+
+        throw Exception('Resim yüklenirken bir sorun oluştu: $e');
       }
     }
 

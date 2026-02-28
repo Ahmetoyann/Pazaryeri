@@ -8,7 +8,6 @@ class Market {
   final String description;
   final Address address;
   final double distanceInMeters;
-  final List<String> products;
   final List<String> openDays; // e.g., ['Pazartesi', 'Cuma']
   final double occupancy;
 
@@ -18,7 +17,6 @@ class Market {
     required this.description,
     required this.address,
     required this.distanceInMeters,
-    this.products = const [],
     this.openDays = const [],
     double? occupancy,
   }) : occupancy = occupancy ??

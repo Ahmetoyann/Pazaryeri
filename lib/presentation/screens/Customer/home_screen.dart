@@ -1,15 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../viewmodels/home_viewmodel.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../widgets/market_card.dart';
 import 'market_detail_screen.dart';
 import '../../viewmodels/language_viewmodel.dart';
-import '../../widgets/custom_app_bar.dart';
 import '../../viewmodels/notification_service.dart';
 import 'notifications_screen.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 import '../../viewmodels/auth_service.dart';
+import '../../widgets/custom_bottom_sheets.dart';
+import '../../widgets/custom_snackbars.dart';
+import '../../widgets/side_menu_drawer.dart';
+import '../../../core/constants/app_icons.dart';
+import '../../../presentation/widgets/svg_icon.dart';
+import '../../widgets/loading_overlay.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -18,7 +24,25 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _pulseController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
   final List<String> _days = [
     'Pazartesi',
     'Salı',
@@ -29,11 +53,46 @@ class _HomeScreenState extends State<HomeScreen> {
     'Pazar',
   ];
 
+  final List<String> _dayKeys = [
+    'day_monday',
+    'day_tuesday',
+    'day_wednesday',
+    'day_thursday',
+    'day_friday',
+    'day_saturday',
+    'day_sunday',
+  ];
+
+  Future<void> _openMapSearch(HomeViewModel vm) async {
+    if (vm.currentAddress == null) return;
+
+    final city = vm.currentAddress!.city;
+    Uri uri;
+
+    if (city.isNotEmpty) {
+      // Şehirdeki tüm semt pazarlarını haritada göster
+      final query = Uri.encodeComponent('$city Semt Pazarları');
+      uri = Uri.parse("https://www.google.com/maps/search/?api=1&query=$query");
+    } else {
+      final lat = vm.currentAddress!.latitude;
+      final lng = vm.currentAddress!.longitude;
+      uri = Uri.parse(
+          "https://www.google.com/maps/search/Semt+Pazarı/@$lat,$lng,14z");
+    }
+
+    try {
+      if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+        debugPrint('Harita açılamadı');
+      }
+    } catch (e) {
+      debugPrint('Harita hatası: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<HomeViewModel>();
     final langVM = context.watch<LanguageViewModel>();
-    final authVM = context.watch<AuthViewModel>();
 
     List<Widget> _buildProvinceMarketsSlivers(HomeViewModel vm) {
       final filteredList = vm.filteredProvinceMarkets;
@@ -57,7 +116,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     },
                     style: ElevatedButton.styleFrom(
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
+                        borderRadius: BorderRadius.circular(12),
                         side: BorderSide(color: Colors.white.withOpacity(0.3)),
                       ),
                     ),
@@ -75,7 +134,7 @@ class _HomeScreenState extends State<HomeScreen> {
           SliverFillRemaining(
             hasScrollBody: false,
             child: Center(
-              child: Text('${vm.selectedDay} günü açık pazar bulunamadı.'),
+              child: Text(langVM.translate('no_open_market_found')),
             ),
           )
         ];
@@ -129,7 +188,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   Text(
                     vm.state == ViewState.busy
                         ? ''
-                        : (vm.errorMessage ?? 'Yakında pazar bulunamadı.'),
+                        : (vm.errorMessage ??
+                            langVM.translate('no_nearby_markets')),
                   ),
                   const SizedBox(height: 8),
                   ElevatedButton(
@@ -138,7 +198,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     },
                     style: ElevatedButton.styleFrom(
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
+                        borderRadius: BorderRadius.circular(12),
                         side: BorderSide(color: Colors.white.withOpacity(0.3)),
                       ),
                     ),
@@ -156,7 +216,7 @@ class _HomeScreenState extends State<HomeScreen> {
           SliverFillRemaining(
             hasScrollBody: false,
             child: Center(
-              child: Text('${vm.selectedDay} günü açık pazar bulunamadı.'),
+              child: Text(langVM.translate('no_open_market_found')),
             ),
           )
         ];
@@ -173,12 +233,40 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  langVM.translate('nearby_markets'),
-                  style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      langVM.translate('nearby_markets'),
+                      style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.primary),
+                    ),
+                    GestureDetector(
+                      onTap: () => _openMapSearch(vm),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.black
+                              : Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                              color: Theme.of(context).colorScheme.primary),
+                        ),
+                        child: Text(
+                          langVM.translate('see_all'),
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.primary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 12),
                 SizedBox(
@@ -209,10 +297,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 16),
                 Text(
                   langVM.translate('all_markets'),
-                  style: const TextStyle(
+                  style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white),
+                      color: Theme.of(context).colorScheme.primary),
                 ),
                 const SizedBox(height: 12),
               ],
@@ -252,243 +340,413 @@ class _HomeScreenState extends State<HomeScreen> {
       ];
     }
 
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: CustomAppBar(
-        title: Text(langVM.translate('home_title')),
-        actions: [
-          StreamBuilder<List<Map<String, dynamic>>>(
-            stream: authVM.currentUser != null
-                ? AuthService.instance
-                    .getUserNotifications(authVM.currentUser!.id)
-                : null,
-            builder: (context, snapshot) {
-              int unreadCount = 0;
-              if (snapshot.hasData) {
-                unreadCount =
-                    snapshot.data!.where((n) => n['read'] == false).length;
-              }
-              return IconButton(
-                icon: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    const Icon(Icons.notifications),
-                    if (unreadCount > 0)
-                      Positioned(
-                        right: -2,
-                        top: -2,
-                        child: Container(
-                          padding: const EdgeInsets.all(2),
-                          decoration: BoxDecoration(
-                            color: Colors.red,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 1.5),
-                          ),
-                          constraints: const BoxConstraints(
-                            minWidth: 18,
-                            minHeight: 18,
-                          ),
-                          child: Center(
-                            child: Text(
-                              '$unreadCount',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
+    return Stack(
+      children: [
+        Padding(
+          padding:
+              EdgeInsets.only(top: MediaQuery.of(context).padding.top + 80),
+          child: CustomScrollView(
+            slivers: [
+              // İl ve İlçe Filtreleri
+              if (vm.allCities.isNotEmpty)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    child: Row(
+                      children: [
+                        // İl Filtresi
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).cardColor,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .primary
+                                    .withOpacity(0.5),
                               ),
-                              textAlign: TextAlign.center,
+                            ),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                value: vm.selectedCityFilter,
+                                hint: Text(
+                                  langVM.translate('select_city'),
+                                  style: TextStyle(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withOpacity(0.6),
+                                  ),
+                                ),
+                                isExpanded: true,
+                                icon: SvgIcon(
+                                    iconPath: AppIcons.market,
+                                    color:
+                                        Theme.of(context).colorScheme.primary),
+                                items: vm.allCities.map((String city) {
+                                  return DropdownMenuItem<String>(
+                                    value: city == 'Tümü' ? null : city,
+                                    child: Text(city),
+                                  );
+                                }).toList(),
+                                onChanged: (String? newValue) {
+                                  vm.updateCityFilter(newValue);
+                                },
+                              ),
                             ),
                           ),
                         ),
+                        const SizedBox(width: 12),
+                        // İlçe Filtresi
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            decoration: BoxDecoration(
+                              color: vm.selectedCityFilter == null
+                                  ? Theme.of(context).cardColor.withOpacity(0.5)
+                                  : Theme.of(context).cardColor,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: vm.selectedCityFilter == null
+                                    ? Colors.grey.withOpacity(0.4)
+                                    : Theme.of(context)
+                                        .colorScheme
+                                        .primary
+                                        .withOpacity(0.5),
+                              ),
+                            ),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                value: vm.selectedDistrictFilter,
+                                hint: Text(langVM.translate('select_district'),
+                                    style: TextStyle(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withOpacity(0.6))),
+                                isExpanded: true,
+                                icon: SvgIcon(
+                                    iconPath: AppIcons.map,
+                                    color:
+                                        Theme.of(context).colorScheme.primary),
+                                items: vm.districtsForSelectedCity
+                                    .map((String district) {
+                                  return DropdownMenuItem<String>(
+                                    value: district == 'Tümü' ? null : district,
+                                    child: Text(district),
+                                  );
+                                }).toList(),
+                                onChanged: vm.selectedCityFilter == null
+                                    ? null
+                                    : (String? newValue) {
+                                        vm.updateDistrictFilter(newValue);
+                                      },
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              // Gün Filtreleri
+              SliverToBoxAdapter(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      height: 40,
+                      child: ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        scrollDirection: Axis.horizontal,
+                        itemCount: _days.length,
+                        itemBuilder: (context, index) {
+                          final day = _days[index];
+                          final dayDisplay = langVM.translate(_dayKeys[index]);
+                          final isSelected = vm.selectedDay == day;
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 10.0),
+                            child: GestureDetector(
+                              onTap: () {
+                                vm.updateDayFilter(isSelected ? null : day);
+                              },
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                  vertical: 8,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? Theme.of(context).colorScheme.primary
+                                      : Theme.of(context).cardColor,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: isSelected
+                                        ? Colors.transparent
+                                        : Colors.grey.withOpacity(0.3),
+                                    width: 1,
+                                  ),
+                                  boxShadow: isSelected
+                                      ? [
+                                          BoxShadow(
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .primary
+                                                .withOpacity(0.4),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 4),
+                                          ),
+                                        ]
+                                      : null,
+                                ),
+                                alignment: Alignment.center,
+                                child: Text(
+                                  dayDisplay,
+                                  style: TextStyle(
+                                    color: isSelected
+                                        ? Colors.white
+                                        : Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withOpacity(0.7),
+                                    fontWeight: isSelected
+                                        ? FontWeight.bold
+                                        : FontWeight.w500,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
                       ),
+                    ),
+                    const SizedBox(height: 16),
                   ],
                 ),
-                onPressed: () async {
-                  if (await authVM.checkGuestStatus(context)) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const NotificationsScreen()),
-                    );
-                  }
-                },
-              );
-            },
+              ),
+
+              if (vm.state == ViewState.busy)
+                const SliverFillRemaining(
+                  child: Center(child: CustomLoadingIndicator()),
+                )
+              else if (vm.state == ViewState.error)
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '${langVM.translate('error_prefix')}: ${vm.errorMessage}',
+                        ),
+                        const SizedBox(height: 12),
+                        ElevatedButton(
+                          onPressed: () async {
+                            await Geolocator.openAppSettings();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              side: BorderSide(
+                                  color: Colors.white.withOpacity(0.3)),
+                            ),
+                          ),
+                          child: Text(langVM.translate('settings')),
+                        ),
+                        const SizedBox(height: 8),
+                        ElevatedButton(
+                          onPressed: () async {
+                            await Geolocator.openLocationSettings();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              side: BorderSide(
+                                  color: Colors.white.withOpacity(0.3)),
+                            ),
+                          ),
+                          child: Text(langVM.translate('location_settings')),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else if (vm.selectedProvince != null)
+                ..._buildProvinceMarketsSlivers(vm)
+              else
+                ..._buildNearbyMarketsSlivers(vm),
+
+              // Bottom padding for navigation bar
+              const SliverToBoxAdapter(child: SizedBox(height: 80)),
+            ],
           ),
-        ],
-      ),
-      body: Padding(
-        padding: const EdgeInsets.only(top: 110),
-        child: CustomScrollView(
-          slivers: [
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        ),
+        // Menü İkonu
+        Positioned(
+          top: MediaQuery.of(context).padding.top + 8,
+          left: 0,
+          right: 16,
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.only(left: 8),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white.withOpacity(0.2)
+                      : Colors.black.withOpacity(0.05),
+                  borderRadius:
+                      const BorderRadius.horizontal(right: Radius.circular(32)),
+                ),
+                child: IconButton(
+                  icon: Icon(Icons.menu,
+                      color: Theme.of(context).iconTheme.color),
+                  onPressed: () => Scaffold.of(context).openDrawer(),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
                 child: GestureDetector(
                   onTap: () {
                     if (vm.currentAddress != null) {
-                      showModalBottomSheet(
+                      final isDark =
+                          Theme.of(context).brightness == Brightness.dark;
+                      CustomBottomSheets.showContent(
                         context: context,
-                        shape: const RoundedRectangleBorder(
-                          borderRadius: BorderRadius.vertical(
-                            top: Radius.circular(24),
-                          ),
-                        ),
-                        builder: (context) => Container(
-                          padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              // Handle bar (Tutma çubuğu)
-                              Container(
-                                width: 40,
-                                height: 4,
-                                margin: const EdgeInsets.only(bottom: 24),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.withOpacity(0.3),
-                                  borderRadius: BorderRadius.circular(2),
+                        title: langVM.translate('location_title'),
+                        icon: Icons.location_pin,
+                        child: Column(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: isDark
+                                    ? Theme.of(context).cardColor
+                                    : Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: isDark
+                                      ? Colors.white.withOpacity(0.1)
+                                      : Colors.grey.withOpacity(0.2),
                                 ),
-                              ),
-                              // Başlık Alanı
-                              Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .primary
-                                      .withOpacity(0.1),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(
-                                  Icons.location_on,
-                                  size: 32,
-                                  color: Theme.of(context).colorScheme.primary,
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                langVM.translate('location_title'),
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .headlineSmall
-                                    ?.copyWith(fontWeight: FontWeight.bold),
-                                textAlign: TextAlign.center,
-                              ),
-                              const SizedBox(height: 24),
-                              // Bilgi Kartı
-                              Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context).cardColor,
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                    color: Colors.white.withOpacity(0.1),
-                                  ),
-                                ),
-                                child: Column(
-                                  children: [
-                                    _buildInfoRow(
-                                      context,
-                                      Icons.map,
-                                      '${vm.currentAddress!.neighborhood}, ${vm.currentAddress!.district}',
-                                    ),
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 12),
-                                      child: Divider(
-                                          color: Colors.white.withOpacity(0.1)),
-                                    ),
-                                    _buildInfoRow(
-                                      context,
-                                      Icons.location_city,
-                                      vm.currentAddress!.city,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 24),
-                              // Aksiyon Butonları
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: OutlinedButton.icon(
-                                      onPressed: () async {
-                                        await Geolocator.openLocationSettings();
-                                      },
-                                      icon: const Icon(Icons.settings),
-                                      style: OutlinedButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(
-                                            vertical: 16),
-                                        side: BorderSide(
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .primary),
-                                        shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(12)),
-                                      ),
-                                      label: Text(langVM.translate('settings')),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: ElevatedButton.icon(
-                                      onPressed: () async {
-                                        vm.clearProvinceSelection();
-                                        await vm.loadData();
-                                        if (context.mounted) {
-                                          Navigator.of(context).pop();
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
-                                            SnackBar(
-                                              content: Text(
-                                                '${langVM.translate('location_updated')}: ${vm.currentAddress?.city ?? langVM.translate('unknown')}',
-                                              ),
-                                              behavior:
-                                                  SnackBarBehavior.floating,
-                                            ),
-                                          );
-                                        }
-                                      },
-                                      icon: const Icon(Icons.refresh),
-                                      style: ElevatedButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(
-                                            vertical: 16),
-                                        backgroundColor: Theme.of(context)
-                                            .colorScheme
-                                            .primary,
-                                        foregroundColor: Colors.white,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(12),
-                                        ),
-                                      ),
-                                      label: Text(
-                                        langVM.translate('location_refresh'),
-                                      ),
-                                    ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.05),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4),
                                   ),
                                 ],
                               ),
-                            ],
-                          ),
+                              child: Column(
+                                children: [
+                                  _buildInfoRow(
+                                    context,
+                                    AppIcons.map,
+                                    '${vm.currentAddress!.neighborhood}, ${vm.currentAddress!.district}',
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 12),
+                                    child: Divider(
+                                        color: Theme.of(context)
+                                            .dividerColor
+                                            .withOpacity(0.2)),
+                                  ),
+                                  _buildInfoRow(
+                                    context,
+                                    AppIcons.market,
+                                    vm.currentAddress!.city,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            // Aksiyon Butonları
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    onPressed: () async {
+                                      await Geolocator.openLocationSettings();
+                                    },
+                                    icon: SvgIcon(
+                                        iconPath: AppIcons.settings,
+                                        size: 20,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary),
+                                    style: OutlinedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 16),
+                                      side: BorderSide(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .primary
+                                              .withOpacity(0.5)),
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(12)),
+                                      foregroundColor:
+                                          Theme.of(context).colorScheme.primary,
+                                    ),
+                                    label: Text(langVM.translate('settings')),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    onPressed: () async {
+                                      vm.clearProvinceSelection();
+                                      await vm.loadData();
+                                      if (context.mounted) {
+                                        Navigator.of(context).pop();
+                                        CustomSnackbars.showSuccess(
+                                          context,
+                                          '${langVM.translate('location_updated')}: ${vm.currentAddress?.city ?? langVM.translate('unknown')}',
+                                        );
+                                      }
+                                    },
+                                    icon: const Icon(Icons.refresh),
+                                    style: ElevatedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 16),
+                                      backgroundColor:
+                                          Theme.of(context).colorScheme.primary,
+                                      foregroundColor: Colors.white,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      elevation: 0,
+                                    ),
+                                    label: Text(
+                                      langVM.translate('location_refresh'),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
                       );
                     }
                   },
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       color: Theme.of(context).cardColor,
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: Colors.white.withOpacity(0.1),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withOpacity(0),
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
+                          color: Colors.black.withOpacity(0.1),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
@@ -496,19 +754,34 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     child: Row(
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .primary
-                                .withOpacity(0.1),
-                            shape: BoxShape.circle,
+                        ScaleTransition(
+                          scale: Tween<double>(begin: 0.9, end: 1.1).animate(
+                            CurvedAnimation(
+                              parent: _pulseController,
+                              curve: Curves.easeInOut,
+                            ),
                           ),
-                          child: Icon(
-                            Icons.location_on,
-                            color: Theme.of(context).colorScheme.primary,
-                            size: 20,
+                          child: Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.primary,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .primary
+                                      .withOpacity(0.8),
+                                  blurRadius: 8,
+                                  spreadRadius: 2,
+                                ),
+                              ],
+                            ),
+                            child: const SvgIcon(
+                              iconPath: AppIcons.location,
+                              color: Colors.white,
+                              size: 20,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -519,15 +792,15 @@ class _HomeScreenState extends State<HomeScreen> {
                               Text(
                                 langVM.translate('location_title'),
                                 style: TextStyle(
-                                  fontSize: 12,
+                                  fontSize: 8,
+                                  fontWeight: FontWeight.w600,
                                   color: Theme.of(context)
-                                      .textTheme
-                                      .bodySmall
-                                      ?.color
-                                      ?.withOpacity(0.7),
+                                      .colorScheme
+                                      .onSurface
+                                      .withOpacity(0.6),
+                                  letterSpacing: 0.5,
                                 ),
                               ),
-                              const SizedBox(height: 2),
                               Text(
                                 vm.currentAddress != null
                                     ? [
@@ -535,10 +808,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                         vm.currentAddress!.district,
                                         vm.currentAddress!.neighborhood
                                       ].where((s) => s.isNotEmpty).join(', ')
-                                    : 'Konum Bulunuyor...',
+                                    : langVM.translate('finding_location'),
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 14,
+                                  fontSize: 11,
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -546,158 +819,39 @@ class _HomeScreenState extends State<HomeScreen> {
                             ],
                           ),
                         ),
-                        Icon(
-                          Icons.keyboard_arrow_down,
-                          color: Theme.of(context)
-                              .iconTheme
-                              .color
-                              ?.withOpacity(0.5),
+                        Container(
+                          margin: const EdgeInsets.only(right: 8),
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).scaffoldBackgroundColor,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.keyboard_arrow_down,
+                            size: 20,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withOpacity(0.7),
+                          ),
                         ),
                       ],
                     ),
                   ),
                 ),
               ),
-            ),
-            // Gün Filtreleri
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(
-                      height: 50,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: _days.length,
-                        itemBuilder: (context, index) {
-                          final day = _days[index];
-                          final isSelected = vm.selectedDay == day;
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 12.0),
-                            child: GestureDetector(
-                              onTap: () {
-                                vm.updateDayFilter(isSelected ? null : day);
-                              },
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 300),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 24,
-                                  vertical: 12,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: isSelected
-                                      ? Theme.of(context).colorScheme.primary
-                                      : Theme.of(context).cardColor,
-                                  borderRadius: BorderRadius.circular(30),
-                                  border: isSelected
-                                      ? null
-                                      : Border.all(
-                                          color: Colors.white.withOpacity(0.3)),
-                                  boxShadow: isSelected
-                                      ? [
-                                          BoxShadow(
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .primary
-                                                .withOpacity(0.3),
-                                            blurRadius: 8,
-                                            offset: const Offset(0, 2),
-                                          ),
-                                        ]
-                                      : null,
-                                ),
-                                alignment: Alignment.center,
-                                child: Text(
-                                  day,
-                                  style: TextStyle(
-                                    color: isSelected
-                                        ? Colors.white
-                                        : Theme.of(context)
-                                            .textTheme
-                                            .bodyMedium
-                                            ?.color,
-                                    fontWeight: isSelected
-                                        ? FontWeight.bold
-                                        : FontWeight.normal,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                  ],
-                ),
-              ),
-            ),
-
-            if (vm.state == ViewState.busy)
-              const SliverFillRemaining(
-                child: Center(child: CircularProgressIndicator()),
-              )
-            else if (vm.state == ViewState.error)
-              SliverFillRemaining(
-                hasScrollBody: false,
-                child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        '${langVM.translate('error_prefix')}: ${vm.errorMessage}',
-                      ),
-                      const SizedBox(height: 12),
-                      ElevatedButton(
-                        onPressed: () async {
-                          await Geolocator.openAppSettings();
-                        },
-                        style: ElevatedButton.styleFrom(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30),
-                            side: BorderSide(
-                                color: Colors.white.withOpacity(0.3)),
-                          ),
-                        ),
-                        child: Text(langVM.translate('settings')),
-                      ),
-                      const SizedBox(height: 8),
-                      ElevatedButton(
-                        onPressed: () async {
-                          await Geolocator.openLocationSettings();
-                        },
-                        style: ElevatedButton.styleFrom(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30),
-                            side: BorderSide(
-                                color: Colors.white.withOpacity(0.3)),
-                          ),
-                        ),
-                        child: Text(langVM.translate('location_settings')),
-                      ),
-                    ],
-                  ),
-                ),
-              )
-            else if (vm.selectedProvince != null)
-              ..._buildProvinceMarketsSlivers(vm)
-            else
-              ..._buildNearbyMarketsSlivers(vm),
-
-            // Bottom padding for navigation bar
-            const SliverToBoxAdapter(child: SizedBox(height: 80)),
-          ],
+            ],
+          ),
         ),
-      ),
+      ],
     );
   }
 
-  Widget _buildInfoRow(BuildContext context, IconData icon, String text) {
+  Widget _buildInfoRow(BuildContext context, String iconPath, String text) {
     return Row(
       children: [
-        Icon(icon,
+        SvgIcon(
+            iconPath: iconPath,
             color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
             size: 20),
         const SizedBox(width: 12),

@@ -124,8 +124,22 @@ class _SplashScreenState extends State<SplashScreen>
                 decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: Theme.of(context).cardColor,
-                    border: Border.all(color: Colors.white.withOpacity(0.3))),
+                    border: Border.all(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withOpacity(0.3),
+                        width: 1.5)),
                 child: Image.asset('assets/images/copilot_ikon.png'),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'PAZARYERİ',
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.0,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
               ),
             ],
           ),
