@@ -12,6 +12,10 @@ import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_bottom_sheets.dart';
 import '../../../core/constants/app_icons.dart';
 import '../../../presentation/widgets/svg_icon.dart';
+import '../../widgets/custom_button.dart';
+import '../../widgets/loading_overlay.dart';
+import '../../widgets/custom_search_bar.dart';
+import '../../widgets/custom_snackbars.dart';
 
 class SellerRegisterScreen extends StatefulWidget {
   const SellerRegisterScreen({super.key});
@@ -32,12 +36,12 @@ class _SellerRegisterScreenState extends State<SellerRegisterScreen> {
 
   String? _selectedMarketId;
   XFile? _profileImage;
-  bool _isLoading = false;
   bool _isLoadingMarkets = true;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _isTermsAccepted = false;
   List<Market> _markets = [];
+  double _passwordStrength = 0;
 
   @override
   void initState() {
@@ -58,6 +62,7 @@ class _SellerRegisterScreenState extends State<SellerRegisterScreen> {
         if (mounted) setState(() => _isLoadingMarkets = false);
       }
     });
+    _passwordController.addListener(_updatePasswordStrength);
   }
 
   @override
@@ -72,10 +77,35 @@ class _SellerRegisterScreenState extends State<SellerRegisterScreen> {
     super.dispose();
   }
 
-  Future<void> _pickImage() async {
+  void _updatePasswordStrength() {
+    final pass = _passwordController.text;
+    if (pass.isEmpty) {
+      setState(() => _passwordStrength = 0);
+    } else if (pass.length < 6) {
+      setState(() => _passwordStrength = 1 / 3);
+    } else if (pass.length < 8 || !pass.contains(RegExp(r'[0-9A-Z!@#\$&*~]'))) {
+      setState(() => _passwordStrength = 2 / 3);
+    } else {
+      setState(() => _passwordStrength = 1.0);
+    }
+  }
+
+  Color _getStrengthColor() {
+    if (_passwordStrength <= 0.34) return Colors.red;
+    if (_passwordStrength <= 0.67) return Colors.orange;
+    return Colors.green;
+  }
+
+  String _getStrengthText() {
+    if (_passwordStrength <= 0.34) return 'Zayıf';
+    if (_passwordStrength <= 0.67) return 'Orta';
+    return 'Güçlü';
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
     final ImagePicker picker = ImagePicker();
     final XFile? image = await picker.pickImage(
-      source: ImageSource.gallery,
+      source: source,
       // Spark Paketi İçin Kritik Ayarlar:
       maxWidth: 800,
       maxHeight: 800,
@@ -86,65 +116,68 @@ class _SellerRegisterScreenState extends State<SellerRegisterScreen> {
     }
   }
 
+  void _showImagePickerOptions() {
+    CustomBottomSheets.showImagePicker(
+      context: context,
+      onCameraTap: () => _pickImage(ImageSource.camera),
+      onGalleryTap: () => _pickImage(ImageSource.gallery),
+    );
+  }
+
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
 
     if (_selectedMarketId == null) {
-      await DialogService.showError(context,
-          message: 'Lütfen bir pazar yeri seçiniz.');
+      CustomSnackbars.showError(context, 'Lütfen bir pazar yeri seçiniz.');
       return;
     }
 
     if (!_isTermsAccepted) {
-      await DialogService.showError(context,
-          message: 'Lütfen kullanım koşullarını kabul ediniz.');
+      CustomSnackbars.showError(
+          context, 'Lütfen kullanım koşullarını kabul ediniz.');
       return;
     }
 
-    setState(() => _isLoading = true);
-
     final authVM = Provider.of<AuthViewModel>(context, listen: false);
+    final langVM = Provider.of<LanguageViewModel>(context, listen: false);
 
     try {
-      await authVM.registerSeller(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-        firstName: _firstNameController.text.trim(),
-        lastName: _lastNameController.text.trim(),
-        phoneNumber: _phoneController.text.trim(),
-        marketId: _selectedMarketId!,
-        profileImagePath: _profileImage?.path,
+      await LoadingOverlay.show(
+        context,
+        asyncFunction: () async {
+          await authVM.registerSeller(
+            email: _emailController.text.trim(),
+            password: _passwordController.text,
+            firstName: _firstNameController.text.trim(),
+            lastName: _lastNameController.text.trim(),
+            phoneNumber: _phoneController.text.trim(),
+            marketId: _selectedMarketId!,
+            profileImagePath: _profileImage?.path,
+          );
+        },
       );
 
       if (mounted) {
-        // Modern başarı mesajı
-        await DialogService.showSuccess(
+        CustomSnackbars.showSuccess(
           context,
-          message:
-              'Satıcı kaydınız başarıyla oluşturuldu!\nGiriş yapabilirsiniz.',
-          onDismiss: () {
-            if (mounted) {
-              Navigator.of(context).pop(); // Giriş ekranına dön
-            }
-          },
+          langVM.translate('register_success_verify'),
         );
+        Navigator.of(context).pop(); // Giriş ekranına dön
       }
     } catch (e) {
       if (mounted) {
-        await DialogService.showError(context, message: 'Kayıt hatası: $e');
+        CustomSnackbars.showError(context, 'Kayıt hatası: $e');
       }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   void _showMarketPicker() {
-    showModalBottomSheet(
+    CustomBottomSheets.showDraggable(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => _MarketSelectionSheet(
+      initialChildSize: 0.7,
+      builder: (context, scrollController) => _MarketSelectionSheet(
         markets: _markets,
+        scrollController: scrollController,
         onSelect: (market) {
           setState(() {
             _selectedMarketId = market.id;
@@ -162,8 +195,8 @@ class _SellerRegisterScreenState extends State<SellerRegisterScreen> {
       title: 'Kullanım Koşulları',
       child: Column(
         children: [
-          const SizedBox(
-            height: 300,
+          Container(
+            constraints: const BoxConstraints(maxHeight: 400),
             child: SingleChildScrollView(
               child: Text(
                 'Pazaryeri Satıcı Sözleşmesi\n\n'
@@ -177,19 +210,22 @@ class _SellerRegisterScreenState extends State<SellerRegisterScreen> {
                 '4. Gizlilik\n'
                 'Kullanıcı verileri gizlilik politikası çerçevesinde korunmaktadır.\n\n'
                 '(Bu metin örnektir, lütfen kendi sözleşmenizi ekleyiniz.)',
+                style: TextStyle(
+                  color:
+                      Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
+                  height: 1.5,
+                ),
               ),
             ),
           ),
           const SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {
-                setState(() => _isTermsAccepted = true);
-                Navigator.pop(context);
-              },
-              child: const Text('Okudum, Kabul Ediyorum'),
-            ),
+          CustomButton(
+            text: 'Okudum, Kabul Ediyorum',
+            onPressed: () {
+              setState(() => _isTermsAccepted = true);
+              Navigator.pop(context);
+            },
+            isFullWidth: true,
           ),
           const SizedBox(height: 12),
         ],
@@ -204,41 +240,81 @@ class _SellerRegisterScreenState extends State<SellerRegisterScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      extendBodyBehindAppBar: true,
       appBar: const CustomAppBar(title: Text('Satıcı Kaydı')),
       body: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(24, 110, 24, 24),
+          padding: const EdgeInsets.all(24),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 GestureDetector(
-                  onTap: _pickImage,
-                  child: Container(
-                    height: 100,
-                    width: 100,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: theme.cardColor,
-                      border: Border.all(
-                          color: theme.colorScheme.primary.withOpacity(0.5)),
-                      image: _profileImage != null
-                          ? DecorationImage(
-                              image: FileImage(File(_profileImage!.path)),
-                              fit: BoxFit.cover,
-                            )
-                          : null,
-                    ),
-                    child: _profileImage == null
-                        ? SvgIcon(
-                            iconPath: AppIcons.camera,
-                            size: 32,
-                            color: theme.colorScheme.primary,
+                  onTap: _showImagePickerOptions,
+                  child: Center(
+                    child: Stack(
+                      children: [
+                        if (_profileImage == null)
+                          CustomPaint(
+                            painter: _DashedBorderPainter(
+                              color: theme.colorScheme.primary.withOpacity(0.5),
+                              borderRadius:
+                                  60.0, // 120x120 kutuyu tam daire yapar
+                            ),
+                            child: Container(
+                              height: 120,
+                              width: 120,
+                              decoration: BoxDecoration(
+                                color:
+                                    theme.colorScheme.primary.withOpacity(0.05),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.add_a_photo_outlined,
+                                    color: theme.colorScheme.primary,
+                                    size: 32,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    langVM.translate('add_photo_button'),
+                                    style: TextStyle(
+                                      color: theme.colorScheme.primary,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ),
+                            ),
                           )
-                        : null,
+                        else
+                          ClipOval(
+                            child: Image.file(
+                              File(_profileImage!.path),
+                              width: 120,
+                              height: 120,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        if (_profileImage != null)
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: CircleAvatar(
+                              radius: 18,
+                              backgroundColor: theme.colorScheme.primary,
+                              child: SvgIcon(
+                                  iconPath: AppIcons.camera,
+                                  size: 22,
+                                  color: theme.colorScheme.onPrimary),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -249,7 +325,8 @@ class _SellerRegisterScreenState extends State<SellerRegisterScreen> {
                         controller: _firstNameController,
                         decoration:
                             _inputDecoration(context, 'İsim', AppIcons.user),
-                        validator: (v) => v!.isEmpty ? 'Gerekli' : null,
+                        validator: (v) =>
+                            v!.isEmpty ? 'Lütfen isminizi giriniz' : null,
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -258,7 +335,8 @@ class _SellerRegisterScreenState extends State<SellerRegisterScreen> {
                         controller: _lastNameController,
                         decoration:
                             _inputDecoration(context, 'Soyisim', AppIcons.user),
-                        validator: (v) => v!.isEmpty ? 'Gerekli' : null,
+                        validator: (v) =>
+                            v!.isEmpty ? 'Lütfen soyisminizi giriniz' : null,
                       ),
                     ),
                   ],
@@ -270,11 +348,12 @@ class _SellerRegisterScreenState extends State<SellerRegisterScreen> {
                   decoration:
                       _inputDecoration(context, 'E-posta', AppIcons.email),
                   validator: (v) {
-                    if (v == null || v.isEmpty) return 'E-posta gerekli';
+                    if (v == null || v.isEmpty)
+                      return 'Lütfen e-posta adresinizi giriniz';
                     final emailRegex =
                         RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
                     if (!emailRegex.hasMatch(v)) {
-                      return 'Geçerli bir e-posta adresi giriniz';
+                      return 'Lütfen geçerli bir e-posta adresi giriniz';
                     }
                     return null;
                   },
@@ -287,7 +366,13 @@ class _SellerRegisterScreenState extends State<SellerRegisterScreen> {
                   decoration:
                       _inputDecoration(context, 'Telefon', AppIcons.phone)
                           .copyWith(helperText: '5** *** ** **'),
-                  validator: (v) => v!.isEmpty ? 'Telefon gerekli' : null,
+                  validator: (v) {
+                    if (v == null || v.isEmpty)
+                      return 'Lütfen telefon numaranızı giriniz';
+                    if (v.length < 15)
+                      return 'Lütfen geçerli bir numara giriniz';
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 16),
                 // Pazar Yeri Seçimi (Dropdown)
@@ -300,13 +385,14 @@ class _SellerRegisterScreenState extends State<SellerRegisterScreen> {
                     suffixIcon: _isLoadingMarkets
                         ? const Padding(
                             padding: EdgeInsets.all(12.0),
-                            child: CircularProgressIndicator(strokeWidth: 2),
+                            child: CustomLoadingIndicator(size: 20),
                           )
                         : const Icon(Icons.arrow_drop_down),
                   ),
                   onTap: _isLoadingMarkets ? null : _showMarketPicker,
-                  validator: (v) =>
-                      _selectedMarketId == null ? 'Lütfen pazar seçin' : null,
+                  validator: (v) => _selectedMarketId == null
+                      ? 'Lütfen satış yapacağınız pazar yerini seçiniz'
+                      : null,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
@@ -325,9 +411,71 @@ class _SellerRegisterScreenState extends State<SellerRegisterScreen> {
                           setState(() => _obscurePassword = !_obscurePassword),
                     ),
                   ),
-                  validator: (v) =>
-                      v!.length < 6 ? 'Şifre en az 6 karakter olmalı' : null,
+                  validator: (v) {
+                    if (v == null || v.isEmpty)
+                      return 'Lütfen bir şifre belirleyiniz';
+                    if (v.length < 6)
+                      return 'Şifreniz en az 6 karakterden oluşmalıdır';
+                    return null;
+                  },
                 ),
+                if (_passwordController.text.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: _passwordStrength >= 0.33
+                                ? _getStrengthColor()
+                                : Colors.grey.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: _passwordStrength >= 0.66
+                                ? _getStrengthColor()
+                                : Colors.grey.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: _passwordStrength >= 1.0
+                                ? _getStrengthColor()
+                                : Colors.grey.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      _getStrengthText(),
+                      style: TextStyle(
+                        color: _getStrengthColor(),
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _confirmPasswordController,
@@ -348,10 +496,10 @@ class _SellerRegisterScreenState extends State<SellerRegisterScreen> {
                   ),
                   validator: (v) {
                     if (v == null || v.isEmpty) {
-                      return 'Lütfen şifrenizi tekrar girin';
+                      return 'Lütfen şifrenizi tekrar giriniz';
                     }
                     if (v != _passwordController.text)
-                      return 'Şifreler eşleşmiyor';
+                      return 'Girdiğiniz şifreler birbiriyle uyuşmuyor';
                     return null;
                   },
                 ),
@@ -380,32 +528,11 @@ class _SellerRegisterScreenState extends State<SellerRegisterScreen> {
                   ],
                 ),
                 const SizedBox(height: 32),
-                ElevatedButton(
-                  onPressed:
-                      (_isLoading || !_isTermsAccepted) ? null : _register,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: theme.colorScheme.primary.withOpacity(0.2),
-                    foregroundColor: theme.colorScheme.primary,
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      side: BorderSide(
-                          color: theme.colorScheme.primary.withOpacity(0.1)),
-                    ),
-                  ),
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                              color: Colors.white, strokeWidth: 2),
-                        )
-                      : const Text(
-                          'Kayıt Ol',
-                          style: TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.bold),
-                        ),
+                CustomButton(
+                  text: 'Kayıt Ol',
+                  onPressed: !_isTermsAccepted ? null : _register,
+                  backgroundColor: theme.colorScheme.primary.withOpacity(0.2),
+                  foregroundColor: theme.colorScheme.primary,
                 ),
                 const SizedBox(height: 24),
                 Row(
@@ -458,6 +585,61 @@ class _SellerRegisterScreenState extends State<SellerRegisterScreen> {
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: theme.colorScheme.primary, width: 2)),
     );
+  }
+}
+
+class _DashedBorderPainter extends CustomPainter {
+  final Color color;
+  final double strokeWidth;
+  final double dashWidth;
+  final double dashSpace;
+  final double borderRadius;
+
+  _DashedBorderPainter({
+    required this.color,
+    this.strokeWidth = 2.0,
+    this.dashWidth = 8.0,
+    this.dashSpace = 6.0,
+    this.borderRadius = 16.0,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke;
+
+    final rrect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      Radius.circular(borderRadius),
+    );
+
+    final path = Path()..addRRect(rrect);
+    final pathMetrics = path.computeMetrics();
+    final dashedPath = Path();
+
+    for (final metric in pathMetrics) {
+      double distance = 0.0;
+      while (distance < metric.length) {
+        dashedPath.addPath(
+          metric.extractPath(distance, distance + dashWidth),
+          Offset.zero,
+        );
+        distance += dashWidth + dashSpace;
+      }
+    }
+
+    canvas.drawPath(dashedPath, paint);
+  }
+
+  @override
+  bool shouldRepaint(_DashedBorderPainter oldDelegate) {
+    return oldDelegate.color != color ||
+        oldDelegate.strokeWidth != strokeWidth ||
+        oldDelegate.dashWidth != dashWidth ||
+        oldDelegate.dashSpace != dashSpace ||
+        oldDelegate.borderRadius != borderRadius;
   }
 }
 
@@ -536,14 +718,19 @@ class _PhoneInputFormatter extends TextInputFormatter {
 class _MarketSelectionSheet extends StatefulWidget {
   final List<Market> markets;
   final Function(Market) onSelect;
+  final ScrollController scrollController;
 
-  const _MarketSelectionSheet({required this.markets, required this.onSelect});
+  const _MarketSelectionSheet(
+      {required this.markets,
+      required this.onSelect,
+      required this.scrollController});
 
   @override
   State<_MarketSelectionSheet> createState() => _MarketSelectionSheetState();
 }
 
 class _MarketSelectionSheetState extends State<_MarketSelectionSheet> {
+  final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   String? _selectedCity;
   List<String> _cities = [];
@@ -560,6 +747,12 @@ class _MarketSelectionSheetState extends State<_MarketSelectionSheet> {
   }
 
   @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final filtered = widget.markets.where((m) {
@@ -572,132 +765,96 @@ class _MarketSelectionSheetState extends State<_MarketSelectionSheet> {
       return matchesSearch && matchesCity;
     }).toList();
 
-    return DraggableScrollableSheet(
-      initialChildSize: 0.7,
-      minChildSize: 0.5,
-      maxChildSize: 0.95,
-      builder: (context, scrollController) {
-        return Container(
-          decoration: BoxDecoration(
-            color: theme.scaffoldBackgroundColor,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: Column(
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.onSurface.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(2),
+    return Column(
+      children: [
+        if (_cities.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+              decoration: BoxDecoration(
+                color: theme.brightness == Brightness.dark
+                    ? theme.cardColor
+                    : Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: theme.colorScheme.primary.withOpacity(0.2),
+                  width: 1.5,
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: theme.colorScheme.primary.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
-              if (_cities.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).cardColor,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .primary
-                            .withOpacity(0.5),
-                      ),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value: _selectedCity,
-                        hint: Text(
-                          'İl Seçiniz (Tümü)',
-                          style: TextStyle(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withOpacity(0.6),
-                          ),
-                        ),
-                        isExpanded: true,
-                        icon: SvgIcon(
-                          iconPath: AppIcons.market,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                        items: [
-                          const DropdownMenuItem<String>(
-                            value: null,
-                            child: Text('Tümü'),
-                          ),
-                          ..._cities.map((String city) {
-                            return DropdownMenuItem<String>(
-                              value: city,
-                              child: Text(city),
-                            );
-                          }).toList(),
-                        ],
-                        onChanged: (String? newValue) {
-                          setState(() {
-                            _selectedCity = newValue;
-                          });
-                        },
-                      ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: _selectedCity,
+                  hint: Text(
+                    'İl Seçiniz (Tümü)',
+                    style: TextStyle(
+                      color: theme.colorScheme.onSurface.withOpacity(0.6),
                     ),
                   ),
-                ),
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: TextField(
-                  decoration: InputDecoration(
-                    hintText: 'Pazar Ara...',
-                    prefixIcon: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: SvgIcon(
-                            iconPath: AppIcons.search,
-                            color: theme.colorScheme.primary,
-                            size: 24)),
-                    filled: true,
-                    fillColor: theme.cardColor,
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: theme.dividerColor)),
-                    enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: theme.dividerColor)),
-                    focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(
-                            color: theme.colorScheme.primary, width: 2)),
+                  isExpanded: true,
+                  icon: SvgIcon(
+                    iconPath: AppIcons.market,
+                    color: theme.colorScheme.primary,
                   ),
-                  onChanged: (val) => setState(() => _searchQuery = val),
-                ),
-              ),
-              Expanded(
-                child: ListView.separated(
-                  controller: scrollController,
-                  itemCount: filtered.length,
-                  separatorBuilder: (_, __) =>
-                      Divider(height: 1, color: theme.dividerColor),
-                  itemBuilder: (context, index) {
-                    final market = filtered[index];
-                    return ListTile(
-                      title: Text(market.name,
-                          style: TextStyle(color: theme.colorScheme.onSurface)),
-                      subtitle: Text(
-                          '${market.address.neighborhood}, ${market.address.district}',
-                          style: TextStyle(
-                              color: theme.colorScheme.onSurface
-                                  .withOpacity(0.7))),
-                      onTap: () => widget.onSelect(market),
-                    );
+                  items: [
+                    const DropdownMenuItem<String>(
+                      value: null,
+                      child: Text('Tümü'),
+                    ),
+                    ..._cities.map((String city) {
+                      return DropdownMenuItem<String>(
+                        value: city,
+                        child: Text(city),
+                      );
+                    }).toList(),
+                  ],
+                  onChanged: (String? newValue) {
+                    setState(() {
+                      _selectedCity = newValue;
+                    });
                   },
                 ),
               ),
-            ],
+            ),
           ),
-        );
-      },
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: CustomSearchBar(
+            controller: _searchController,
+            hintText: 'Pazar Ara...',
+            onChanged: (val) => setState(() => _searchQuery = val),
+          ),
+        ),
+        Expanded(
+          child: ListView.separated(
+            controller: widget.scrollController,
+            itemCount: filtered.length,
+            separatorBuilder: (_, __) =>
+                Divider(height: 1, color: theme.dividerColor.withOpacity(0.2)),
+            itemBuilder: (context, index) {
+              final market = filtered[index];
+              return ListTile(
+                title: Text(market.name,
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: Text(
+                    '${market.address.neighborhood}, ${market.address.district}',
+                    style: TextStyle(
+                        color: theme.colorScheme.onSurface.withOpacity(0.7))),
+                trailing: Icon(Icons.chevron_right,
+                    color: theme.colorScheme.primary.withOpacity(0.5)),
+                onTap: () => widget.onSelect(market),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }

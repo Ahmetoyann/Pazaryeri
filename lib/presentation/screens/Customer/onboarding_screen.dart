@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../viewmodels/language_viewmodel.dart';
 import '../../viewmodels/auth_service.dart';
+import '../../widgets/custom_button.dart';
 
 class OnboardingScreen extends StatefulWidget {
   final void Function(BuildContext) onDone;
@@ -140,11 +141,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             langVM.translate('skip'),
                             style: TextStyle(
                               color: colorScheme.onSurface.withOpacity(0.6),
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
-                      const SizedBox(width: 8),
-                      ElevatedButton(
+                      const SizedBox(width: 12),
+                      CustomButton(
                         onPressed: () {
                           if (_currentPage < _pages.length - 1) {
                             _pageController.nextPage(
@@ -155,20 +157,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             _finishOnboarding();
                           }
                         },
-                        style: ElevatedButton.styleFrom(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            side: BorderSide(
-                                color: Colors.white.withOpacity(0.3)),
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 24, vertical: 12),
-                        ),
-                        child: Text(
-                          _currentPage == _pages.length - 1
-                              ? langVM.translate('start')
-                              : langVM.translate('next'),
-                        ),
+                        text: _currentPage == _pages.length - 1
+                            ? langVM.translate('start')
+                            : langVM.translate('next'),
+                        isFullWidth: false,
+                        padding: const EdgeInsets.symmetric(horizontal: 32),
                       ),
                     ],
                   ),

@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import '../../viewmodels/seller_viewmodel.dart';
 import '../../viewmodels/language_viewmodel.dart';
@@ -57,6 +58,10 @@ class _SellerProductsScreenState extends State<SellerProductsScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    // Sayfa açıldığında ürünleri yükle
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<SellerViewModel>(context, listen: false).loadProducts();
+    });
   }
 
   @override
@@ -140,24 +145,37 @@ class _SellerProductsScreenState extends State<SellerProductsScreen> {
     }
 
     if (sellerVM.myProducts.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SvgIcon(
-                iconPath: AppIcons.inventory,
-                size: 72,
-                color:
-                    Theme.of(context).colorScheme.onSurface.withOpacity(0.2)),
-            const SizedBox(height: 16),
-            Text("Henüz ürün eklemediniz.",
-                style: TextStyle(
-                    fontSize: 17,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withOpacity(0.5))),
-          ],
+      return RefreshIndicator(
+        onRefresh: () async {
+          await sellerVM.loadProducts();
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: SizedBox(
+            height: MediaQuery.of(context).size.height * 0.6,
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SvgIcon(
+                      iconPath: AppIcons.inventory,
+                      size: 72,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withOpacity(0.2)),
+                  const SizedBox(height: 16),
+                  Text("Henüz ürün eklemediniz.",
+                      style: TextStyle(
+                          fontSize: 17,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withOpacity(0.5))),
+                ],
+              ),
+            ),
+          ),
         ),
       );
     }
@@ -205,31 +223,40 @@ class _SellerProductsScreenState extends State<SellerProductsScreen> {
                   iconPath: AppIcons.delete, color: Colors.white, size: 28),
             ),
             confirmDismiss: (direction) async {
-              return await CustomBottomSheets.showConfirmation(
-                context: context,
-                title: langVM.translate('delete_product_title'),
-                message: langVM.translate('delete_product_confirm'),
-                confirmText: langVM.translate('yes'),
-                cancelText: langVM.translate('no'),
-                iconPath: AppIcons.delete,
-              );
+              return true; // "Emin misiniz?" sormadan anında sil
             },
             onDismissed: (direction) async {
-              await LoadingOverlay.show(
-                context,
-                asyncFunction: () async {
-                  try {
-                    await sellerVM.removeProduct(product.id);
-                  } catch (e) {
-                    debugPrint('Error removing product: $e');
-                  }
-                },
-              );
+              final productId = product.id;
 
-              if (context.mounted) {
-                await DialogService.showSuccess(
-                  context,
-                  message: langVM.translate('success_product_deleted'),
+              // Geri alabilmek için silinmeden önce Firestore'dan yedeğini alıyoruz
+              Map<String, dynamic>? deletedData;
+              try {
+                final docSnap = await FirebaseFirestore.instance
+                    .collection('products')
+                    .doc(productId)
+                    .get();
+                deletedData = docSnap.data();
+
+                await sellerVM.removeProduct(productId);
+              } catch (e) {
+                debugPrint('Error removing product: $e');
+              }
+
+              if (mounted) {
+                CustomSnackbars.showUndo(
+                  this.context,
+                  langVM.translate('success_product_deleted'),
+                  () async {
+                    if (deletedData != null) {
+                      // Geri Al tıklandığında aynı ID ile veritabanına geri yükle
+                      await FirebaseFirestore.instance
+                          .collection('products')
+                          .doc(productId)
+                          .set(deletedData);
+                      // Listeyi yenile
+                      if (mounted) await sellerVM.loadProducts();
+                    }
+                  },
                 );
               }
             },

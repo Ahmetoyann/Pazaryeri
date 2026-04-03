@@ -92,230 +92,247 @@ class MarketCard extends StatelessWidget {
     // Dinamik doluluk oranı
     final dynamicOccupancy = _calculateDynamicOccupancy(market.id);
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: isHorizontal ? size.width * 0.6 : null,
-        height: isHorizontal ? 170 : null,
-        margin: EdgeInsets.symmetric(
-          horizontal: isHorizontal ? 12 : 0,
-          vertical: 8,
-        ),
-        decoration: BoxDecoration(
-          color: theme.cardColor,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(isDark ? 0.3 : 0.04),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
-            ),
-          ],
-          border: Border.all(
-            color: Colors.grey.withOpacity(0.4),
-            width: 1,
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: isHorizontal ? size.width * 0.6 : null,
+          height: isHorizontal ? 170 : null,
+          margin: EdgeInsets.symmetric(
+            horizontal: isHorizontal ? 12 : 0,
+            vertical: 8,
           ),
-        ),
-        child: Padding(
-          padding: EdgeInsets.all(isHorizontal ? 12 : 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Header: Icon + Name + Location
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Hero(
-                    tag: 'market_icon_$baseTag',
-                    child: Container(
-                        padding: EdgeInsets.all(isHorizontal ? 8 : 10),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.primary.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Icon(
-                          Icons.storefront,
-                          color: Theme.of(context).colorScheme.primary,
-                          size: 24,
-                        )),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Hero(
-                          tag: 'market_name_$baseTag',
-                          child: Material(
-                            color: Colors.transparent,
-                            child: Text(
-                              market.name,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                height: 1.2,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            SvgIcon(
-                                iconPath: AppIcons.location,
-                                size: 14,
-                                color: theme.colorScheme.onSurface
-                                    .withOpacity(0.7)),
-                            const SizedBox(width: 2),
-                            Expanded(
-                              child: Text(
-                                '${market.address.neighborhood}, ${market.address.district}',
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: theme.colorScheme.onSurface
-                                      .withOpacity(0.7),
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-
-              if (showOccupancy) ...[
-                const SizedBox(height: 10),
-                TweenAnimationBuilder<double>(
-                  tween: Tween<double>(begin: 0.0, end: dynamicOccupancy),
-                  duration: const Duration(milliseconds: 1500),
-                  curve: Curves.easeOutCubic,
-                  builder: (context, value, child) {
-                    return Row(
-                      children: [
-                        Icon(Icons.people_alt_outlined,
-                            size: 16,
-                            color:
-                                theme.colorScheme.onSurface.withOpacity(0.7)),
-                        const SizedBox(width: 6),
-                        Text(
-                          langVM.translate('occupancy_rate'),
-                          style: theme.textTheme.bodySmall,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(4),
-                            child: LinearProgressIndicator(
-                              value: value,
-                              backgroundColor:
-                                  theme.dividerColor.withOpacity(0.1),
-                              color: _getOccupancyColor(
-                                  dynamicOccupancy, theme.colorScheme),
-                              minHeight: 6,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '%${(value * 100).toInt()}',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: _getOccupancyColor(
-                                dynamicOccupancy, theme.colorScheme),
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-              ],
-
-              if (isHorizontal) const Spacer() else const SizedBox(height: 12),
-
-              if (!isHorizontal) ...[
-                Text(
-                  market.description,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.textTheme.bodySmall?.color,
-                  ),
-                ),
-                const SizedBox(height: 16),
-              ],
-
-              // Footer: Status & Distance
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isOpenNow
-                          ? Colors.green.withOpacity(0.1)
-                          : Colors.red.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        isOpenNow
-                            ? const SvgIcon(
-                                iconPath: AppIcons.check,
-                                size: 14,
-                                color: Colors.green,
-                              )
-                            : SvgIcon(
-                                iconPath: AppIcons.clock,
-                                size: 14,
-                                color: Colors.red,
-                              ),
-                        const SizedBox(width: 6),
-                        Text(
-                          isBeforeOpening
-                              ? "05.00'te kurulacak"
-                              : (isOpenNow
-                                  ? langVM.translate('market_open_today')
-                                  : langVM.translate('market_closed_today')),
-                          style: TextStyle(
-                            color: isOpenNow ? Colors.green : Colors.red,
-                            fontSize: isBeforeOpening ? 9 : 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: theme.cardColor,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: theme.dividerColor.withOpacity(0.5),
-                      ),
-                    ),
-                    child: Text(
-                      '${(market.distanceInMeters / 1000).toStringAsFixed(1)} km',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        fontWeight: FontWeight.w300,
-                      ),
-                    ),
-                  ),
-                ],
+          decoration: BoxDecoration(
+            color: theme.cardColor,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(isDark ? 0.3 : 0.04),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
               ),
             ],
+            border: Border.all(
+              color: Colors.grey.withOpacity(0.4),
+              width: 1,
+            ),
+          ),
+          child: Padding(
+            padding: EdgeInsets.all(isHorizontal ? 12 : 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header: Icon + Name + Location
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Hero(
+                      tag: 'market_icon_$baseTag',
+                      child: Container(
+                          padding: EdgeInsets.all(isHorizontal ? 8 : 10),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.primary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(
+                            Icons.storefront,
+                            color: Theme.of(context).colorScheme.primary,
+                            size: 24,
+                          )),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Hero(
+                            tag: 'market_name_$baseTag',
+                            child: Material(
+                              color: Colors.transparent,
+                              child: Text(
+                                market.name,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  height: 1.2,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              SvgIcon(
+                                  iconPath: AppIcons.location,
+                                  size: 14,
+                                  color: theme.colorScheme.onSurface
+                                      .withOpacity(0.7)),
+                              const SizedBox(width: 2),
+                              Expanded(
+                                child: Text(
+                                  '${market.address.neighborhood}, ${market.address.district}',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.onSurface
+                                        .withOpacity(0.7),
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+
+                if (showOccupancy) ...[
+                  const SizedBox(height: 10),
+                  TweenAnimationBuilder<double>(
+                    tween: Tween<double>(begin: 0.0, end: dynamicOccupancy),
+                    duration: const Duration(milliseconds: 1500),
+                    curve: Curves.easeOutCubic,
+                    builder: (context, value, child) {
+                      return Row(
+                        children: [
+                          Icon(Icons.people_alt_outlined,
+                              size: 16,
+                              color:
+                                  theme.colorScheme.onSurface.withOpacity(0.7)),
+                          const SizedBox(width: 6),
+                          Text(
+                            langVM.translate('occupancy_rate'),
+                            style: theme.textTheme.bodySmall,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(4),
+                              child: LinearProgressIndicator(
+                                value: value,
+                                backgroundColor:
+                                    theme.dividerColor.withOpacity(0.1),
+                                color: _getOccupancyColor(
+                                    dynamicOccupancy, theme.colorScheme),
+                                minHeight: 6,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '%${(value * 100).toInt()}',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: _getOccupancyColor(
+                                  dynamicOccupancy, theme.colorScheme),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ],
+
+                if (isHorizontal)
+                  const Spacer()
+                else
+                  const SizedBox(height: 12),
+
+                if (!isHorizontal) ...[
+                  Text(
+                    market.description,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.textTheme.bodySmall?.color,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
+                // Footer: Status & Distance
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isBeforeOpening
+                            ? Colors.orange.withOpacity(0.1)
+                            : (isOpenNow
+                                ? Colors.green.withOpacity(0.1)
+                                : Colors.red.withOpacity(0.1)),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: isBeforeOpening
+                                  ? Colors.orange
+                                  : (isOpenNow ? Colors.green : Colors.red),
+                              shape: BoxShape.circle,
+                            ),
+                            child: SvgIcon(
+                              iconPath: isBeforeOpening
+                                  ? AppIcons.clock
+                                  : (isOpenNow
+                                      ? AppIcons.check
+                                      : AppIcons.close),
+                              size: 10,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            isBeforeOpening
+                                ? "05.00'te kurulacak"
+                                : (isOpenNow
+                                    ? langVM.translate('market_open_today')
+                                    : langVM.translate('market_closed_today')),
+                            style: TextStyle(
+                              color: isBeforeOpening
+                                  ? Colors.orange
+                                  : (isOpenNow ? Colors.green : Colors.red),
+                              fontSize: isBeforeOpening ? 9 : 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: theme.cardColor,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: theme.dividerColor.withOpacity(0.5),
+                        ),
+                      ),
+                      child: Text(
+                        '${(market.distanceInMeters / 1000).toStringAsFixed(1)} km',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.w300,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../viewmodels/language_viewmodel.dart';
 import '../viewmodels/auth_viewmodel.dart';
 import '../widgets/custom_app_bar.dart';
+import '../widgets/custom_button.dart';
 
 class PhoneVerificationScreen extends StatefulWidget {
   final String phoneNumber;
@@ -120,18 +121,10 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
               ),
             ),
             const SizedBox(height: 24),
-            ElevatedButton(
+            CustomButton(
+              text: langVM.translate('verify_button'),
               onPressed: _isLoading ? null : _verifyCode,
-              child: _isLoading
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : Text(langVM.translate('verify_button')),
+              isLoading: _isLoading,
             ),
             if (_isCodeSent && !_isLoading)
               TextButton(

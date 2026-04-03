@@ -10,7 +10,8 @@ class AppTheme {
   static const Color _primaryColor = Color(0xFF388E3C); // Pazar Yeşili
   static const Color _secondaryColor = Color(0xFFF57C00); // Turuncu
   static const Color _errorColor = Color(0xFFD32F2F); // Hata Kırmızısı
-  static const Color _surfaceDark = Color(0xFF1E1E1E);
+  static const Color _surfaceDark =
+      Color(0xFF121212); // Spotify benzeri koyu gri
 
   // --- KARANLIK TEMA (DARK THEME) ---
   static ThemeData darkTheme(Color seedColor) {
@@ -27,7 +28,7 @@ class AppTheme {
       useMaterial3: true,
       colorScheme: colorScheme,
       scaffoldBackgroundColor: Colors.transparent,
-      canvasColor: Colors.black,
+      canvasColor: const Color(0xFF121212), // Spotify benzeri koyu gri arkaplan
       cardColor: _surfaceDark.withOpacity(0.2),
       cardTheme: CardThemeData(
         color: _surfaceDark.withOpacity(0.2),

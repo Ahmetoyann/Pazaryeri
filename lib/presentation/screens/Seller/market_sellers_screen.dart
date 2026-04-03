@@ -4,6 +4,7 @@ import '../../viewmodels/language_viewmodel.dart';
 import '../../viewmodels/auth_service.dart';
 import '../Customer/customer_seller_detail_screen.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../widgets/loading_overlay.dart';
 
 class MarketSellersScreen extends StatefulWidget {
   final String marketId;
@@ -45,20 +46,19 @@ class _MarketSellersScreenState extends State<MarketSellersScreen> {
     final langVM = Provider.of<LanguageViewModel>(context);
 
     return Scaffold(
-      extendBodyBehindAppBar: true,
       appBar: CustomAppBar(
         title:
             Text('${widget.marketName} - ${langVM.translate('sellers_title')}'),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CustomLoadingIndicator())
           : _sellers.isEmpty
               ? Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(
-                        Icons.storefront,
+                        Icons.people,
                         size: 64,
                         color: Theme.of(context)
                             .colorScheme
@@ -78,7 +78,7 @@ class _MarketSellersScreenState extends State<MarketSellersScreen> {
                   ),
                 )
               : ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 110, 16, 16),
+                  padding: const EdgeInsets.all(16),
                   itemCount: _sellers.length,
                   itemBuilder: (context, index) {
                     final seller = _sellers[index];
@@ -151,7 +151,7 @@ class _MarketSellersScreenState extends State<MarketSellersScreen> {
                               ),
                           ],
                         ),
-                        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                        trailing: const Icon(Icons.arrow_forward, size: 16),
                         onTap: () {
                           Navigator.push(
                             context,

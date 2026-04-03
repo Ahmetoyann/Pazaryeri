@@ -17,7 +17,8 @@ import '../../widgets/svg_icon.dart';
 import '../../widgets/loading_overlay.dart';
 
 class MyReviewsScreen extends StatefulWidget {
-  const MyReviewsScreen({super.key});
+  final String? highlightReviewId;
+  const MyReviewsScreen({super.key, this.highlightReviewId});
 
   @override
   State<MyReviewsScreen> createState() => _MyReviewsScreenState();
@@ -33,6 +34,7 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
   List<Map<String, dynamic>> _productReviews = [];
   ReviewView _currentView = ReviewView.menu;
   bool _isLoading = true;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
@@ -53,13 +55,55 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
       final productReviews =
           await AuthService.instance.getUserProductReviews(userId);
 
+      ReviewView targetView = _currentView;
+
+      // Bildirimden gelindiyse ilgili yorumu bul, en başa taşı ve o sekmeyi aç
+      if (widget.highlightReviewId != null) {
+        // Pazar yorumlarında ara
+        int mIndex = marketReviews
+            .indexWhere((r) => r['id'] == widget.highlightReviewId);
+        if (mIndex != -1) {
+          final item = marketReviews.removeAt(mIndex);
+          marketReviews.insert(0, item);
+          targetView = ReviewView.markets;
+        }
+
+        // Satıcı yorumlarında ara
+        int sIndex = sellerReviews
+            .indexWhere((r) => r['id'] == widget.highlightReviewId);
+        if (sIndex != -1) {
+          final item = sellerReviews.removeAt(sIndex);
+          sellerReviews.insert(0, item);
+          targetView = ReviewView.sellers;
+        }
+
+        // Ürün yorumlarında ara
+        int pIndex = productReviews
+            .indexWhere((r) => r['id'] == widget.highlightReviewId);
+        if (pIndex != -1) {
+          final item = productReviews.removeAt(pIndex);
+          productReviews.insert(0, item);
+          targetView = ReviewView.products;
+        }
+      }
+
       if (mounted) {
         setState(() {
           _marketReviews = marketReviews;
           _sellerReviews = sellerReviews;
           _productReviews = productReviews;
+          _currentView = targetView;
           _isLoading = false;
         });
+
+        // Listeyi en başa kaydır
+        if (widget.highlightReviewId != null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (_scrollController.hasClients) {
+              _scrollController.jumpTo(0);
+            }
+          });
+        }
       }
     } else {
       if (mounted) setState(() => _isLoading = false);
@@ -126,12 +170,11 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
         _goBack();
       },
       child: Scaffold(
-        extendBodyBehindAppBar: true,
         appBar: CustomAppBar(
           title: Text(_getTitle(langVM)),
           leading: _currentView != ReviewView.menu
               ? IconButton(
-                  icon: Icon(Icons.arrow_back_ios,
+                  icon: Icon(Icons.arrow_back,
                       color: Theme.of(context).colorScheme.primary),
                   onPressed: _goBack,
                 )
@@ -175,7 +218,7 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
 
   Widget _buildMenu(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 120, 16, 16),
+      padding: const EdgeInsets.all(16),
       child: Column(
         children: [
           _buildMenuButton(
@@ -197,7 +240,7 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
           _buildMenuButton(
             context,
             title: 'Ürün Değerlendirmeleri',
-            icon: Icons.shopping_basket,
+            iconPath: AppIcons.products,
             color: Colors.green,
             onTap: () => _navigateTo(ReviewView.products),
           ),
@@ -209,7 +252,8 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
   Widget _buildMenuButton(
     BuildContext context, {
     required String title,
-    required IconData icon,
+    IconData? icon,
+    String? iconPath,
     required Color color,
     required VoidCallback onTap,
   }) {
@@ -244,11 +288,17 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
                 Positioned(
                   right: -30,
                   bottom: -30,
-                  child: Icon(
-                    icon,
-                    size: 140,
-                    color: Colors.white.withOpacity(0.15),
-                  ),
+                  child: iconPath != null
+                      ? SvgIcon(
+                          iconPath: iconPath,
+                          size: 140,
+                          color: Colors.white.withOpacity(0.15),
+                        )
+                      : Icon(
+                          icon,
+                          size: 140,
+                          color: Colors.white.withOpacity(0.15),
+                        ),
                 ),
                 // İçerik
                 Padding(
@@ -263,7 +313,13 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
                           color: Colors.white.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(16),
                         ),
-                        child: Icon(icon, size: 32, color: Colors.white),
+                        child: iconPath != null
+                            ? SvgIcon(
+                                iconPath: iconPath,
+                                size: 32,
+                                color: Colors.white,
+                              )
+                            : Icon(icon, size: 32, color: Colors.white),
                       ),
                       const Spacer(),
                       Row(
@@ -280,8 +336,7 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
                               ),
                             ),
                           ),
-                          const Icon(Icons.arrow_forward_ios,
-                              color: Colors.white),
+                          const Icon(Icons.arrow_forward, color: Colors.white),
                         ],
                       ),
                     ],
@@ -302,7 +357,7 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
         icon = Icons.storefront;
         break;
       case ReviewType.seller:
-        icon = Icons.store;
+        icon = Icons.people;
         break;
       case ReviewType.product:
         icon = Icons.shopping_basket;
@@ -355,8 +410,9 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
     }
 
     return ListView.builder(
+      controller: _scrollController,
       // AppBar yüksekliği kadar boşluk bırakıyoruz
-      padding: const EdgeInsets.fromLTRB(16, 120, 16, 16),
+      padding: const EdgeInsets.all(16),
       itemCount: reviews.length,
       itemBuilder: (context, index) {
         final review = reviews[index];
@@ -378,16 +434,24 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
             : '';
 
         final isDark = Theme.of(context).brightness == Brightness.dark;
+        final isHighlighted = review['id'] == widget.highlightReviewId;
 
         return Container(
           margin: const EdgeInsets.only(bottom: 16),
           decoration: BoxDecoration(
-            color: isDark ? Theme.of(context).cardColor : Colors.white,
+            color: isHighlighted
+                ? (isDark
+                    ? Theme.of(context).colorScheme.primary.withOpacity(0.15)
+                    : Colors.orange.shade50)
+                : (isDark ? Theme.of(context).cardColor : Colors.white),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: isDark
-                  ? Colors.white.withOpacity(0.1)
-                  : Colors.grey.withOpacity(0.1),
+              color: isHighlighted
+                  ? Theme.of(context).colorScheme.primary
+                  : (isDark
+                      ? Colors.white.withOpacity(0.1)
+                      : Colors.grey.withOpacity(0.1)),
+              width: isHighlighted ? 2 : 1,
             ),
             boxShadow: [
               BoxShadow(
@@ -632,7 +696,7 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
                             Row(
                               children: [
                                 Icon(
-                                  Icons.storefront,
+                                  Icons.people,
                                   size: 16,
                                   color: Theme.of(context).colorScheme.primary,
                                 ),

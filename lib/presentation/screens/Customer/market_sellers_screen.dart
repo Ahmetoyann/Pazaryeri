@@ -4,6 +4,7 @@ import '../../viewmodels/language_viewmodel.dart';
 import '../../viewmodels/auth_service.dart';
 import '../../widgets/custom_app_bar.dart';
 import 'seller_products_view_screen.dart';
+import '../../widgets/loading_overlay.dart';
 
 class MarketSellersScreen extends StatelessWidget {
   final String marketId;
@@ -20,7 +21,6 @@ class MarketSellersScreen extends StatelessWidget {
     final langVM = Provider.of<LanguageViewModel>(context);
 
     return Scaffold(
-      extendBodyBehindAppBar: true,
       appBar: CustomAppBar(
         title: Text(langVM.translate('sellers_title')),
       ),
@@ -28,7 +28,7 @@ class MarketSellersScreen extends StatelessWidget {
         future: AuthService.instance.fetchSellersForMarket(marketId),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: CustomLoadingIndicator());
           }
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
             return Center(
@@ -45,7 +45,7 @@ class MarketSellersScreen extends StatelessWidget {
 
           final sellers = snapshot.data!;
           return ListView.builder(
-            padding: const EdgeInsets.fromLTRB(16, 110, 16, 16),
+            padding: const EdgeInsets.all(16),
             itemCount: sellers.length,
             itemBuilder: (context, index) {
               final seller = sellers[index];

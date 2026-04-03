@@ -8,6 +8,8 @@ import '../../../data/models/market.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../../core/constants/app_icons.dart';
 import '../../../presentation/widgets/svg_icon.dart';
+import '../../widgets/loading_overlay.dart';
+import '../../widgets/custom_search_bar.dart';
 
 class SellerMarketSelectionScreen extends StatefulWidget {
   const SellerMarketSelectionScreen({super.key});
@@ -112,12 +114,11 @@ class _SellerMarketSelectionScreenState
     // Kontrol sürerken yükleniyor göster
     if (_isChecking) {
       return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+        body: Center(child: CustomLoadingIndicator()),
       );
     }
 
     return Scaffold(
-      extendBodyBehindAppBar: true,
       appBar: CustomAppBar(
         title: Text(langVM.translate('select_market_title')),
       ),
@@ -125,7 +126,6 @@ class _SellerMarketSelectionScreenState
         color: Theme.of(context).scaffoldBackgroundColor,
         child: Column(
           children: [
-            const SizedBox(height: 110), // AppBar için boşluk
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Text(
@@ -139,16 +139,30 @@ class _SellerMarketSelectionScreenState
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).cardColor,
-                    borderRadius: BorderRadius.circular(12),
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Theme.of(context).cardColor
+                        : Colors.white,
+                    borderRadius: BorderRadius.circular(16),
                     border: Border.all(
                       color: Theme.of(context)
                           .colorScheme
                           .primary
-                          .withOpacity(0.5),
+                          .withOpacity(0.2),
+                      width: 1.5,
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
@@ -193,59 +207,15 @@ class _SellerMarketSelectionScreenState
             // Arama Çubuğu
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: TextField(
+              child: CustomSearchBar(
                 controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: langVM.translate('search_market_hint'),
-                  hintStyle: TextStyle(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withOpacity(0.6)),
-                  prefixIcon: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: SvgIcon(
-                          iconPath: AppIcons.search,
-                          size: 28,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withOpacity(0.6))),
-                  suffixIcon: _searchController.text.isNotEmpty
-                      ? IconButton(
-                          icon: SvgIcon(
-                              iconPath: AppIcons.close,
-                              size: 28,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withOpacity(0.6)),
-                          onPressed: () {
-                            _searchController.clear();
-                            _filterMarkets();
-                          },
-                        )
-                      : null,
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none),
-                  enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none),
-                  focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(
-                          color: Theme.of(context).colorScheme.primary,
-                          width: 1.5)),
-                  filled: true,
-                  fillColor: Theme.of(context).cardColor,
-                ),
+                hintText: langVM.translate('search_market_hint'),
                 onChanged: (val) => _filterMarkets(),
               ),
             ),
             Expanded(
               child: _isLoadingMarkets
-                  ? const Center(child: CircularProgressIndicator())
+                  ? const Center(child: CustomLoadingIndicator())
                   : _filteredMarkets.isEmpty
                       ? Center(
                           child: Text(
@@ -264,14 +234,11 @@ class _SellerMarketSelectionScreenState
                             return Card(
                               margin: const EdgeInsets.symmetric(
                                   horizontal: 16, vertical: 8),
+                              elevation: 4,
+                              shadowColor: Colors.black.withOpacity(0.1),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                side: BorderSide(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .primary
-                                        .withOpacity(0.4),
-                                    width: 1.5),
+                                side: BorderSide.none,
                               ),
                               color: Theme.of(context).cardColor,
                               child: ListTile(
@@ -285,7 +252,7 @@ class _SellerMarketSelectionScreenState
                                     shape: BoxShape.circle,
                                   ),
                                   child: Icon(
-                                    Icons.storefront,
+                                    Icons.people,
                                     size: 28,
                                     color:
                                         Theme.of(context).colorScheme.primary,
@@ -295,7 +262,7 @@ class _SellerMarketSelectionScreenState
                                     style: const TextStyle(
                                         fontWeight: FontWeight.bold)),
                                 subtitle: Text(market.address.district),
-                                trailing: Icon(Icons.arrow_forward_ios,
+                                trailing: Icon(Icons.arrow_forward,
                                     size: 20,
                                     color: Theme.of(context)
                                         .colorScheme
@@ -308,7 +275,7 @@ class _SellerMarketSelectionScreenState
                                     barrierDismissible: false,
                                     useRootNavigator: false,
                                     builder: (ctx) => const Center(
-                                        child: CircularProgressIndicator()),
+                                        child: CustomLoadingIndicator()),
                                   );
 
                                   // 1. Seçimi ViewModel'e bildir

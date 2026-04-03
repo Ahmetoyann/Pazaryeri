@@ -10,6 +10,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'notification_service.dart';
 
 class AuthService {
   static final AuthService _instance = AuthService._init();
@@ -29,6 +30,7 @@ class AuthService {
   static const String _keyThemeColor = 'themeColor';
   static const String _keyLanguage = 'language';
   static const String _keyRecentSearches = 'recent_searches';
+  static const String _keyRecentCategories = 'recent_categories';
   static const String _keyFavorites = 'favorite_markets';
   static const String _keyReviews = 'market_reviews';
   static const String _keyOnboardingSeen = 'onboarding_seen';
@@ -572,6 +574,8 @@ class AuthService {
           'stallHours': data['stallHours']?.toString() ?? '',
           'instagramLink': data['instagramLink']?.toString() ?? '',
           'facebookLink': data['facebookLink']?.toString() ?? '',
+          'instagramName': data['instagramName']?.toString() ?? '',
+          'facebookName': data['facebookName']?.toString() ?? '',
         };
       }
     } catch (e) {
@@ -674,6 +678,26 @@ class AuthService {
   Future<void> clearRecentSearches() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_keyRecentSearches);
+  }
+
+  // --- KATEGORİ GEÇMİŞİ İŞLEMLERİ ---
+
+  Future<List<String>> getRecentCategories() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getStringList(_keyRecentCategories) ?? [];
+  }
+
+  Future<void> addRecentCategory(String category) async {
+    if (category.trim().isEmpty) return;
+    final prefs = await SharedPreferences.getInstance();
+    List<String> categories = prefs.getStringList(_keyRecentCategories) ?? [];
+    categories.remove(category);
+    categories.insert(0, category);
+    // Maksimum 5 kategori tut
+    if (categories.length > 5) {
+      categories = categories.sublist(0, 5);
+    }
+    await prefs.setStringList(_keyRecentCategories, categories);
   }
 
   // --- FAVORİLER İŞLEMLERİ ---
@@ -901,6 +925,26 @@ class AuthService {
     await batch.commit();
   }
 
+  /// İlgili içeriğe (yorum, soru vb.) ait tüm bildirimleri siler
+  Future<void> _deleteRelatedNotifications(String key, String value) async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collectionGroup('notifications')
+          .where('metadata.$key', isEqualTo: value)
+          .get();
+
+      final batch = FirebaseFirestore.instance.batch();
+      for (var doc in snapshot.docs) {
+        batch.delete(doc.reference);
+      }
+      if (snapshot.docs.isNotEmpty) {
+        await batch.commit();
+      }
+    } catch (e) {
+      debugPrint('İlgili bildirimler silinirken hata: $e');
+    }
+  }
+
   Future<void> toggleFavoriteSeller(String sellerId) async {
     final user = FirebaseAuth.instance.currentUser;
     final prefs = await SharedPreferences.getInstance();
@@ -1099,27 +1143,64 @@ class AuthService {
     await prefs.setString(_keyReviews, json.encode(reviews));
   }
 
-  // Yorum beğenme durumunu değiştir
+  // Yorum beğenme durumunu değiştir (Market Reviews)
   Future<void> toggleReviewLike(String reviewId, String userId) async {
-    final prefs = await SharedPreferences.getInstance();
-    final reviews = await getReviews();
+    final docRef =
+        FirebaseFirestore.instance.collection('market_reviews').doc(reviewId);
 
-    final index = reviews.indexWhere((r) => r['id'] == reviewId);
-    if (index != -1) {
-      final review = reviews[index];
-      List<String> likes =
-          (review['likes'] as List<dynamic>?)?.cast<String>() ?? [];
+    bool shouldNotify = false;
+    String? reviewOwnerId;
+    String? marketId;
+
+    await FirebaseFirestore.instance.runTransaction((transaction) async {
+      final snapshot = await transaction.get(docRef);
+      if (!snapshot.exists) return;
+
+      final data = snapshot.data()!;
+      List<String> likes = List<String>.from(data['likes'] ?? []);
 
       if (likes.contains(userId)) {
         likes.remove(userId);
       } else {
         likes.add(userId);
+        shouldNotify = true;
+        reviewOwnerId = data['userId'];
+        marketId = data['marketId'];
       }
 
-      review['likes'] = likes;
-      reviews[index] = review;
+      transaction.update(docRef, {'likes': likes});
+    });
 
-      await prefs.setString(_keyReviews, json.encode(reviews));
+    if (shouldNotify && reviewOwnerId != null && reviewOwnerId != userId) {
+      // Beğenen kişinin ismini al
+      String likerName = 'Bir kullanıcı';
+      try {
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userId)
+            .get();
+        if (userDoc.exists) {
+          final uData = userDoc.data();
+          final fName = uData?['firstName'] ?? '';
+          final lName = uData?['lastName'] ?? '';
+          if (fName.isNotEmpty || lName.isNotEmpty) {
+            likerName = '$fName $lName'.trim();
+          }
+        }
+      } catch (e) {
+        debugPrint('Kullanıcı adı alınamadı: $e');
+      }
+
+      await sendUserNotification(
+        reviewOwnerId!,
+        'Değerlendirmeniz Beğenildi ❤️',
+        '$likerName pazar değerlendirmenizi beğendi.',
+        metadata: {
+          'type': 'market_review_like',
+          'marketId': marketId,
+          'reviewId': reviewId,
+        },
+      );
     }
   }
 
@@ -1227,7 +1308,9 @@ class AuthService {
   /// Satıcı yorumu ekler
   Future<void> addSellerReview(Map<String, dynamic> review) async {
     try {
-      await FirebaseFirestore.instance.collection('seller_reviews').add(review);
+      final docRef = await FirebaseFirestore.instance
+          .collection('seller_reviews')
+          .add(review);
 
       // Satıcıya bildirim gönder
       if (review['sellerId'] != null) {
@@ -1238,6 +1321,7 @@ class AuthService {
           metadata: {
             'type': 'new_seller_review',
             'sellerId': review['sellerId'],
+            'reviewId': docRef.id,
           },
         );
       }
@@ -1348,6 +1432,9 @@ class AuthService {
           .collection('seller_reviews')
           .doc(reviewId)
           .delete();
+
+      // İlgili bildirimleri temizle
+      await _deleteRelatedNotifications('reviewId', reviewId);
     } catch (e) {
       debugPrint('Satıcı yorumu silinirken hata: $e');
       throw e;
@@ -1610,6 +1697,9 @@ class AuthService {
           .collection('product_reviews')
           .doc(reviewId)
           .delete();
+
+      // İlgili bildirimleri temizle
+      await _deleteRelatedNotifications('reviewId', reviewId);
     } catch (e) {
       debugPrint('Ürün yorumu silinirken hata: $e');
       throw e;
@@ -1645,10 +1735,29 @@ class AuthService {
     });
 
     if (shouldNotify && reviewOwnerId != null && reviewOwnerId != userId) {
+      // Beğenen kişinin ismini al
+      String likerName = 'Bir kullanıcı';
+      try {
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userId)
+            .get();
+        if (userDoc.exists) {
+          final uData = userDoc.data();
+          final fName = uData?['firstName'] ?? '';
+          final lName = uData?['lastName'] ?? '';
+          if (fName.isNotEmpty || lName.isNotEmpty) {
+            likerName = '$fName $lName'.trim();
+          }
+        }
+      } catch (e) {
+        debugPrint('Kullanıcı adı alınamadı: $e');
+      }
+
       await sendUserNotification(
         reviewOwnerId!,
         'Değerlendirmeniz Beğenildi ❤️',
-        'Bir kullanıcı ürün değerlendirmenizi beğendi.',
+        '$likerName ürün değerlendirmenizi beğendi.',
         metadata: {
           'type': 'review_like',
           'productId': productId,
@@ -1684,6 +1793,31 @@ class AuthService {
             'reviewId': reviewId,
           },
         );
+
+        // --- PUSH BİLDİRİM GÖNDER (FCM) ---
+        try {
+          final userDoc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(data['userId'])
+              .get();
+          final fcmToken = userDoc.data()?['fcmToken'];
+
+          if (fcmToken != null) {
+            await NotificationService.instance.sendPushNotification(
+              fcmToken: fcmToken,
+              title: 'Satıcı Yanıt Verdi 💬',
+              body: 'Satıcı yorumunuza yanıt verdi: "$reply"',
+              data: {
+                'click_action': 'FLUTTER_NOTIFICATION_CLICK',
+                'type': 'review_reply',
+                'productId': data['productId'],
+                'reviewId': reviewId,
+              },
+            );
+          }
+        } catch (e) {
+          debugPrint('Push bildirim hatası: $e');
+        }
       }
     } catch (e) {
       debugPrint('Yorum yanıtlanırken hata: $e');
@@ -1974,6 +2108,31 @@ class AuthService {
             'questionId': questionId,
           },
         );
+
+        // --- PUSH BİLDİRİM GÖNDER (FCM) ---
+        try {
+          final userDoc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(data['userId'])
+              .get();
+          final fcmToken = userDoc.data()?['fcmToken'];
+
+          if (fcmToken != null) {
+            await NotificationService.instance.sendPushNotification(
+              fcmToken: fcmToken,
+              title: 'Satıcı Sorunuzu Yanıtladı 💬',
+              body: 'Satıcı sorunuza yanıt verdi: "$reply"',
+              data: {
+                'click_action': 'FLUTTER_NOTIFICATION_CLICK',
+                'type': 'question_reply',
+                'productId': data['productId'],
+                'questionId': questionId,
+              },
+            );
+          }
+        } catch (e) {
+          debugPrint('Push bildirim hatası: $e');
+        }
       }
     } catch (e) {
       debugPrint('Soru yanıtlanırken hata: $e');
@@ -2032,6 +2191,9 @@ class AuthService {
           .collection('product_questions')
           .doc(questionId)
           .delete();
+
+      // İlgili bildirimleri temizle
+      await _deleteRelatedNotifications('questionId', questionId);
     } catch (e) {
       debugPrint('Ürün sorusu silinirken hata: $e');
       throw e;
@@ -2130,16 +2292,32 @@ class AuthService {
   // Belirli bir satıcının ürünlerini getirir
   Future<List<Map<String, dynamic>>> getSellerProducts(String sellerId) async {
     try {
+      debugPrint('Fetching products for sellerId: $sellerId');
       final snapshot = await FirebaseFirestore.instance
           .collection('products')
           .where('sellerId', isEqualTo: sellerId)
+          // .orderBy('createdAt', descending: true) // İndeks hatasını önlemek için kaldırıldı
           .get();
 
-      return snapshot.docs.map((doc) {
+      debugPrint(
+          'Found ${snapshot.docs.length} products for sellerId: $sellerId');
+      final products = snapshot.docs.map((doc) {
         final data = doc.data();
         data['id'] = doc.id;
         return data;
       }).toList();
+
+      // Client-side sıralama (Yeniden eskiye)
+      products.sort((a, b) {
+        final tA = a['createdAt'];
+        final tB = b['createdAt'];
+        if (tA is Timestamp && tB is Timestamp) {
+          return tB.compareTo(tA);
+        }
+        return 0;
+      });
+
+      return products;
     } catch (e) {
       debugPrint('Ürünler çekilirken hata: $e');
       return [];

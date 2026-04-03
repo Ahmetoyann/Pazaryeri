@@ -12,6 +12,7 @@ import '../../../presentation/widgets/svg_icon.dart';
 import '../../widgets/loading_overlay.dart';
 import '../../widgets/custom_snackbars.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../widgets/custom_button.dart';
 
 class SellerProductManagementScreen extends StatefulWidget {
   final SellerProduct product;
@@ -583,63 +584,29 @@ class _SellerProductManagementScreenState
               _buildStockHistoryChart(context),
               const SizedBox(height: 24),
 
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    setState(() {
-                      _inStock = !_inStock;
-                    });
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _inStock
-                        ? Colors.red.withOpacity(0.2)
-                        : Colors.green.withOpacity(0.2),
-                    foregroundColor: _inStock ? Colors.red : Colors.green,
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      side: BorderSide(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .primary
-                              .withOpacity(0.5)),
-                    ),
-                  ),
-                  icon: Icon(_inStock
-                      ? Icons.pause_circle_filled
-                      : Icons.play_circle_filled),
-                  label: Text(
-                    _inStock ? 'Satışı Durdur' : 'Satışı Başlat',
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 17),
-                  ),
-                ),
+              CustomButton(
+                text: _inStock ? 'Satışı Durdur' : 'Satışı Başlat',
+                icon: _inStock
+                    ? Icons.pause_circle_filled
+                    : Icons.play_circle_filled,
+                backgroundColor: _inStock
+                    ? Colors.red.withOpacity(0.2)
+                    : Colors.green.withOpacity(0.2),
+                foregroundColor: _inStock ? Colors.red : Colors.green,
+                onPressed: () {
+                  setState(() {
+                    _inStock = !_inStock;
+                  });
+                },
               ),
               const SizedBox(height: 16),
 
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _updateProduct,
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor:
-                        Theme.of(context).colorScheme.primary.withOpacity(0.2),
-                    foregroundColor: Theme.of(context).colorScheme.primary,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      side: BorderSide(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .primary
-                              .withOpacity(0.5)),
-                    ),
-                  ),
-                  child: const Text('Güncelle'),
-                ),
+              CustomButton(
+                text: 'Güncelle',
+                onPressed: _updateProduct,
+                backgroundColor:
+                    Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                foregroundColor: Theme.of(context).colorScheme.primary,
               ),
             ],
           ),

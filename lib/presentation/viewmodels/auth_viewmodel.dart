@@ -55,6 +55,9 @@ class AuthViewModel extends ChangeNotifier {
 
         // Bildirimleri dinle (Satıcı ve Müşteri)
         _startNotificationListener();
+
+        // FCM Token'ı kaydet (Arka plan bildirimleri için)
+        _saveFcmToken();
       }
     } catch (e) {
       debugPrint('Auto login error: $e');
@@ -163,6 +166,7 @@ class AuthViewModel extends ChangeNotifier {
         _isSeller = true;
         _isGuest = false;
         _startNotificationListener();
+        _saveFcmToken(); // Token kaydet
         notifyListeners();
         return true;
       }
@@ -250,6 +254,7 @@ class AuthViewModel extends ChangeNotifier {
         _isSeller = false;
         _isGuest = false;
         _startNotificationListener();
+        _saveFcmToken(); // Token kaydet
         notifyListeners();
         return true;
       }
@@ -534,6 +539,21 @@ class AuthViewModel extends ChangeNotifier {
       await AuthService.instance.deleteUserFromDb(_currentUser!.email);
 
       logout();
+    }
+  }
+
+  /// Cihazın FCM Token'ını alıp kullanıcının veritabanı kaydına ekler.
+  /// Bu sayede sunucu tarafı bu kullanıcıya bildirim gönderebilir.
+  Future<void> _saveFcmToken() async {
+    try {
+      final token = await NotificationService.instance.getFcmToken();
+      if (token != null && _currentUser != null) {
+        // Token'ı kullanıcı profiline kaydet
+        await AuthService.instance
+            .updateUserInDb({'fcmToken': token}, _currentUser!.email);
+      }
+    } catch (e) {
+      debugPrint('FCM Token kaydedilemedi: $e');
     }
   }
 

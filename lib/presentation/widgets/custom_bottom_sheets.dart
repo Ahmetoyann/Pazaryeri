@@ -1,46 +1,64 @@
+import 'dart:math';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'svg_icon.dart';
 import '../../core/constants/app_icons.dart';
 
 class CustomBottomSheets {
+  static const Color _darkSheetBackground = Color(0xFF121212);
+
   /// Temel BottomSheet yapılandırması (Tüm sheetler bunu kullanacak)
   static Future<T?> _showBase<T>({
     required BuildContext context,
     required Widget child,
     bool isScrollControlled = true,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return showModalBottomSheet<T>(
       context: context,
       isScrollControlled: isScrollControlled,
-      backgroundColor: Colors.black,
-      builder: (context) => Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-          top: 12,
-          left: 24,
-          right: 24,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Tutma Çubuğu (Drag Handle)
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 24),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withOpacity(isDark ? 0.85 : 0.6),
+      builder: (context) => ClipRRect(
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container( 
+            decoration: BoxDecoration(
+              color: (Theme.of(context).brightness == Brightness.dark
+                  ? _darkSheetBackground
+                  : Colors.white),
             ),
-            child,
-          ],
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom +
+                  MediaQuery.of(context).padding.bottom +
+                  24,
+              top: 12,
+              left: 24,
+              right: 24,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Tutma Çubuğu (Drag Handle)
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 24),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                child,
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -69,23 +87,26 @@ class CustomBottomSheets {
         builder: (context) {
           return Column(
             children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: effectiveIconColor.withOpacity(0.1),
-                  shape: BoxShape.circle,
+              _AnimatedIcon(
+                type: IconAnimationType.shake,
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: effectiveIconColor.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: iconPath != null
+                      ? SvgIcon(
+                          iconPath: iconPath,
+                          size: 32,
+                          color: effectiveIconColor,
+                        )
+                      : Icon(
+                          icon,
+                          size: 32,
+                          color: effectiveIconColor,
+                        ),
                 ),
-                child: iconPath != null
-                    ? SvgIcon(
-                        iconPath: iconPath,
-                        size: 32,
-                        color: effectiveIconColor,
-                      )
-                    : Icon(
-                        icon,
-                        size: 32,
-                        color: effectiveIconColor,
-                      ),
               ),
               const SizedBox(height: 24),
               Text(
@@ -183,7 +204,6 @@ class CustomBottomSheets {
                 },
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
-                  side: BorderSide(color: theme.colorScheme.primary),
                 ),
               ),
               ListTile(
@@ -195,7 +215,6 @@ class CustomBottomSheets {
                 },
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
-                  side: BorderSide(color: theme.colorScheme.primary),
                 ),
               ),
               if (onRemoveTap != null)
@@ -213,7 +232,6 @@ class CustomBottomSheets {
                   },
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(color: theme.colorScheme.primary),
                   ),
                 ),
             ],
@@ -237,24 +255,29 @@ class CustomBottomSheets {
       child: Column(
         children: [
           if (icon != null || iconPath != null) ...[
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: (iconColor ?? Theme.of(context).colorScheme.primary)
-                    .withOpacity(0.1),
-                shape: BoxShape.circle,
+            _AnimatedIcon(
+              type: IconAnimationType.scale,
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: (iconColor ?? Theme.of(context).colorScheme.primary)
+                      .withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: iconPath != null
+                    ? SvgIcon(
+                        iconPath: iconPath,
+                        size: 32,
+                        color:
+                            iconColor ?? Theme.of(context).colorScheme.primary,
+                      )
+                    : Icon(
+                        icon,
+                        size: 32,
+                        color:
+                            iconColor ?? Theme.of(context).colorScheme.primary,
+                      ),
               ),
-              child: iconPath != null
-                  ? SvgIcon(
-                      iconPath: iconPath,
-                      size: 32,
-                      color: iconColor ?? Theme.of(context).colorScheme.primary,
-                    )
-                  : Icon(
-                      icon,
-                      size: 32,
-                      color: iconColor ?? Theme.of(context).colorScheme.primary,
-                    ),
             ),
             const SizedBox(height: 16),
           ],
@@ -282,37 +305,48 @@ class CustomBottomSheets {
     double minChildSize = 0.25,
     double maxChildSize = 0.9,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return showModalBottomSheet<T>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withOpacity(isDark ? 0.85 : 0.6),
       builder: (context) => DraggableScrollableSheet(
         initialChildSize: initialChildSize,
         minChildSize: minChildSize,
         maxChildSize: maxChildSize,
-        builder: (context, scrollController) => Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).scaffoldBackgroundColor,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          child: Column(
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.symmetric(vertical: 12),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
+        builder: (context, scrollController) => ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(
+              decoration: BoxDecoration(
+                color: (Theme.of(context).brightness == Brightness.dark
+                    ? _darkSheetBackground
+                    : Colors.white),
               ),
-              Expanded(child: builder(context, scrollController)),
-            ],
+              padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).padding.bottom),
+              child: Column(
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      margin: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  Expanded(child: builder(context, scrollController)),
+                ],
+              ),
+            ),
           ),
         ),
       ),
@@ -340,13 +374,16 @@ class CustomBottomSheets {
       isScrollControlled: false,
       child: Column(
         children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              shape: BoxShape.circle,
+          _AnimatedIcon(
+            type: IconAnimationType.elastic,
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, size: 48, color: color),
             ),
-            child: Icon(icon, size: 48, color: color),
           ),
           const SizedBox(height: 24),
           Text(
@@ -362,5 +399,91 @@ class CustomBottomSheets {
     );
 
     onDismiss?.call();
+  }
+}
+
+enum IconAnimationType { scale, shake, elastic, rotate }
+
+class _AnimatedIcon extends StatefulWidget {
+  final Widget child;
+  final IconAnimationType type;
+
+  const _AnimatedIcon({
+    required this.child,
+    this.type = IconAnimationType.scale,
+  });
+
+  @override
+  State<_AnimatedIcon> createState() => _AnimatedIconState();
+}
+
+class _AnimatedIconState extends State<_AnimatedIcon>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _rotateAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    );
+
+    switch (widget.type) {
+      case IconAnimationType.scale:
+      case IconAnimationType.elastic:
+        _scaleAnimation = CurvedAnimation(
+          parent: _controller,
+          curve: Curves.elasticOut,
+        );
+        _controller.forward();
+        break;
+      case IconAnimationType.rotate:
+        _rotateAnimation = CurvedAnimation(
+          parent: _controller,
+          curve: Curves.easeInOutBack,
+        );
+        _controller.forward();
+        break;
+      case IconAnimationType.shake:
+        _controller.forward();
+        break;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.type == IconAnimationType.shake) {
+      return AnimatedBuilder(
+        animation: _controller,
+        builder: (context, child) {
+          final sineValue = sin(4 * pi * _controller.value);
+          return Transform.translate(
+            offset: Offset(sineValue * 8, 0),
+            child: child,
+          );
+        },
+        child: widget.child,
+      );
+    } else if (widget.type == IconAnimationType.rotate) {
+      return RotationTransition(
+        turns: _rotateAnimation,
+        child: widget.child,
+      );
+    }
+
+    // Scale & Elastic
+    return ScaleTransition(
+      scale: _scaleAnimation,
+      child: widget.child,
+    );
   }
 }

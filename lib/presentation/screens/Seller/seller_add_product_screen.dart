@@ -13,6 +13,7 @@ import '../../widgets/custom_snackbars.dart';
 import '../../../core/constants/app_icons.dart';
 import '../../../presentation/widgets/svg_icon.dart';
 import '../../widgets/loading_overlay.dart';
+import '../../widgets/custom_button.dart';
 
 class SellerAddProductScreen extends StatefulWidget {
   final SellerProduct? productToEdit;
@@ -574,38 +575,47 @@ class _SellerAddProductScreenState extends State<SellerAddProductScreen> {
               // Fotoğraf Alanı
               GestureDetector(
                 onTap: () => _showImagePicker(context),
-                child: Container(
-                  height: 150,
-                  width: double.infinity,
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: isDark ? theme.cardColor : Colors.white,
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: CustomPaint(
+                    painter: _DashedBorderPainter(
+                      color: theme.colorScheme.primary.withOpacity(0.5),
+                      borderRadius: 24.0,
+                    ),
+                    child: Container(
+                      height: 150,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primary.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(24),
                       ),
-                    ],
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      SvgIcon(
-                          iconPath: AppIcons.camera,
-                          size: 56,
-                          color: theme.colorScheme.primary.withOpacity(0.5)),
-                      const SizedBox(height: 12),
-                      Text(
-                        langVM.translate('add_photo_button'),
-                        style: TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.bold,
-                          color: theme.colorScheme.onSurface.withOpacity(0.7),
-                        ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.primary.withOpacity(0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.add_a_photo_outlined,
+                              color: theme.colorScheme.primary,
+                              size: 32,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            langVM.translate('add_photo_button'),
+                            style: TextStyle(
+                              color: theme.colorScheme.primary,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),
@@ -871,27 +881,13 @@ class _SellerAddProductScreenState extends State<SellerAddProductScreen> {
               Row(
                 children: [
                   Expanded(
-                    child: ElevatedButton(
+                    child: CustomButton(
+                      text: widget.productToEdit != null
+                          ? langVM.translate('update_button')
+                          : langVM.translate('publish_product_button'),
                       onPressed: () =>
                           _handleFormSubmit(sellerVM, langVM, false),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: theme.colorScheme.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        elevation: 4,
-                        shadowColor: theme.colorScheme.primary.withOpacity(0.4),
-                      ),
-                      child: Text(
-                        widget.productToEdit != null
-                            ? langVM.translate('update_button')
-                            : langVM.translate('publish_product_button'),
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
+                      isFullWidth: true,
                     ),
                   ),
                 ],
@@ -901,5 +897,60 @@ class _SellerAddProductScreenState extends State<SellerAddProductScreen> {
         ),
       ),
     );
+  }
+}
+
+class _DashedBorderPainter extends CustomPainter {
+  final Color color;
+  final double strokeWidth;
+  final double dashWidth;
+  final double dashSpace;
+  final double borderRadius;
+
+  _DashedBorderPainter({
+    required this.color,
+    this.strokeWidth = 2.0,
+    this.dashWidth = 8.0,
+    this.dashSpace = 6.0,
+    this.borderRadius = 16.0,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke;
+
+    final rrect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      Radius.circular(borderRadius),
+    );
+
+    final path = Path()..addRRect(rrect);
+    final pathMetrics = path.computeMetrics();
+    final dashedPath = Path();
+
+    for (final metric in pathMetrics) {
+      double distance = 0.0;
+      while (distance < metric.length) {
+        dashedPath.addPath(
+          metric.extractPath(distance, distance + dashWidth),
+          Offset.zero,
+        );
+        distance += dashWidth + dashSpace;
+      }
+    }
+
+    canvas.drawPath(dashedPath, paint);
+  }
+
+  @override
+  bool shouldRepaint(_DashedBorderPainter oldDelegate) {
+    return oldDelegate.color != color ||
+        oldDelegate.strokeWidth != strokeWidth ||
+        oldDelegate.dashWidth != dashWidth ||
+        oldDelegate.dashSpace != dashSpace ||
+        oldDelegate.borderRadius != borderRadius;
   }
 }

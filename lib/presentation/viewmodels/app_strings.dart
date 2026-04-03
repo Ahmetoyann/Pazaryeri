@@ -4,11 +4,13 @@ class AppStrings {
       'home_title': 'PAZARYERİ',
       'account_title': 'HESABIM',
       'login': 'Giriş Yap',
+      'login_success': 'Giriş başarılı. Hoş geldiniz!',
       'logout': 'Çıkış Yap',
       'register': 'Kayıt Ol',
       'dark_mode': 'Karanlık Mod',
       'language': 'Dil / Language',
       'welcome': 'Hoş geldin',
+      'guest_login_success': 'Misafir olarak giriş yapıldı.',
       'guest_message':
           'Hesabım alanını görüntülemek ve kişisel avantajlardan yararlanmak için lütfen giriş yapın.',
       'edit_profile': 'Profili Düzenle',
@@ -216,7 +218,7 @@ class AppStrings {
       'category_office': 'Ofis & Mobilya',
       'category_error': 'Lütfen bir kategori seçin',
       'my_products_tab': 'Ürünlerim',
-      'no_products_added': 'Henüz ürün eklemediniz.',
+      'no_products_added': 'Henüz ürün bulunmuyor.',
       'exit_seller_panel': 'Panelden Çık',
       'delete_product_title': 'Ürünü Sil',
       'delete_product_confirm': 'Bu ürünü silmek istediğinize emin misiniz?',
@@ -407,6 +409,9 @@ class AppStrings {
       'delete_selected_title': 'Seçilenleri Sil',
       'delete_selected_confirm_suffix':
           'bildirimi silmek istediğinize emin misiniz?',
+      'delete_notification_title': 'Bildirimi Sil',
+      'delete_notification_confirm':
+          'Bu bildirimi silmek istediğinize emin misiniz?',
       'view_product_button': 'Ürünü Görüntüle',
       'view_question_button': 'Soruyu Gör',
       'view_review_button': 'Yorumu Gör',
@@ -467,11 +472,13 @@ class AppStrings {
       'seller_notifications_tab': 'Seller Notifications',
       'marketplace_notifications_tab': 'Marketplace',
       'login': 'Login',
+      'login_success': 'Login successful. Welcome!',
       'logout': 'Logout',
       'register': 'Register',
       'dark_mode': 'Dark Mode',
       'language': 'Language / Dil',
       'welcome': 'Welcome',
+      'guest_login_success': 'Logged in as guest.',
       'guest_message':
           'Please login to view your account details and enjoy personal benefits.',
       'edit_profile': 'Edit Profile',
@@ -847,6 +854,9 @@ class AppStrings {
       'delete_selected_title': 'Delete Selected',
       'delete_selected_confirm_suffix':
           'notifications? This action cannot be undone.',
+      'delete_notification_title': 'Delete Notification',
+      'delete_notification_confirm':
+          'Are you sure you want to delete this notification?',
       'view_product_button': 'View Product',
       'view_question_button': 'View Question',
       'view_review_button': 'View Review',

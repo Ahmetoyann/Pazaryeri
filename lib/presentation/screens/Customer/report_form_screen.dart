@@ -14,6 +14,7 @@ import '../../widgets/loading_overlay.dart';
 import '../../widgets/svg_icon.dart';
 import '../../../core/constants/app_icons.dart';
 import '../../widgets/custom_text_field.dart';
+import '../../widgets/custom_button.dart';
 
 class ReportFormScreen extends StatefulWidget {
   final String? marketId;
@@ -127,11 +128,12 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
   Future<void> _sendReport() async {
     final text = _controller.text.trim();
     if (_selectedSubject == null) {
-      CustomSnackbars.showWarning(context, 'Lütfen bir konu seçiniz.');
+      CustomSnackbars.showWarning(context, 'Lütfen bildirim konusunu seçiniz.');
       return;
     }
     if (text.isEmpty) {
-      CustomSnackbars.showWarning(context, 'Lütfen mesajınızı yazınız.');
+      CustomSnackbars.showWarning(
+          context, 'Lütfen bildirim mesajınızı yazınız.');
       return;
     }
 
@@ -198,10 +200,9 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      extendBodyBehindAppBar: true,
       appBar: CustomAppBar(title: Text(title)),
       body: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 110, 16, 16),
+        padding: const EdgeInsets.all(16),
         child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -211,7 +212,7 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
                 style: TextStyle(
                     color: Theme.of(context).textTheme.bodyLarge?.color,
                     fontSize: 16),
-                dropdownColor: Theme.of(context).cardColor,
+                dropdownColor: isDark ? Colors.black : Colors.white,
                 decoration: InputDecoration(
                   labelText: 'Konu Seçiniz',
                   prefixIcon: Icon(Icons.subject,
@@ -267,90 +268,115 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              Card(
-                margin: EdgeInsets.zero,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(24),
-                  side: BorderSide(color: Colors.white.withOpacity(0.3)),
-                ),
-                child: InkWell(
+              if (_selectedImage == null)
+                GestureDetector(
                   onTap: _pickImage,
-                  borderRadius: BorderRadius.circular(24),
-                  child: Container(
-                    height: 150,
-                    width: double.infinity,
-                    decoration: _selectedImage == null
-                        ? null
-                        : BoxDecoration(
-                            borderRadius: BorderRadius.circular(24),
-                            image: DecorationImage(
-                              image: FileImage(File(_selectedImage!.path)),
-                              fit: BoxFit.cover,
+                  child: CustomPaint(
+                    painter: _DashedBorderPainter(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withOpacity(0.5),
+                      borderRadius: 16.0,
+                    ),
+                    child: Container(
+                      height: 150,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .primary
+                                  .withOpacity(0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.add_a_photo_outlined,
+                              color: Theme.of(context).colorScheme.primary,
+                              size: 32,
                             ),
                           ),
-                    child: _selectedImage == null
-                        ? Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.add_a_photo,
-                                size: 40,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
-                                    .withValues(alpha: 0.4),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Fotoğraf Ekle (İsteğe Bağlı)',
-                                style: TextStyle(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurface
-                                      .withValues(alpha: 0.6),
-                                ),
-                              ),
-                            ],
-                          )
-                        : Stack(
-                            children: [
-                              Positioned(
-                                top: 8,
-                                right: 8,
-                                child: GestureDetector(
-                                  onTap: () =>
-                                      setState(() => _selectedImage = null),
-                                  child: Container(
-                                    padding: const EdgeInsets.all(6),
-                                    decoration: BoxDecoration(
-                                      color: Colors.red.withOpacity(0.9),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const SvgIcon(
-                                        iconPath: AppIcons.close,
-                                        color: Colors.white,
-                                        size: 20),
-                                  ),
-                                ),
-                              ),
-                            ],
+                          const SizedBox(height: 12),
+                          Text(
+                            'Fotoğraf Ekle (İsteğe Bağlı)',
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.primary,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
                           ),
+                        ],
+                      ),
+                    ),
                   ),
+                )
+              else
+                Stack(
+                  children: [
+                    GestureDetector(
+                      onTap: _pickImage,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: Image.file(
+                          File(_selectedImage!.path),
+                          height: 150,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      bottom: 12,
+                      right: 12,
+                      child: GestureDetector(
+                        onTap: _pickImage,
+                        child: CircleAvatar(
+                          radius: 20,
+                          backgroundColor:
+                              Theme.of(context).colorScheme.primary,
+                          child: Icon(
+                            Icons.add_a_photo_outlined,
+                            color: Theme.of(context).colorScheme.onPrimary,
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: GestureDetector(
+                        onTap: () => setState(() => _selectedImage = null),
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withOpacity(0.9),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const SvgIcon(
+                              iconPath: AppIcons.close,
+                              color: Colors.white,
+                              size: 20),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
               const SizedBox(height: 24),
-              ElevatedButton(
+              CustomButton(
+                text: 'Gönder',
                 onPressed: _sendReport,
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(color: Colors.white.withOpacity(0.3)),
-                  ),
-                ),
-                child: const Text('Gönder',
-                    style:
-                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               ),
               const SizedBox(height: 12),
             ],
@@ -358,5 +384,60 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
         ),
       ),
     );
+  }
+}
+
+class _DashedBorderPainter extends CustomPainter {
+  final Color color;
+  final double strokeWidth;
+  final double dashWidth;
+  final double dashSpace;
+  final double borderRadius;
+
+  _DashedBorderPainter({
+    required this.color,
+    this.strokeWidth = 2.0,
+    this.dashWidth = 8.0,
+    this.dashSpace = 6.0,
+    this.borderRadius = 16.0,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke;
+
+    final rrect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      Radius.circular(borderRadius),
+    );
+
+    final path = Path()..addRRect(rrect);
+    final pathMetrics = path.computeMetrics();
+    final dashedPath = Path();
+
+    for (final metric in pathMetrics) {
+      double distance = 0.0;
+      while (distance < metric.length) {
+        dashedPath.addPath(
+          metric.extractPath(distance, distance + dashWidth),
+          Offset.zero,
+        );
+        distance += dashWidth + dashSpace;
+      }
+    }
+
+    canvas.drawPath(dashedPath, paint);
+  }
+
+  @override
+  bool shouldRepaint(_DashedBorderPainter oldDelegate) {
+    return oldDelegate.color != color ||
+        oldDelegate.strokeWidth != strokeWidth ||
+        oldDelegate.dashWidth != dashWidth ||
+        oldDelegate.dashSpace != dashSpace ||
+        oldDelegate.borderRadius != borderRadius;
   }
 }

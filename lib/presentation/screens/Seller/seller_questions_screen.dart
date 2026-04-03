@@ -12,6 +12,8 @@ import '../../widgets/custom_bottom_sheets.dart';
 import '../../../core/constants/app_icons.dart';
 import '../../widgets/svg_icon.dart';
 import '../../widgets/custom_snackbars.dart';
+import '../../widgets/custom_button.dart';
+import '../../widgets/loading_overlay.dart';
 
 class SellerQuestionsScreen extends StatefulWidget {
   final String? highlightQuestionId;
@@ -184,39 +186,30 @@ class _SellerQuestionsScreenState extends State<SellerQuestionsScreen> {
                 maxLines: 4,
               ),
               const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    backgroundColor:
-                        Theme.of(context).colorScheme.primary.withOpacity(0.2),
-                    foregroundColor: Theme.of(context).colorScheme.primary,
-                    elevation: 0,
-                  ),
-                  onPressed: () async {
-                    if (controller.text.trim().isNotEmpty) {
-                      final replyText = controller.text.trim();
-                      await AuthService.instance.replyToProductQuestion(
-                        questionId,
-                        replyText,
-                      );
-                      if (mounted) {
-                        Navigator.pop(context);
+              CustomButton(
+                text: langVM.translate('send_button'),
+                backgroundColor:
+                    Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                foregroundColor: Theme.of(context).colorScheme.primary,
+                borderRadius: 12,
+                onPressed: () async {
+                  if (controller.text.trim().isNotEmpty) {
+                    final replyText = controller.text.trim();
+                    await AuthService.instance.replyToProductQuestion(
+                      questionId,
+                      replyText,
+                    );
+                    if (mounted) {
+                      Navigator.pop(context);
 
-                        await DialogService.showSuccess(
-                          context,
-                          message: langVM.translate('reply_sent_success'),
-                          duration: const Duration(seconds: 3),
-                        );
-                      }
+                      await DialogService.showSuccess(
+                        context,
+                        message: langVM.translate('reply_sent_success'),
+                        duration: const Duration(seconds: 3),
+                      );
                     }
-                  },
-                  child: Text(langVM.translate('send_button')),
-                ),
+                  }
+                },
               ),
             ],
           );
@@ -258,22 +251,9 @@ class _SellerQuestionsScreenState extends State<SellerQuestionsScreen> {
             maxLines: 3,
           ),
           const SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () => Navigator.pop(context, controller.text.trim()),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                backgroundColor: Theme.of(context).colorScheme.primary,
-                foregroundColor: Colors.white,
-                elevation: 0,
-              ),
-              child: const Text('Ekle',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            ),
+          CustomButton(
+            text: 'Ekle',
+            onPressed: () => Navigator.pop(context, controller.text.trim()),
           ),
         ],
       ),
@@ -366,7 +346,7 @@ class _SellerQuestionsScreenState extends State<SellerQuestionsScreen> {
             stream: _questionsStream,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
+                return const Center(child: CustomLoadingIndicator());
               }
 
               if (!snapshot.hasData || snapshot.data!.isEmpty) {
@@ -476,7 +456,8 @@ class _SellerQuestionsScreenState extends State<SellerQuestionsScreen> {
                                       ),
                                       child: ClipRRect(
                                         borderRadius: BorderRadius.circular(8),
-                                        child: productImage.startsWith('http')
+                                        child: (productImage is String &&
+                                                productImage.startsWith('http'))
                                             ? Image.network(
                                                 productImage,
                                                 fit: BoxFit.cover,
@@ -485,7 +466,7 @@ class _SellerQuestionsScreenState extends State<SellerQuestionsScreen> {
                                                         size: 28),
                                               )
                                             : Image.file(
-                                                File(productImage),
+                                                File(productImage.toString()),
                                                 fit: BoxFit.cover,
                                                 errorBuilder: (_, __, ___) =>
                                                     const Icon(Icons.image,

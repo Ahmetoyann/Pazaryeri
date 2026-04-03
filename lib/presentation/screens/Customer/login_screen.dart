@@ -6,6 +6,7 @@ import '../../viewmodels/auth_viewmodel.dart';
 import '../../viewmodels/language_viewmodel.dart';
 import '../../widgets/success_dialog.dart';
 import '../../widgets/loading_overlay.dart';
+import '../../widgets/custom_snackbars.dart';
 import '../../../core/constants/app_icons.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -27,6 +28,8 @@ class _LoginScreenState extends State<LoginScreen> {
         try {
           final success = await authVM.loginWithGoogle();
           if (success && mounted) {
+            CustomSnackbars.showSuccess(
+                context, langVM.translate('login_success'));
             widget.onLoginSuccess();
             Navigator.of(context).pop();
           }
@@ -34,8 +37,8 @@ class _LoginScreenState extends State<LoginScreen> {
           if (mounted) {
             // Hata mesajını overlay kapandıktan sonra göster
             Future.delayed(const Duration(milliseconds: 100), () {
-              DialogService.showError(context,
-                  message: '${langVM.translate('google_login_error')}: $e');
+              CustomSnackbars.showError(
+                  context, '${langVM.translate('google_login_error')}: $e');
             });
           }
         }
@@ -44,12 +47,18 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _loginAsGuest() async {
+    final langVM = Provider.of<LanguageViewModel>(context, listen: false);
+
     await LoadingOverlay.show(
       context,
       asyncFunction: () async {
         Provider.of<AuthViewModel>(context, listen: false).enterAsGuest();
-        widget.onLoginSuccess();
-        Navigator.of(context).pop();
+        if (mounted) {
+          CustomSnackbars.showSuccess(
+              context, langVM.translate('guest_login_success'));
+          widget.onLoginSuccess();
+          Navigator.of(context).pop();
+        }
       },
     );
   }
@@ -118,7 +127,7 @@ class _LoginScreenState extends State<LoginScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
@@ -179,7 +188,7 @@ class _LoginScreenState extends State<LoginScreen> {
               _buildLoginButton(
                 context,
                 title: langVM.translate('continue_guest'),
-                icon: const Icon(Icons.arrow_forward_ios,
+                icon: const Icon(Icons.arrow_forward,
                     color: Colors.white, size: 24),
                 color: Theme.of(context).colorScheme.primary,
                 onTap: _loginAsGuest,

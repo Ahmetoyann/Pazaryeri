@@ -9,6 +9,8 @@ import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_snackbars.dart';
 import '../../../core/constants/app_icons.dart';
 import '../../widgets/svg_icon.dart';
+import '../../widgets/loading_overlay.dart';
+import '../../widgets/custom_search_bar.dart';
 
 class SellerProductsViewScreen extends StatefulWidget {
   final Map<String, dynamic> seller;
@@ -195,234 +197,161 @@ class _SellerProductsViewScreenState extends State<SellerProductsViewScreen> {
         '${widget.seller['firstName']} ${widget.seller['lastName']}';
 
     return Scaffold(
-      extendBodyBehindAppBar: true,
       appBar: CustomAppBar(
         title: Text('$stallName Ürünleri'),
         actions: [
           IconButton(
             icon: Icon(_isFavorite ? Icons.favorite : Icons.favorite_border),
-            color: _isFavorite ? Colors.red : Colors.white,
+            color: _isFavorite ? Colors.red : null,
             onPressed: _toggleFavorite,
           ),
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CustomLoadingIndicator())
           : _errorMessage != null
               ? Center(child: Text('Hata: $_errorMessage'))
-              : Padding(
-                  padding: const EdgeInsets.only(top: 110),
-                  child: Column(
-                    children: [
-                      // Satıcı Puanı ve Bilgisi
-                      Card(
-                        margin: const EdgeInsets.symmetric(horizontal: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          side:
-                              BorderSide(color: Colors.white.withOpacity(0.3)),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.star,
-                                  color: Colors.amber, size: 24),
-                              const SizedBox(width: 8),
-                              Text(
-                                _averageRating.toStringAsFixed(1),
-                                style: const TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                '($_reviewCount Değerlendirme)',
-                                style: TextStyle(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurface
-                                      .withValues(alpha: 0.6),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+              : Column(
+                  children: [
+                    // Satıcı Puanı ve Bilgisi
+                    Card(
+                      margin: const EdgeInsets.symmetric(horizontal: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(color: Colors.white.withOpacity(0.3)),
                       ),
-                      if (_marketName != null)
-                        Container(
-                          margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .primary
-                                .withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.star,
+                                color: Colors.amber, size: 24),
+                            const SizedBox(width: 8),
+                            Text(
+                              _averageRating.toStringAsFixed(1),
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '($_reviewCount Değerlendirme)',
+                              style: TextStyle(
                                 color: Theme.of(context)
                                     .colorScheme
-                                    .primary
-                                    .withOpacity(0.3)),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(Icons.storefront,
-                                  color: Theme.of(context).colorScheme.primary),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  'Bu satıcı şu an $_marketName pazarında satış yapıyor.',
-                                  style: TextStyle(
-                                    color:
-                                        Theme.of(context).colorScheme.onSurface,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
+                                    .onSurface
+                                    .withValues(alpha: 0.6),
                               ),
-                            ],
-                          ),
-                        ),
-                      // Arama Çubuğu
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                        child: TextField(
-                          controller: _searchController,
-                          decoration: InputDecoration(
-                            hintText: 'Ürün ara...',
-                            hintStyle:
-                                TextStyle(color: Theme.of(context).hintColor),
-                            prefixIcon: Padding(
-                              padding: const EdgeInsets.all(12.0),
-                              child: SvgIcon(
-                                  iconPath: AppIcons.search,
-                                  color: Theme.of(context).hintColor),
                             ),
-                            suffixIcon: _searchQuery.isNotEmpty
-                                ? IconButton(
-                                    icon: SvgIcon(
-                                        iconPath: AppIcons.close,
-                                        size: 20,
-                                        color: Theme.of(context).hintColor),
-                                    onPressed: () {
-                                      _searchController.clear();
-                                      setState(() {
-                                        _searchQuery = '';
-                                        _applyFilters();
-                                      });
-                                    },
-                                  )
-                                : IconButton(
-                                    icon: Icon(Icons.mic,
-                                        color: Theme.of(context).hintColor),
-                                    onPressed: () {
-                                      CustomSnackbars.showInfo(
-                                          context, 'Sesli arama yakında...');
-                                    },
-                                  ),
-                            border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide.none),
-                            enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide.none),
-                            focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(
-                                    color:
-                                        Theme.of(context).colorScheme.primary,
-                                    width: 1.5)),
-                            filled: true,
-                            fillColor: Theme.of(context).cardColor,
-                          ),
-                          onChanged: (value) {
-                            _searchQuery = value;
-                            _applyFilters();
-                          },
+                          ],
                         ),
                       ),
-                      // Filtreleme ve Sıralama
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8),
+                    ),
+                    if (_marketName != null)
+                      Container(
+                        margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .primary
+                                  .withOpacity(0.3)),
+                        ),
                         child: Row(
                           children: [
-                            if (_categories.length > 1)
-                              Expanded(
-                                flex: 3,
-                                child: Container(
-                                  margin: const EdgeInsets.only(right: 8),
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 12),
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(context).cardColor,
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                        color: Colors.white.withOpacity(0.3)),
-                                  ),
-                                  child: DropdownButtonHideUnderline(
-                                    child: DropdownButton<String>(
-                                      value: _selectedCategory,
-                                      isExpanded: true,
-                                      style: const TextStyle(
-                                          color: Colors.white, fontSize: 13),
-                                      icon: const Icon(Icons.filter_list,
-                                          color: Colors.white, size: 18),
-                                      items: _categories.map((String category) {
-                                        return DropdownMenuItem<String>(
-                                          value: category,
-                                          child: Text(
-                                            langVM.translate(category),
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        );
-                                      }).toList(),
-                                      onChanged: (String? newValue) {
-                                        if (newValue != null) {
-                                          setState(() =>
-                                              _selectedCategory = newValue);
-                                          _applyFilters();
-                                        }
-                                      },
-                                    ),
-                                  ),
+                            Icon(Icons.people,
+                                color: Theme.of(context).colorScheme.primary),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'Bu satıcı şu an $_marketName pazarında satış yapıyor.',
+                                style: TextStyle(
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface,
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    // Arama Çubuğu
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                      child: CustomSearchBar(
+                        controller: _searchController,
+                        hintText: 'Ürün ara...',
+                        onMicPressed: () {
+                          CustomSnackbars.showInfo(
+                              context, 'Sesli arama yakında...');
+                        },
+                        onChanged: (value) {
+                          _searchQuery = value;
+                          _applyFilters();
+                        },
+                      ),
+                    ),
+                    // Filtreleme ve Sıralama
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      child: Row(
+                        children: [
+                          if (_categories.length > 1)
                             Expanded(
-                              flex: 2,
+                              flex: 3,
                               child: Container(
+                                margin: const EdgeInsets.only(right: 8),
                                 padding:
                                     const EdgeInsets.symmetric(horizontal: 12),
                                 decoration: BoxDecoration(
-                                  color: Theme.of(context).cardColor,
+                                  color: Theme.of(context).brightness ==
+                                          Brightness.dark
+                                      ? Colors.black
+                                      : Colors.white,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Theme.of(context).brightness ==
+                                              Brightness.dark
+                                          ? Colors.white.withOpacity(0.25)
+                                          : Colors.black.withOpacity(0.2),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
                                       color: Colors.white.withOpacity(0.3)),
                                 ),
                                 child: DropdownButtonHideUnderline(
                                   child: DropdownButton<String>(
-                                    value: _sortOption,
+                                    value: _selectedCategory,
                                     isExpanded: true,
                                     style: const TextStyle(
                                         color: Colors.white, fontSize: 13),
-                                    icon: const Icon(Icons.sort,
+                                    icon: const Icon(Icons.filter_list,
                                         color: Colors.white, size: 18),
-                                    items: const [
-                                      DropdownMenuItem(
-                                          value: 'default',
-                                          child: Text('Varsayılan')),
-                                      DropdownMenuItem(
-                                          value: 'rating_desc',
-                                          child: Text('Puan (Azalan)')),
-                                      DropdownMenuItem(
-                                          value: 'rating_asc',
-                                          child: Text('Puan (Artan)')),
-                                    ],
+                                    items: _categories.map((String category) {
+                                      return DropdownMenuItem<String>(
+                                        value: category,
+                                        child: Text(
+                                          langVM.translate(category),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      );
+                                    }).toList(),
                                     onChanged: (String? newValue) {
                                       if (newValue != null) {
-                                        setState(() => _sortOption = newValue);
+                                        setState(
+                                            () => _selectedCategory = newValue);
                                         _applyFilters();
                                       }
                                     },
@@ -430,85 +359,121 @@ class _SellerProductsViewScreenState extends State<SellerProductsViewScreen> {
                                 ),
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-                      Expanded(
-                        child: _filteredProducts.isEmpty
-                            ? const Center(
-                                child: Text('Bu kategoride ürün bulunamadı.'))
-                            : ListView.builder(
-                                padding: const EdgeInsets.all(16),
-                                itemCount: _filteredProducts.length,
-                                itemBuilder: (context, index) {
-                                  final product = _filteredProducts[index];
-                                  return Card(
-                                      margin: const EdgeInsets.only(bottom: 12),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                        side: BorderSide(
-                                            color:
-                                                Colors.white.withOpacity(0.3)),
-                                      ),
-                                      child: ListTile(
-                                        leading: _buildProductImage(
-                                            product['imagePath']),
-                                        title: Text(product['name']),
-                                        subtitle: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                                '${product['price']} ₺ / ${langVM.translate(product['unit'] ?? 'unit_kg')}'),
-                                            if ((product['averageRating'] ??
-                                                    0) >
-                                                0)
-                                              Row(
-                                                children: [
-                                                  const Icon(Icons.star,
-                                                      size: 14,
-                                                      color: Colors.amber),
-                                                  const SizedBox(width: 4),
-                                                  Text(
-                                                    (product['averageRating']
-                                                            as double)
-                                                        .toStringAsFixed(1),
-                                                    style: TextStyle(
-                                                      fontSize: 12,
-                                                      color: Theme.of(context)
-                                                          .colorScheme
-                                                          .onSurface
-                                                          .withValues(
-                                                              alpha: 0.6),
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                          ],
-                                        ),
-                                        trailing: product['inStock'] == true
-                                            ? const Icon(Icons.check_circle,
-                                                color: Colors.green, size: 20)
-                                            : const Icon(Icons.remove_circle,
-                                                color: Colors.red, size: 20),
-                                        onTap: () {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) =>
-                                                  ProductDetailScreen(
-                                                product: product,
-                                                sellerName: stallName,
-                                              ),
-                                            ),
-                                          );
-                                        },
-                                      ));
-                                },
+                          Expanded(
+                            flex: 2,
+                            child: Container(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 12),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).cardColor,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                    color: Colors.white.withOpacity(0.3)),
                               ),
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton<String>(
+                                  value: _sortOption,
+                                  isExpanded: true,
+                                  style: const TextStyle(
+                                      color: Colors.white, fontSize: 13),
+                                  icon: const Icon(Icons.sort,
+                                      color: Colors.white, size: 18),
+                                  items: const [
+                                    DropdownMenuItem(
+                                        value: 'default',
+                                        child: Text('Varsayılan')),
+                                    DropdownMenuItem(
+                                        value: 'rating_desc',
+                                        child: Text('Puan (Azalan)')),
+                                    DropdownMenuItem(
+                                        value: 'rating_asc',
+                                        child: Text('Puan (Artan)')),
+                                  ],
+                                  onChanged: (String? newValue) {
+                                    if (newValue != null) {
+                                      setState(() => _sortOption = newValue);
+                                      _applyFilters();
+                                    }
+                                  },
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                    Expanded(
+                      child: _filteredProducts.isEmpty
+                          ? const Center(
+                              child: Text('Bu kategoride ürün bulunamadı.'))
+                          : ListView.builder(
+                              padding: const EdgeInsets.all(16),
+                              itemCount: _filteredProducts.length,
+                              itemBuilder: (context, index) {
+                                final product = _filteredProducts[index];
+                                return Card(
+                                    margin: const EdgeInsets.only(bottom: 12),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      side: BorderSide(
+                                          color: Colors.white.withOpacity(0.3)),
+                                    ),
+                                    child: ListTile(
+                                      leading: _buildProductImage(
+                                          product['imagePath']),
+                                      title: Text(product['name']),
+                                      subtitle: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                              '${product['price']} ₺ / ${langVM.translate(product['unit'] ?? 'unit_kg')}'),
+                                          if ((product['averageRating'] ?? 0) >
+                                              0)
+                                            Row(
+                                              children: [
+                                                const Icon(Icons.star,
+                                                    size: 14,
+                                                    color: Colors.amber),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  (product['averageRating']
+                                                          as double)
+                                                      .toStringAsFixed(1),
+                                                  style: TextStyle(
+                                                    fontSize: 12,
+                                                    color: Theme.of(context)
+                                                        .colorScheme
+                                                        .onSurface
+                                                        .withValues(alpha: 0.6),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                        ],
+                                      ),
+                                      trailing: product['inStock'] == true
+                                          ? const Icon(Icons.check_circle,
+                                              color: Colors.green, size: 20)
+                                          : const Icon(Icons.remove_circle,
+                                              color: Colors.red, size: 20),
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                ProductDetailScreen(
+                                              product: product,
+                                              sellerName: stallName,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ));
+                              },
+                            ),
+                    ),
+                  ],
                 ),
     );
   }

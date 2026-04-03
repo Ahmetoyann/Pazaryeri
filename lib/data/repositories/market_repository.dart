@@ -1236,6 +1236,66 @@ class JsonMarketRepository implements MarketRepository {
     final jsonString = await rootBundle.loadString(assetPath);
     final list = json.decode(jsonString) as List<dynamic>;
 
+    // Load izmir.json if available
+    try {
+      final izmirJsonString =
+          await rootBundle.loadString('assets/data/izmir.json');
+      final izmirList = json.decode(izmirJsonString) as List<dynamic>;
+      list.addAll(izmirList);
+    } catch (e) {
+      print('Error loading izmir.json: $e');
+    }
+
+    // Load adana.json if available
+    try {
+      final adanaJsonString =
+          await rootBundle.loadString('assets/data/adana.json');
+      final adanaList = json.decode(adanaJsonString) as List<dynamic>;
+      list.addAll(adanaList);
+    } catch (e) {
+      print('Error loading adana.json: $e');
+    }
+
+    // Load antalya.json if available
+    try {
+      final antalyaJsonString =
+          await rootBundle.loadString('assets/data/antalya.json');
+      final antalyaList = json.decode(antalyaJsonString) as List<dynamic>;
+      list.addAll(antalyaList);
+    } catch (e) {
+      print('Error loading antalya.json: $e');
+    }
+
+    // Load balikesir.json if available
+    try {
+      final balikesirJsonString =
+          await rootBundle.loadString('assets/data/balikesir.json');
+      final balikesirList = json.decode(balikesirJsonString) as List<dynamic>;
+      list.addAll(balikesirList);
+    } catch (e) {
+      print('Error loading balikesir.json: $e');
+    }
+
+    // Load gaziantep.json if available
+    try {
+      final gaziantepJsonString =
+          await rootBundle.loadString('assets/data/gaziantep.json');
+      final gaziantepList = json.decode(gaziantepJsonString) as List<dynamic>;
+      list.addAll(gaziantepList);
+    } catch (e) {
+      print('Error loading gaziantep.json: $e');
+    }
+
+    // Load kocaeli.json if available
+    try {
+      final kocaeliJsonString =
+          await rootBundle.loadString('assets/data/kocaeli.json');
+      final kocaeliList = json.decode(kocaeliJsonString) as List<dynamic>;
+      list.addAll(kocaeliList);
+    } catch (e) {
+      print('Error loading kocaeli.json: $e');
+    }
+
     return list.map((e) {
       final id = e['id'] as String? ?? '';
       final name = e['name'] as String? ?? '';
@@ -1278,6 +1338,67 @@ class JsonMarketRepository implements MarketRepository {
     try {
       final jsonString = await rootBundle.loadString(assetPath);
       final list = json.decode(jsonString) as List<dynamic>;
+
+      // Load izmir.json if available
+      try {
+        final izmirJsonString =
+            await rootBundle.loadString('assets/data/izmir.json');
+        final izmirList = json.decode(izmirJsonString) as List<dynamic>;
+        list.addAll(izmirList);
+      } catch (e) {
+        print('Error loading izmir.json: $e');
+      }
+
+      // Load adana.json if available
+      try {
+        final adanaJsonString =
+            await rootBundle.loadString('assets/data/adana.json');
+        final adanaList = json.decode(adanaJsonString) as List<dynamic>;
+        list.addAll(adanaList);
+      } catch (e) {
+        print('Error loading adana.json: $e');
+      }
+
+      // Load antalya.json if available
+      try {
+        final antalyaJsonString =
+            await rootBundle.loadString('assets/data/antalya.json');
+        final antalyaList = json.decode(antalyaJsonString) as List<dynamic>;
+        list.addAll(antalyaList);
+      } catch (e) {
+        print('Error loading antalya.json: $e');
+      }
+
+      // Load balikesir.json if available
+      try {
+        final balikesirJsonString =
+            await rootBundle.loadString('assets/data/balikesir.json');
+        final balikesirList = json.decode(balikesirJsonString) as List<dynamic>;
+        list.addAll(balikesirList);
+      } catch (e) {
+        print('Error loading balikesir.json: $e');
+      }
+
+      // Load gaziantep.json if available
+      try {
+        final gaziantepJsonString =
+            await rootBundle.loadString('assets/data/gaziantep.json');
+        final gaziantepList = json.decode(gaziantepJsonString) as List<dynamic>;
+        list.addAll(gaziantepList);
+      } catch (e) {
+        print('Error loading gaziantep.json: $e');
+      }
+
+      // Load kocaeli.json if available
+      try {
+        final kocaeliJsonString =
+            await rootBundle.loadString('assets/data/kocaeli.json');
+        final kocaeliList = json.decode(kocaeliJsonString) as List<dynamic>;
+        list.addAll(kocaeliList);
+      } catch (e) {
+        print('Error loading kocaeli.json: $e');
+      }
+
       final lat1 = forAddress.latitude;
       final lon1 = forAddress.longitude;
 

@@ -12,6 +12,8 @@ import 'customer_seller_detail_screen.dart';
 import '../../viewmodels/seller_viewmodel.dart';
 import '../../../core/constants/app_icons.dart';
 import '../../../presentation/widgets/svg_icon.dart';
+import '../../widgets/loading_overlay.dart';
+import '../../widgets/custom_search_bar.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -236,8 +238,11 @@ class _SearchScreenState extends State<SearchScreen> {
           // Arama Çubuğu
           Padding(
             padding: const EdgeInsets.all(16.0),
-            child: TextField(
+            child: CustomSearchBar(
               controller: _searchController,
+              hintText: langVM.translate('search_placeholder'),
+              onMicPressed: _listen,
+              isListening: _isListening,
               onChanged: (val) {
                 setState(() {
                   _query = val;
@@ -246,51 +251,6 @@ class _SearchScreenState extends State<SearchScreen> {
                   _performSellerSearch(val);
                 }
               },
-              onSubmitted: (val) {
-                _addToHistory(val);
-              },
-              decoration: InputDecoration(
-                labelText: langVM.translate('search_placeholder'),
-                prefixIcon: Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: SvgIcon(iconPath: AppIcons.search, color: Colors.grey),
-                ),
-                suffixIcon: _query.isNotEmpty
-                    ? IconButton(
-                        icon: SvgIcon(
-                            iconPath: AppIcons.close,
-                            size: 20,
-                            color: Theme.of(context).hintColor),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() {
-                            _query = '';
-                          });
-                        },
-                      )
-                    : IconButton(
-                        icon: Icon(_isListening ? Icons.mic : Icons.mic_none,
-                            color: _isListening
-                                ? Colors.redAccent
-                                : Theme.of(context).hintColor),
-                        onPressed: _listen,
-                      ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.grey.withOpacity(0.3)),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.grey.withOpacity(0.3)),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(
-                      color: Colors.grey.withOpacity(0.8), width: 1.5),
-                ),
-                filled: true,
-                fillColor: Theme.of(context).cardColor,
-              ),
             ),
           ),
 
@@ -332,60 +292,101 @@ class _SearchScreenState extends State<SearchScreen> {
           // Kategori Sekmeleri (Pazar / Satıcı)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              children: [
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => setState(() => _searchType = 0),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      decoration: BoxDecoration(
-                        color: _searchType == 0
-                            ? Theme.of(context).colorScheme.primary
-                            : Theme.of(context).cardColor,
-                        borderRadius: const BorderRadius.horizontal(
-                            left: Radius.circular(8)),
-                        border: Border.all(color: Colors.grey.withOpacity(0.3)),
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        langVM.translate('market_tab'),
-                        style: TextStyle(
-                          color: _searchType == 0 ? Colors.white : Colors.grey,
-                          fontWeight: FontWeight.bold,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white.withOpacity(0.05)
+                    : Colors.grey.shade200,
+                borderRadius: BorderRadius.circular(30),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => setState(() => _searchType = 0),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 250),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        decoration: BoxDecoration(
+                          color: _searchType == 0
+                              ? Theme.of(context).colorScheme.primary
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(30),
+                          boxShadow: _searchType == 0
+                              ? [
+                                  BoxShadow(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .primary
+                                        .withOpacity(0.3),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  )
+                                ]
+                              : [],
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          langVM.translate('market_tab'),
+                          style: TextStyle(
+                            color: _searchType == 0
+                                ? Colors.white
+                                : Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withOpacity(0.6),
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () {
-                      setState(() => _searchType = 1);
-                      _performSellerSearch(_query);
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      decoration: BoxDecoration(
-                        color: _searchType == 1
-                            ? Theme.of(context).colorScheme.primary
-                            : Theme.of(context).cardColor,
-                        borderRadius: const BorderRadius.horizontal(
-                            right: Radius.circular(8)),
-                        border: Border.all(color: Colors.grey.withOpacity(0.3)),
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        langVM.translate('seller_tab'),
-                        style: TextStyle(
-                          color: _searchType == 1 ? Colors.white : Colors.grey,
-                          fontWeight: FontWeight.bold,
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() => _searchType = 1);
+                        _performSellerSearch(_query);
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 250),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        decoration: BoxDecoration(
+                          color: _searchType == 1
+                              ? Theme.of(context).colorScheme.primary
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(30),
+                          boxShadow: _searchType == 1
+                              ? [
+                                  BoxShadow(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .primary
+                                        .withOpacity(0.3),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  )
+                                ]
+                              : [],
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          langVM.translate('seller_tab'),
+                          style: TextStyle(
+                            color: _searchType == 1
+                                ? Colors.white
+                                : Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withOpacity(0.6),
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 8),
@@ -508,7 +509,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
   Widget _buildSellerList(LanguageViewModel langVM) {
     if (_isSearchingSellers) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(child: CustomLoadingIndicator());
     }
 
     if (_sellerResults.isEmpty) {
@@ -575,7 +576,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 child: (seller['profilePicture'] == null ||
                         seller['profilePicture'].isEmpty)
                     ? Icon(
-                        Icons.storefront,
+                        Icons.people,
                         color: Theme.of(context).colorScheme.primary,
                         size: 28,
                       )
@@ -656,6 +657,8 @@ class _SearchScreenState extends State<SearchScreen> {
                       stallHours: seller['stallHours'] ?? '',
                       instagramLink: seller['instagramLink'],
                       facebookLink: seller['facebookLink'],
+                      instagramName: seller['instagramName'],
+                      facebookName: seller['facebookName'],
                       profilePicture: seller['profilePicture'],
                       marketName: marketName.isNotEmpty ? marketName : null,
                     ),

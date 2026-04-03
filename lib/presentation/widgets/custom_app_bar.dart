@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
@@ -8,6 +7,9 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final Widget? leading;
   final bool automaticallyImplyLeading;
   final PreferredSizeWidget? bottom;
+  final Color? backgroundColor;
+  final double? elevation;
+  final Color? contentColor;
 
   const CustomAppBar({
     super.key,
@@ -17,50 +19,117 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.leading,
     this.automaticallyImplyLeading = true,
     this.bottom,
+    this.backgroundColor,
+    this.elevation,
+    this.contentColor,
   });
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final contentColor = Theme.of(context).colorScheme.primary;
+    final effectiveContentColor =
+        contentColor ?? Theme.of(context).colorScheme.primary;
+    final surfaceColor = Theme.of(context).colorScheme.surface;
 
-    return SafeArea(
-      bottom: false,
-      child: Container(
-        margin: const EdgeInsets.fromLTRB(16, 4, 16, 21), // tavandan ayrık
-        child: AppBar(
-          title: title,
-          actions: actions,
-          leading: leading,
-          centerTitle: centerTitle,
-          automaticallyImplyLeading: automaticallyImplyLeading,
-          backgroundColor: isDark ? Colors.black : Colors.white,
-          elevation: 0,
-          scrolledUnderElevation: 0,
-          bottom: bottom,
-          iconTheme: Theme.of(context).iconTheme.copyWith(
-                color: contentColor,
-              ),
-          titleTextStyle: TextStyle(
-            color: contentColor,
-            fontWeight: FontWeight.w900,
-            fontSize: 21,
-            shadows: [
-              Shadow(
-                offset: const Offset(0, 1),
-                blurRadius: 2,
+    Widget? effectiveLeading = leading;
+    if (effectiveLeading == null && automaticallyImplyLeading) {
+      final ModalRoute<dynamic>? parentRoute = ModalRoute.of(context);
+      if (parentRoute?.canPop ?? false) {
+        effectiveLeading = IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.maybePop(context),
+          tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+        );
+      }
+    }
+
+    if (effectiveLeading != null) {
+      effectiveLeading = Center(
+        child: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: isDark ? surfaceColor : Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
                 color: isDark
-                    ? Colors.black.withOpacity(0.2)
-                    : Colors.white.withOpacity(0.2),
+                    ? Colors.black.withOpacity(0.3)
+                    : Colors.black.withOpacity(0.15),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
               ),
             ],
           ),
+          child: effectiveLeading,
         ),
+      );
+    }
+
+    List<Widget>? effectiveActions;
+    if (actions != null) {
+      effectiveActions = actions!.map((action) {
+        if (action is IconButton) {
+          return Center(
+            child: Container(
+              constraints: const BoxConstraints(minWidth: 40),
+              height: 40,
+              margin: const EdgeInsets.only(right: 8),
+              decoration: BoxDecoration(
+                color: isDark ? surfaceColor : Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: isDark
+                        ? Colors.black.withOpacity(0.3)
+                        : Colors.black.withOpacity(0.15),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: action,
+            ),
+          );
+        }
+        return action;
+      }).toList();
+    }
+
+    return AppBar(
+      title: title,
+      actions: effectiveActions,
+      leading: effectiveLeading,
+      centerTitle: centerTitle,
+      automaticallyImplyLeading: automaticallyImplyLeading,
+      backgroundColor:
+          backgroundColor ?? (isDark ? surfaceColor : Colors.white),
+      surfaceTintColor: Colors.transparent,
+      elevation: elevation ?? 2,
+      shadowColor: Colors.black.withOpacity(0.1),
+      scrolledUnderElevation: elevation ?? 2,
+      bottom: bottom,
+      iconTheme: Theme.of(context).iconTheme.copyWith(
+            color: Theme.of(context).colorScheme.primary,
+          ),
+      titleTextStyle: TextStyle(
+        color: effectiveContentColor,
+        fontWeight: FontWeight.w900,
+        fontSize: 21,
+        shadows: [
+          Shadow(
+            offset: const Offset(0, 1),
+            blurRadius: 2,
+            color: isDark
+                ? Colors.black.withOpacity(0.2)
+                : Colors.white.withOpacity(0.2),
+          ),
+        ],
       ),
     );
   }
 
   @override
   Size get preferredSize =>
-      Size.fromHeight(80 + (bottom?.preferredSize.height ?? 0));
+      Size.fromHeight(kToolbarHeight + (bottom?.preferredSize.height ?? 0));
 }

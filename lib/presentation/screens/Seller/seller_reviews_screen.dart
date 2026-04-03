@@ -9,6 +9,7 @@ import '../../widgets/success_dialog.dart';
 import '../../widgets/custom_bottom_sheets.dart';
 import 'package:flutter_application_1/core/constants/app_icons.dart';
 import '../../widgets/loading_overlay.dart';
+import '../../widgets/custom_button.dart';
 
 class SellerReviewsScreen extends StatefulWidget {
   final String? highlightReviewId;
@@ -158,56 +159,45 @@ class _SellerReviewsScreenState extends State<SellerReviewsScreen> {
             maxLines: 4,
           ),
           const SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                backgroundColor: Theme.of(context).colorScheme.primary,
-                foregroundColor: Colors.white,
-              ),
-              onPressed: () async {
-                if (_replyController.text.trim().isNotEmpty) {
-                  final replyText = _replyController.text.trim();
-                  try {
-                    await AuthService.instance.replyToProductReview(
-                      id,
-                      replyText,
+          CustomButton(
+            text: langVM.translate('send_button'),
+            onPressed: () async {
+              if (_replyController.text.trim().isNotEmpty) {
+                final replyText = _replyController.text.trim();
+                try {
+                  await AuthService.instance.replyToProductReview(
+                    id,
+                    replyText,
+                  );
+                  if (mounted) {
+                    Navigator.pop(context);
+
+                    // Anlık güncelleme
+                    setState(() {
+                      final index =
+                          _productReviews.indexWhere((r) => r['id'] == id);
+                      if (index != -1) {
+                        _productReviews[index]['sellerReply'] = replyText;
+                        _productReviews[index]['replyDate'] = Timestamp.now();
+                        _applyFilter();
+                      }
+                    });
+
+                    await DialogService.showSuccess(
+                      context,
+                      message: langVM.translate('reply_sent_success'),
+                      duration: const Duration(seconds: 3),
                     );
-                    if (mounted) {
-                      Navigator.pop(context);
-
-                      // Anlık güncelleme
-                      setState(() {
-                        final index =
-                            _productReviews.indexWhere((r) => r['id'] == id);
-                        if (index != -1) {
-                          _productReviews[index]['sellerReply'] = replyText;
-                          _productReviews[index]['replyDate'] = Timestamp.now();
-                          _applyFilter();
-                        }
-                      });
-
-                      await DialogService.showSuccess(
-                        context,
-                        message: langVM.translate('reply_sent_success'),
-                        duration: const Duration(seconds: 3),
-                      );
-                      _loadReviews(); // Listeyi yenile
-                    }
-                  } catch (e) {
-                    if (mounted) {
-                      Navigator.pop(context);
-                      DialogService.showError(context, message: 'Hata: $e');
-                    }
+                    _loadReviews(); // Listeyi yenile
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    Navigator.pop(context);
+                    DialogService.showError(context, message: 'Hata: $e');
                   }
                 }
-              },
-              child: Text(langVM.translate('send_button')),
-            ),
+              }
+            },
           ),
         ],
       ),
@@ -260,7 +250,7 @@ class _SellerReviewsScreenState extends State<SellerReviewsScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.storefront_outlined,
+              Icons.people,
               size: 72,
               color: Theme.of(context).colorScheme.onSurface.withOpacity(0.2),
             ),

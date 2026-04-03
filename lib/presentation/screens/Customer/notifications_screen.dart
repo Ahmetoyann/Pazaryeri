@@ -13,6 +13,9 @@ import '../../widgets/custom_snackbars.dart';
 import '../../../core/constants/app_icons.dart';
 import '../../../presentation/widgets/svg_icon.dart';
 import '../../widgets/loading_overlay.dart';
+import '../../viewmodels/home_viewmodel.dart';
+import '../../../data/models/market.dart';
+import 'market_detail_screen.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -74,6 +77,27 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
   }
 
+  Map<String, dynamic> _getNotificationStyle(
+      String? type, BuildContext context) {
+    final theme = Theme.of(context).colorScheme;
+    switch (type) {
+      case 'new_question':
+        return {'icon': Icons.help_outline, 'color': Colors.orange};
+      case 'new_review':
+      case 'new_seller_review':
+        return {'icon': Icons.star_outline, 'color': Colors.amber};
+      case 'question_reply':
+        return {'icon': Icons.mark_chat_read, 'color': Colors.green};
+      case 'review_reply':
+        return {'icon': Icons.reviews_rounded, 'color': Colors.purple};
+      case 'review_like':
+      case 'market_review_like':
+        return {'icon': Icons.favorite, 'color': Colors.red};
+      default:
+        return {'icon': Icons.notifications_outlined, 'color': theme.primary};
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final authVM = Provider.of<AuthViewModel>(context);
@@ -94,22 +118,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        extendBodyBehindAppBar: true,
         appBar: CustomAppBar(
           leading: _isSelectionMode
-              ? Center(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? Colors.white.withOpacity(0.2)
-                          : Colors.black.withOpacity(0.05),
-                      shape: BoxShape.circle,
-                    ),
-                    child: IconButton(
-                      icon: Icon(Icons.close, color: theme.iconTheme.color),
-                      onPressed: _cancelSelection,
-                    ),
-                  ),
+              ? IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: _cancelSelection,
                 )
               : null,
           title: _isSelectionMode
@@ -127,113 +140,104 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           ),
           actions: _isSelectionMode
               ? [
-                  Container(
-                    margin: const EdgeInsets.only(right: 16),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? Colors.white.withOpacity(0.1)
-                          : Colors.grey.withOpacity(0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: IconButton(
-                      icon: const SvgIcon(
-                          iconPath: AppIcons.delete, color: Colors.red),
-                      tooltip: langVM.translate('delete_selected_title'),
-                      onPressed: () => _deleteSelected(user.id, langVM),
-                    ),
+                  IconButton(
+                    icon: const SvgIcon(
+                        iconPath: AppIcons.delete, color: Colors.red),
+                    tooltip: langVM.translate('delete_selected_title'),
+                    onPressed: () => _deleteSelected(user.id, langVM),
                   ),
                 ]
               : [
-                  Container(
-                    margin: const EdgeInsets.only(right: 8),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? Colors.white.withOpacity(0.1)
-                          : Colors.grey.withOpacity(0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: PopupMenuButton<String>(
-                      icon: Icon(Icons.filter_list,
-                          color: theme.colorScheme.primary),
-                      tooltip: 'Filtrele',
-                      onSelected: (value) {
-                        setState(() {
-                          _filterType = value;
-                        });
-                      },
-                      itemBuilder: (context) => [
-                        PopupMenuItem(
-                          value: 'all',
-                          child: Text(langVM.translate('filter_all')),
-                        ),
-                        PopupMenuItem(
-                          value: 'unread',
-                          child: Text(langVM.translate('filter_unread')),
-                        ),
-                        PopupMenuItem(
-                          value: 'read',
-                          child: Text(langVM.translate('filter_read')),
-                        ),
-                      ],
+                  Center(
+                    child: Container(
+                      constraints: const BoxConstraints(minWidth: 40),
+                      height: 40,
+                      margin: const EdgeInsets.only(right: 8),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.black
+                            : Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.white.withOpacity(0.25)
+                                    : Colors.black.withOpacity(0.2),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: PopupMenuButton<String>(
+                        icon: const Icon(Icons.filter_list),
+                        tooltip: 'Filtrele',
+                        onSelected: (value) {
+                          setState(() {
+                            _filterType = value;
+                          });
+                        },
+                        itemBuilder: (context) => [
+                          PopupMenuItem(
+                            value: 'all',
+                            child: Text(langVM.translate('filter_all')),
+                          ),
+                          PopupMenuItem(
+                            value: 'unread',
+                            child: Text(langVM.translate('filter_unread')),
+                          ),
+                          PopupMenuItem(
+                            value: 'read',
+                            child: Text(langVM.translate('filter_read')),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                  Container(
-                    margin: const EdgeInsets.only(right: 16),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? Colors.white.withOpacity(0.1)
-                          : Colors.grey.withOpacity(0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: IconButton(
-                      icon: Icon(Icons.done_all,
-                          color: theme.colorScheme.primary),
-                      tooltip: langVM.translate('mark_all_read'),
-                      onPressed: () async {
-                        await AuthService.instance
-                            .markAllNotificationsAsRead(user.id);
-                      },
-                    ),
+                  IconButton(
+                    icon: const Icon(Icons.done_all),
+                    tooltip: langVM.translate('mark_all_read'),
+                    onPressed: () async {
+                      await AuthService.instance
+                          .markAllNotificationsAsRead(user.id);
+                    },
                   ),
                 ],
         ),
-        body: Container(
-          padding: const EdgeInsets.only(top: 150),
-          child: StreamBuilder<List<Map<String, dynamic>>>(
-            stream: AuthService.instance.getUserNotifications(user.id),
-            builder: (_, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CustomLoadingIndicator());
-              }
+        body: StreamBuilder<List<Map<String, dynamic>>>(
+          stream: AuthService.instance.getUserNotifications(user.id),
+          builder: (_, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CustomLoadingIndicator());
+            }
 
-              final notifications = snapshot.data ?? [];
+            final notifications = snapshot.data ?? [];
 
-              // Filtreleme
-              List<Map<String, dynamic>> filteredList = notifications;
-              if (_filterType == 'unread') {
-                filteredList =
-                    notifications.where((n) => n['read'] == false).toList();
-              } else if (_filterType == 'read') {
-                filteredList =
-                    notifications.where((n) => n['read'] == true).toList();
-              }
+            // Filtreleme
+            List<Map<String, dynamic>> filteredList = notifications;
+            if (_filterType == 'unread') {
+              filteredList =
+                  notifications.where((n) => n['read'] == false).toList();
+            } else if (_filterType == 'read') {
+              filteredList =
+                  notifications.where((n) => n['read'] == true).toList();
+            }
 
-              // Bildirimleri filtrele
-              final sellerNotifications =
-                  filteredList.where((n) => _isSellerNotification(n)).toList();
-              final marketNotifications =
-                  filteredList.where((n) => !_isSellerNotification(n)).toList();
+            // Bildirimleri filtrele
+            final sellerNotifications =
+                filteredList.where((n) => _isSellerNotification(n)).toList();
+            final marketNotifications =
+                filteredList.where((n) => !_isSellerNotification(n)).toList();
 
-              return TabBarView(
-                children: [
-                  _buildNotificationList(
-                      context, sellerNotifications, user.id, langVM),
-                  _buildNotificationList(
-                      context, marketNotifications, user.id, langVM),
-                ],
-              );
-            },
-          ),
+            return TabBarView(
+              children: [
+                _buildNotificationList(
+                    context, sellerNotifications, user.id, langVM),
+                _buildNotificationList(
+                    context, marketNotifications, user.id, langVM),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -291,10 +295,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               '${dt.day}/${dt.month}/${dt.year} ${dt.hour}:${dt.minute.toString().padLeft(2, '0')}';
         }
 
-        Color notificationColor = Theme.of(context).colorScheme.primary;
-        if (_isSellerNotification(notification)) {
-          notificationColor = Theme.of(context).colorScheme.secondary;
-        }
+        final metadata = notification['metadata'];
+        final type = (metadata is Map) ? metadata['type'] : null;
+        final style = _getNotificationStyle(type, context);
+        final Color notificationColor = style['color'];
+        final IconData iconData = style['icon'];
 
         final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -303,6 +308,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           direction: _isSelectionMode
               ? DismissDirection.none
               : DismissDirection.endToStart,
+          confirmDismiss: (direction) async {
+            if (_isSelectionMode) return false;
+            return true; // "Emin misiniz?" sormadan anında kaydırılmasına izin ver
+          },
           background: Container(
             alignment: Alignment.centerRight,
             padding: const EdgeInsets.only(right: 20),
@@ -315,7 +324,27 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 const SvgIcon(iconPath: AppIcons.delete, color: Colors.white),
           ),
           onDismissed: (direction) {
+            // Geri alabilmek için bildirimin kopyasını alıyoruz
+            final deletedData = Map<String, dynamic>.from(notification);
+            deletedData.remove(
+                'id'); // Veritabanına yazarken id alanı doc.id olarak kullanılacak
+
             AuthService.instance.deleteNotification(userId, id);
+
+            // Modern Geri Al Snackbar'ını göster
+            CustomSnackbars.showUndo(
+              context,
+              'Bildirim silindi',
+              () {
+                // Geri Al tıklandığında aynı ID ile veritabanına geri yükle
+                FirebaseFirestore.instance
+                    .collection('users')
+                    .doc(userId)
+                    .collection('notifications')
+                    .doc(id)
+                    .set(deletedData);
+              },
+            );
           },
           child: Container(
             margin: const EdgeInsets.only(bottom: 16),
@@ -324,7 +353,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
                   : (isRead
                       ? (isDark ? Theme.of(context).cardColor : Colors.white)
-                      : notificationColor.withOpacity(isDark ? 0.15 : 0.05)),
+                      : notificationColor.withOpacity(isDark ? 0.15 : 0.08)),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: isSelected
@@ -333,12 +362,15 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         ? (isDark
                             ? Colors.white.withOpacity(0.1)
                             : Colors.grey.withOpacity(0.1))
-                        : notificationColor.withOpacity(0.3)),
+                        : notificationColor.withOpacity(0.5)),
+                width: isRead ? 1 : 1.5,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.2),
-                  blurRadius: 10,
+                  color: isRead
+                      ? Colors.black.withOpacity(0.05)
+                      : notificationColor.withOpacity(0.15),
+                  blurRadius: isRead ? 10 : 15,
                   offset: const Offset(0, 4),
                 ),
               ],
@@ -363,88 +395,79 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     _startSelection(id);
                   }
                 },
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
+                child: IntrinsicHeight(
                   child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      CircleAvatar(
-                        backgroundColor: isSelected
-                            ? Theme.of(context).colorScheme.primary
-                            : (isRead
-                                ? (isDark
-                                    ? Colors.grey.withOpacity(0.2)
-                                    : Colors.grey.withOpacity(0.1))
-                                : notificationColor),
-                        child: isSelected
-                            ? const Icon(Icons.check, color: Colors.white)
-                            : Icon(
-                                Icons.notifications,
-                                color: isRead
-                                    ? (isDark
-                                        ? Colors.grey
-                                        : Colors.grey.shade600)
-                                    : Colors.white,
-                              ),
-                      ),
-                      const SizedBox(width: 16),
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              notification['title'] ?? '',
-                              style: TextStyle(
-                                fontWeight: isRead
-                                    ? FontWeight.normal
-                                    : FontWeight.bold,
-                                fontSize: 16,
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              CircleAvatar(
+                                backgroundColor: isSelected
+                                    ? Theme.of(context).colorScheme.primary
+                                    : (isRead
+                                        ? (isDark
+                                            ? Colors.grey.withOpacity(0.2)
+                                            : Colors.grey.withOpacity(0.1))
+                                        : notificationColor),
+                                child: isSelected
+                                    ? const Icon(Icons.check,
+                                        color: Colors.white)
+                                    : Icon(
+                                        iconData,
+                                        color: isRead
+                                            ? (isDark
+                                                ? Colors.grey
+                                                : Colors.grey.shade600)
+                                            : Colors.white,
+                                      ),
                               ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              notification['body'] ?? '',
-                              style: TextStyle(
-                                color: Theme.of(context)
-                                    .textTheme
-                                    .bodyMedium
-                                    ?.color
-                                    ?.withOpacity(0.8),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              timeText,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
-                                    .withOpacity(0.5),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (!isRead)
-                        Padding(
-                          padding: const EdgeInsets.only(left: 8.0, top: 8.0),
-                          child: Container(
-                            width: 12,
-                            height: 12,
-                            decoration: BoxDecoration(
-                              color: notificationColor,
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: notificationColor.withOpacity(0.4),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 2),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      notification['title'] ?? '',
+                                      style: TextStyle(
+                                        fontWeight: isRead
+                                            ? FontWeight.normal
+                                            : FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      notification['body'] ?? '',
+                                      style: TextStyle(
+                                        color: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium
+                                            ?.color
+                                            ?.withOpacity(0.8),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      timeText,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withOpacity(0.5),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
                         ),
+                      ),
                     ],
                   ),
                 ),
@@ -469,9 +492,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           _formatRelativeTime(timestamp.toDate(), langVM.currentLanguage);
     }
 
-    Color iconColor = Theme.of(context).colorScheme.primary;
     final metadata = notification['metadata'];
     final type = metadata is Map ? metadata['type'] : null;
+    final style = _getNotificationStyle(type, context);
+    final Color iconColor = style['color'];
+    final IconData iconData = style['icon'];
 
     // Buton metnini belirle
     String buttonText = langVM.translate('view_product_button');
@@ -481,7 +506,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       buttonText = langVM.translate('view_review_button');
     } else if (type == 'question_reply' || type == 'review_reply') {
       buttonText = langVM.translate('view_reply_button');
-    } else if (type == 'review_like') {
+    } else if (type == 'review_like' || type == 'market_review_like') {
       buttonText = langVM.translate('view_review_button');
     }
 
@@ -522,7 +547,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
-                      Icons.notifications_active_outlined,
+                      iconData,
                       size: 32,
                       color: iconColor,
                     ),
@@ -582,7 +607,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       type == 'new_question' ||
                       type == 'question_reply' ||
                       type == 'review_reply' ||
-                      type == 'review_like')
+                      type == 'review_like' ||
+                      type == 'market_review_like')
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton.icon(
@@ -620,12 +646,23 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 icon:
                     const SvgIcon(iconPath: AppIcons.delete, color: Colors.red),
                 onPressed: () async {
-                  final authVM =
-                      Provider.of<AuthViewModel>(context, listen: false);
-                  if (authVM.currentUser != null) {
-                    await AuthService.instance.deleteNotification(
-                        authVM.currentUser!.id, notification['id']);
-                    if (ctx.mounted) Navigator.pop(ctx);
+                  final confirm = await CustomBottomSheets.showConfirmation(
+                    context: context,
+                    title: langVM.translate('delete_notification_title'),
+                    message: langVM.translate('delete_notification_confirm'),
+                    confirmText: langVM.translate('yes'),
+                    cancelText: langVM.translate('no'),
+                    iconPath: AppIcons.delete,
+                  );
+
+                  if (confirm == true) {
+                    final authVM =
+                        Provider.of<AuthViewModel>(context, listen: false);
+                    if (authVM.currentUser != null) {
+                      await AuthService.instance.deleteNotification(
+                          authVM.currentUser!.id, notification['id']);
+                      if (ctx.mounted) Navigator.pop(ctx);
+                    }
                   }
                 },
               ),
@@ -702,10 +739,17 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
 
     // Satıcı veya Kullanıcı için: Değerlendirme Detayı
-    if ((type == 'new_review' || type == 'review_like') && reviewId != null) {
+    if ((type == 'new_review' ||
+            type == 'review_like' ||
+            type == 'market_review_like') &&
+        reviewId != null) {
+      // Koleksiyon adını belirle
+      final collection =
+          type == 'market_review_like' ? 'market_reviews' : 'product_reviews';
+
       return FutureBuilder<DocumentSnapshot>(
         future: FirebaseFirestore.instance
-            .collection('product_reviews')
+            .collection(collection)
             .doc(reviewId)
             .get(),
         builder: (context, snapshot) {
@@ -813,6 +857,34 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           ),
         ),
       );
+      return;
+    }
+
+    // Pazar Yorumu Beğenisi
+    if (type == 'market_review_like' && metadata['marketId'] != null) {
+      final homeVM = Provider.of<HomeViewModel>(context, listen: false);
+      Market? market;
+      try {
+        market = homeVM.nearbyMarkets
+            .firstWhere((m) => m.id == metadata['marketId']);
+      } catch (_) {
+        try {
+          market = homeVM.provinceMarkets
+              .firstWhere((m) => m.id == metadata['marketId']);
+        } catch (_) {}
+      }
+
+      if (market != null && context.mounted) {
+        Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (_) => MarketDetailScreen(
+                    market: market!, highlightReviewId: metadata['reviewId'])));
+      } else {
+        if (context.mounted) {
+          CustomSnackbars.showError(context, 'Pazar bulunamadı.');
+        }
+      }
       return;
     }
 

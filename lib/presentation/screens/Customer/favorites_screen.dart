@@ -12,6 +12,8 @@ import 'customer_seller_detail_screen.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../../core/constants/app_icons.dart';
 import '../../../presentation/widgets/svg_icon.dart';
+import '../../widgets/loading_overlay.dart';
+import '../../widgets/custom_snackbars.dart';
 
 enum FavoriteView { menu, markets, sellers, products }
 
@@ -58,12 +60,11 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         _goBack();
       },
       child: Scaffold(
-        extendBodyBehindAppBar: true,
         appBar: CustomAppBar(
           title: Text(_getTitle(langVM)),
           leading: _currentView != FavoriteView.menu
               ? IconButton(
-                  icon: Icon(Icons.arrow_back_ios,
+                  icon: Icon(Icons.arrow_back,
                       color: Theme.of(context).colorScheme.primary),
                   onPressed: _goBack,
                 )
@@ -104,7 +105,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
   Widget _buildMenu(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 120, 16, 16),
+      padding: const EdgeInsets.all(16),
       child: Column(
         children: [
           _buildMenuButton(
@@ -220,8 +221,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                               letterSpacing: 0.5,
                             ),
                           ),
-                          const Icon(Icons.arrow_forward_ios,
-                              color: Colors.white),
+                          const Icon(Icons.arrow_forward, color: Colors.white),
                         ],
                       ),
                     ],
@@ -239,7 +239,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     return Consumer<HomeViewModel>(
       builder: (context, homeVM, child) {
         if (homeVM.state == ViewState.busy) {
-          return const Center(child: CircularProgressIndicator());
+          return const Center(child: CustomLoadingIndicator());
         }
 
         if (homeVM.favoriteMarkets.isEmpty) {
@@ -248,7 +248,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         }
 
         return ListView.builder(
-          padding: const EdgeInsets.fromLTRB(12, 110, 12, 12),
+          padding: const EdgeInsets.all(12),
           itemCount: homeVM.favoriteMarkets.length,
           itemBuilder: (context, index) {
             var market = homeVM.favoriteMarkets[index];
@@ -289,7 +289,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
       future: AuthService.instance.fetchFavoriteSellersDetails(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return const Center(child: CustomLoadingIndicator());
         }
         if (!snapshot.hasData || snapshot.data!.isEmpty) {
           return _buildEmptyState(
@@ -299,7 +299,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
         final sellers = snapshot.data!;
         return ListView.builder(
-          padding: const EdgeInsets.fromLTRB(16, 110, 16, 16),
+          padding: const EdgeInsets.all(16),
           itemCount: sellers.length,
           itemBuilder: (context, index) {
             final seller = sellers[index];
@@ -323,6 +323,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                       stallHours: seller['stallHours'] ?? '',
                       instagramLink: seller['instagramLink'],
                       facebookLink: seller['facebookLink'],
+                      instagramName: seller['instagramName'],
+                      facebookName: seller['facebookName'],
                       profilePicture: seller['profilePicture'],
                       marketName: '', // Detay sayfasında gerekirse çekilebilir
                     ),
@@ -370,7 +372,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                             : null,
                       ),
                       child: (profilePic == null || profilePic.isEmpty)
-                          ? Icon(Icons.storefront,
+                          ? Icon(Icons.people,
                               size: 30,
                               color: Theme.of(context).colorScheme.primary)
                           : null,
@@ -441,7 +443,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
-                        Icons.arrow_forward_ios_rounded,
+                        Icons.arrow_forward,
                         size: 14,
                         color: Theme.of(context)
                             .colorScheme
@@ -465,7 +467,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
       future: AuthService.instance.fetchFavoriteProductsDetails(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return const Center(child: CustomLoadingIndicator());
         }
         if (!snapshot.hasData || snapshot.data!.isEmpty) {
           return _buildEmptyState(context, 'Henüz favori ürününüz yok.',
@@ -474,7 +476,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
         final products = snapshot.data!;
         return GridView.builder(
-          padding: const EdgeInsets.fromLTRB(16, 110, 16, 16),
+          padding: const EdgeInsets.all(16),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2,
             childAspectRatio: 0.62,
@@ -490,8 +492,23 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
               isPriority: false,
               isFavorite: true,
               onFavoriteToggle: () async {
+                // 1. İşlemi anında gerçekleştir
                 await AuthService.instance.toggleFavoriteProduct(product['id']);
                 setState(() {}); // Listeyi yenile
+
+                // 2. Kullanıcıya "Geri Al" imkanı sun
+                if (context.mounted) {
+                  CustomSnackbars.showUndo(
+                    context,
+                    'Ürün favorilerden çıkarıldı',
+                    () async {
+                      // 3. Geri al dendiğinde işlemi tersine çevirip listeyi tekrar yenile
+                      await AuthService.instance
+                          .toggleFavoriteProduct(product['id']);
+                      if (mounted) setState(() {});
+                    },
+                  );
+                }
               },
               onDetailReturn: () => setState(() {}),
             );

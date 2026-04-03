@@ -1,7 +1,7 @@
 import 'dart:io';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
@@ -22,6 +22,7 @@ import '../../core/constants/app_icons.dart';
 import '../../presentation/widgets/svg_icon.dart';
 import 'loading_overlay.dart';
 import 'custom_app_bar.dart';
+import 'custom_button.dart';
 
 class SideMenuDrawer extends StatelessWidget {
   const SideMenuDrawer({super.key});
@@ -50,64 +51,6 @@ class SideMenuDrawer extends StatelessWidget {
         Navigator.of(context).popUntil((route) => route.isFirst);
       }
     }
-  }
-
-  Future<void> _pickImage(BuildContext context, ImageSource source) async {
-    final picker = ImagePicker();
-    final XFile? image = await picker.pickImage(
-      source: source,
-      imageQuality: 70,
-      maxWidth: 800,
-      maxHeight: 800,
-    );
-
-    if (image != null && context.mounted) {
-      try {
-        await Provider.of<AuthViewModel>(context, listen: false)
-            .updateProfilePhoto(image.path);
-        if (context.mounted) {
-          final langVM = Provider.of<LanguageViewModel>(context, listen: false);
-          CustomSnackbars.showSuccess(
-              context, langVM.translate('profile_photo_updated'));
-        }
-      } catch (e) {
-        if (context.mounted) {
-          final langVM = Provider.of<LanguageViewModel>(context, listen: false);
-          CustomSnackbars.showError(
-              context, '${langVM.translate('error_prefix')}: $e');
-        }
-      }
-    }
-  }
-
-  void _showImagePicker(BuildContext context) {
-    final langVM = Provider.of<LanguageViewModel>(context, listen: false);
-    final authVM = Provider.of<AuthViewModel>(context, listen: false);
-
-    CustomBottomSheets.showImagePicker(
-      context: context,
-      cameraText: langVM.translate('camera'),
-      galleryText: langVM.translate('gallery'),
-      removeText: langVM.translate('remove_photo'),
-      onCameraTap: () => _pickImage(context, ImageSource.camera),
-      onGalleryTap: () => _pickImage(context, ImageSource.gallery),
-      onRemoveTap: authVM.currentUser?.profilePicturePath != null
-          ? () async {
-              try {
-                await authVM.removeProfilePhoto();
-                if (context.mounted) {
-                  CustomSnackbars.showSuccess(
-                      context, langVM.translate('profile_photo_removed'));
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  CustomSnackbars.showError(
-                      context, '${langVM.translate('error_prefix')}: $e');
-                }
-              }
-            }
-          : null,
-    );
   }
 
   void _showFullScreenImage(BuildContext context, String imagePath) {
@@ -240,7 +183,7 @@ class SideMenuDrawer extends StatelessWidget {
             children: [
               DropdownButtonFormField<String>(
                 value: selectedSubject,
-                dropdownColor: Theme.of(context).cardColor,
+                dropdownColor: Colors.black,
                 style: TextStyle(
                     color: Theme.of(context).textTheme.bodyLarge?.color),
                 decoration: InputDecoration(
@@ -297,8 +240,6 @@ class SideMenuDrawer extends StatelessWidget {
                   hintText: langVM.translate('message_hint'),
                   filled: true,
                   fillColor: Theme.of(context).cardColor,
-                  prefixIcon: Icon(Icons.message_outlined,
-                      color: Theme.of(context).colorScheme.primary),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
                     borderSide: BorderSide.none,
@@ -323,32 +264,19 @@ class SideMenuDrawer extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    if (selectedSubject == null ||
-                        messageController.text.isEmpty) {
-                      CustomSnackbars.showWarning(
-                          context, langVM.translate('fill_all_fields'));
-                      return;
-                    }
-                    Navigator.pop(context); // Formu kapat
-                    _sendEmail(
-                        context, selectedSubject!, messageController.text);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                  ),
-                  icon: const Icon(Icons.send),
-                  label: Text(langVM.translate('send_button')),
-                ),
+              CustomButton(
+                text: langVM.translate('send_button'),
+                icon: Icons.send,
+                onPressed: () {
+                  if (selectedSubject == null ||
+                      messageController.text.isEmpty) {
+                    CustomSnackbars.showWarning(
+                        context, langVM.translate('fill_all_fields'));
+                    return;
+                  }
+                  Navigator.pop(context); // Formu kapat
+                  _sendEmail(context, selectedSubject!, messageController.text);
+                },
               ),
             ],
           );
@@ -358,7 +286,6 @@ class SideMenuDrawer extends StatelessWidget {
   }
 
   void _navigateToAbout(BuildContext context, LanguageViewModel langVM) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -368,15 +295,7 @@ class SideMenuDrawer extends StatelessWidget {
             title: Text(langVM.translate('help_support_title')),
           ),
           body: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: isDark
-                    ? [Colors.black, const Color(0xFF1A1A1A)]
-                    : [Colors.white, const Color(0xFFF5F5F5)],
-              ),
-            ),
+            width: double.infinity,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -448,7 +367,9 @@ class SideMenuDrawer extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: SizedBox(
                     width: double.infinity,
-                    child: ElevatedButton.icon(
+                    child: CustomButton(
+                      text: langVM.translate('contact_us_title'),
+                      icon: Icons.support_agent,
                       onPressed: () {
                         CustomBottomSheets.showContent(
                           context: context,
@@ -462,51 +383,18 @@ class SideMenuDrawer extends StatelessWidget {
                                 textAlign: TextAlign.center,
                               ),
                               const SizedBox(height: 24),
-                              SizedBox(
-                                width: double.infinity,
-                                child: ElevatedButton.icon(
-                                  onPressed: () {
-                                    Navigator.pop(context); // İlk sheet'i kapat
-                                    _showContactForm(context); // Formu aç
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 16),
-                                    backgroundColor:
-                                        Theme.of(context).colorScheme.primary,
-                                    foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(16),
-                                    ),
-                                    elevation: 0,
-                                  ),
-                                  icon: const Icon(Icons.edit_note),
-                                  label: Text(
-                                      langVM.translate('create_form_button')),
-                                ),
+                              CustomButton(
+                                text: langVM.translate('create_form_button'),
+                                onPressed: () {
+                                  Navigator.pop(context); // İlk sheet'i kapat
+                                  _showContactForm(context); // Formu aç
+                                },
                               ),
                               const SizedBox(height: 12),
                             ],
                           ),
                         );
                       },
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        backgroundColor: Theme.of(context).colorScheme.primary,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        elevation: 4,
-                        shadowColor: Theme.of(context)
-                            .colorScheme
-                            .primary
-                            .withOpacity(0.4),
-                      ),
-                      icon: const Icon(Icons.support_agent),
-                      label: Text(langVM.translate('contact_us_title'),
-                          style: const TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.bold)),
                     ),
                   ),
                 ),
@@ -534,7 +422,7 @@ class SideMenuDrawer extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Drawer(
-      width: MediaQuery.of(context).size.width * 0.85,
+      width: MediaQuery.of(context).size.width * 0.80,
       backgroundColor: theme.brightness == Brightness.dark
           ? Colors.black
           : theme.scaffoldBackgroundColor,
@@ -560,190 +448,181 @@ class SideMenuDrawer extends StatelessWidget {
     final userImage = user?.profilePicturePath;
     final theme = Theme.of(context);
 
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            theme.colorScheme.primary,
-            theme.colorScheme.primary.withOpacity(0.8),
-          ],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: theme.colorScheme.primary.withOpacity(0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-        borderRadius: const BorderRadius.only(
-          bottomRight: Radius.circular(32),
-        ),
-      ),
-      child: ClipRRect(
-        borderRadius: const BorderRadius.only(
-          bottomRight: Radius.circular(32),
-        ),
-        child: Stack(
-          children: [
-            // Arka plan deseni
-            Positioned(
-              right: -30,
-              bottom: -20,
-              child: Transform.rotate(
-                angle: -0.2,
-                child: Image.asset(
-                  'assets/images/copilot_ikon.png',
-                  width: 180,
-                  height: 180,
-                  color: Colors.white.withOpacity(0.1),
-                ),
-              ),
+    return StreamBuilder<firebase_auth.User?>(
+      stream: firebase_auth.FirebaseAuth.instance.userChanges(),
+      builder: (context, snapshot) {
+        return Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                theme.colorScheme.primary,
+                theme.colorScheme.primary.withOpacity(0.8),
+              ],
             ),
-            // İçerik
-            Padding(
-              padding: EdgeInsets.only(
-                top: MediaQuery.of(context).padding.top + 24,
-                bottom: 24,
-                left: 24,
-                right: 24,
+            boxShadow: [
+              BoxShadow(
+                color: theme.colorScheme.primary.withOpacity(0.3),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
               ),
-              child: authVM.isAuthenticated
-                  ? Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            ],
+            borderRadius: const BorderRadius.only(
+              bottomRight: Radius.circular(32),
+            ),
+          ),
+          child: ClipRRect(
+            borderRadius: const BorderRadius.only(
+              bottomRight: Radius.circular(32),
+            ),
+            child: Stack(
+              children: [
+                // Arka plan deseni
+                Positioned(
+                  right: -30,
+                  bottom: -20,
+                  child: Transform.rotate(
+                    angle: -0.2,
+                    child: Image.asset(
+                      'assets/images/copilot_ikon.png',
+                      width: 180,
+                      height: 180,
+                      color: Colors.white.withOpacity(0.1),
+                    ),
+                  ),
+                ),
+                // İçerik
+                Padding(
+                  padding: EdgeInsets.only(
+                    top: MediaQuery.of(context).padding.top + 24,
+                    bottom: 24,
+                    left: 24,
+                    right: 24,
+                  ),
+                  child: authVM.isAuthenticated
+                      ? Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Stack(
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                GestureDetector(
-                                  onTap: () {
-                                    if (userImage != null) {
-                                      _showFullScreenImage(context, userImage);
-                                    } else {
-                                      _showImagePicker(context);
-                                    }
-                                  },
-                                  child: Container(
-                                    padding: const EdgeInsets.all(2),
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: Colors.white.withOpacity(0.5),
-                                        width: 2,
+                                Stack(
+                                  children: [
+                                    GestureDetector(
+                                      onTap: () {
+                                        if (userImage != null) {
+                                          _showFullScreenImage(
+                                              context, userImage);
+                                        }
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.all(2),
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: Colors.white,
+                                            width: 2,
+                                          ),
+                                        ),
+                                        child: Hero(
+                                          tag: 'drawer_profile_photo',
+                                          child: CircleAvatar(
+                                            radius: 32,
+                                            backgroundColor: theme.cardColor,
+                                            backgroundImage:
+                                                userImage != null
+                                                    ? (userImage.startsWith(
+                                                                'http')
+                                                            ? NetworkImage(
+                                                                userImage)
+                                                            : FileImage(File(
+                                                                userImage)))
+                                                        as ImageProvider
+                                                    : null,
+                                            child: userImage == null
+                                                ? SvgIcon(
+                                                    iconPath: AppIcons.profile,
+                                                    size: 32,
+                                                    color: Colors.grey.shade400)
+                                                : null,
+                                          ),
+                                        ),
                                       ),
                                     ),
-                                    child: Hero(
-                                      tag: 'drawer_profile_photo',
-                                      child: CircleAvatar(
-                                        radius: 32,
-                                        backgroundColor: theme.cardColor,
-                                        backgroundImage: userImage != null
-                                            ? (userImage.startsWith('http')
-                                                    ? NetworkImage(userImage)
-                                                    : FileImage(
-                                                        File(userImage)))
-                                                as ImageProvider
-                                            : null,
-                                        child: userImage == null
-                                            ? SvgIcon(
-                                                iconPath: AppIcons.profile,
-                                                size: 32,
-                                                color: Colors.grey.shade400)
-                                            : null,
-                                      ),
-                                    ),
-                                  ),
+                                  ],
                                 ),
-                                Positioned(
-                                  bottom: 0,
-                                  right: 0,
-                                  child: GestureDetector(
-                                    onTap: () => _showImagePicker(context),
-                                    child: Container(
-                                      padding: const EdgeInsets.all(6),
+                                Transform.translate(
+                                  offset: const Offset(0, -12),
+                                  child: IconButton(
+                                    onPressed: () =>
+                                        _showLogoutConfirmation(context),
+                                    icon: Container(
+                                      padding: const EdgeInsets.all(8),
                                       decoration: BoxDecoration(
-                                        color: theme.colorScheme.secondary,
+                                        color: Colors.white.withOpacity(0.2),
                                         shape: BoxShape.circle,
-                                        border: Border.all(
-                                            color: Colors.white, width: 2),
                                       ),
                                       child: const SvgIcon(
-                                          iconPath: AppIcons.camera,
-                                          size: 14,
-                                          color: Colors.white),
+                                        iconPath: AppIcons.logout,
+                                        color: Colors.white,
+                                        size: 30,
+                                      ),
                                     ),
                                   ),
                                 ),
                               ],
                             ),
-                            IconButton(
-                              onPressed: () => _showLogoutConfirmation(context),
-                              icon: Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.2),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const SvgIcon(
-                                  iconPath: AppIcons.logout,
-                                  color: Colors.white,
-                                  size: 20,
-                                ),
+                            const SizedBox(height: 16),
+                            Text(
+                              '${user?.firstName} ${user?.lastName}',
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                            Text(
+                              user?.email ?? '',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: Colors.white.withOpacity(0.8),
+                              ),
+                            ),
+                          ],
+                        )
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            CircleAvatar(
+                              radius: 32,
+                              backgroundColor: Colors.white.withOpacity(0.2),
+                              child: const Icon(Icons.person_off,
+                                  size: 32, color: Colors.white),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              langVM.translate('guest_user_title'),
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              langVM.translate('guest_user_subtitle'),
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: Colors.white.withOpacity(0.8),
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 16),
-                        Text(
-                          '${user?.firstName} ${user?.lastName}',
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                        Text(
-                          user?.email ?? '',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: Colors.white.withOpacity(0.8),
-                          ),
-                        ),
-                      ],
-                    )
-                  : Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        CircleAvatar(
-                          radius: 32,
-                          backgroundColor: Colors.white.withOpacity(0.2),
-                          child: const Icon(Icons.person_off,
-                              size: 32, color: Colors.white),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          langVM.translate('guest_user_title'),
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          langVM.translate('guest_user_subtitle'),
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: Colors.white.withOpacity(0.8),
-                          ),
-                        ),
-                      ],
-                    ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -898,7 +777,8 @@ class SideMenuDrawer extends StatelessWidget {
           [
             Padding(
               padding: const EdgeInsets.all(12),
-              child: ElevatedButton(
+              child: CustomButton(
+                text: langVM.translate('login'),
                 onPressed: () {
                   Navigator.pop(context);
                   Navigator.push(
@@ -910,24 +790,6 @@ class SideMenuDrawer extends StatelessWidget {
                     ),
                   );
                 },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Flexible(
-                      child: Text(
-                        langVM.translate('login'),
-                        textAlign: TextAlign.center,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
               ),
             ),
           ],

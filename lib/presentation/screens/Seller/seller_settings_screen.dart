@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:image_cropper/image_cropper.dart';
 import 'package:provider/provider.dart';
 import '../../viewmodels/seller_viewmodel.dart';
 import '../../viewmodels/language_viewmodel.dart';
@@ -14,6 +15,7 @@ import '../../widgets/custom_snackbars.dart';
 import '../../../core/constants/app_icons.dart';
 import '../../../presentation/widgets/svg_icon.dart';
 import '../../widgets/loading_overlay.dart';
+import '../../widgets/custom_button.dart';
 
 class SellerSettingsScreen extends StatefulWidget {
   const SellerSettingsScreen({super.key});
@@ -29,11 +31,15 @@ class _SellerSettingsScreenState extends State<SellerSettingsScreen> {
   late TextEditingController _hoursController;
   late TextEditingController _instagramController;
   late TextEditingController _facebookController;
+  late TextEditingController _instagramNameController;
+  late TextEditingController _facebookNameController;
   String _initialName = '';
   String _initialDesc = '';
   String _initialHours = '';
   String _initialInstagram = '';
   String _initialFacebook = '';
+  String _initialInstagramName = '';
+  String _initialFacebookName = '';
   bool _isChanged = false;
 
   @override
@@ -49,12 +55,17 @@ class _SellerSettingsScreenState extends State<SellerSettingsScreen> {
     _hoursController = TextEditingController(text: _initialHours);
     _instagramController = TextEditingController(text: _initialInstagram);
     _facebookController = TextEditingController(text: _initialFacebook);
+    _instagramNameController =
+        TextEditingController(text: _initialInstagramName);
+    _facebookNameController = TextEditingController(text: _initialFacebookName);
 
     _nameController.addListener(_checkForChanges);
     _descController.addListener(_checkForChanges);
     _hoursController.addListener(_checkForChanges);
     _instagramController.addListener(_checkForChanges);
     _facebookController.addListener(_checkForChanges);
+    _instagramNameController.addListener(_checkForChanges);
+    _facebookNameController.addListener(_checkForChanges);
 
     _loadSellerData();
   }
@@ -64,7 +75,9 @@ class _SellerSettingsScreenState extends State<SellerSettingsScreen> {
         _descController.text != _initialDesc ||
         _hoursController.text != _initialHours ||
         _instagramController.text != _initialInstagram ||
-        _facebookController.text != _initialFacebook;
+        _facebookController.text != _initialFacebook ||
+        _instagramNameController.text != _initialInstagramName ||
+        _facebookNameController.text != _initialFacebookName;
     if (_isChanged != hasChanges) {
       setState(() => _isChanged = hasChanges);
     }
@@ -98,6 +111,14 @@ class _SellerSettingsScreenState extends State<SellerSettingsScreen> {
             _initialFacebook = data['facebookLink']!;
             _facebookController.text = _initialFacebook;
           }
+          if (data['instagramName'] != null) {
+            _initialInstagramName = data['instagramName']!;
+            _instagramNameController.text = _initialInstagramName;
+          }
+          if (data['facebookName'] != null) {
+            _initialFacebookName = data['facebookName']!;
+            _facebookNameController.text = _initialFacebookName;
+          }
           _isChanged = false;
         });
       }
@@ -111,11 +132,15 @@ class _SellerSettingsScreenState extends State<SellerSettingsScreen> {
     _hoursController.removeListener(_checkForChanges);
     _instagramController.removeListener(_checkForChanges);
     _facebookController.removeListener(_checkForChanges);
+    _instagramNameController.removeListener(_checkForChanges);
+    _facebookNameController.removeListener(_checkForChanges);
     _nameController.dispose();
     _descController.dispose();
     _hoursController.dispose();
     _instagramController.dispose();
     _facebookController.dispose();
+    _instagramNameController.dispose();
+    _facebookNameController.dispose();
     super.dispose();
   }
 
@@ -124,24 +149,51 @@ class _SellerSettingsScreenState extends State<SellerSettingsScreen> {
     final XFile? image = await picker.pickImage(source: source);
 
     if (image != null && mounted) {
-      try {
-        await LoadingOverlay.show(
-          context,
-          asyncFunction: () async {
-            await Provider.of<AuthViewModel>(context, listen: false)
-                .updateProfilePhoto(image.path);
-          },
-        );
+      final primaryColor = Theme.of(context).colorScheme.primary;
 
-        if (!mounted) return;
-        final langVM = Provider.of<LanguageViewModel>(context, listen: false);
-        await DialogService.showSuccess(
-          context,
-          message: langVM.translate('success_settings_updated'),
-        );
-      } catch (e) {
-        if (mounted) {
-          CustomSnackbars.showError(context, 'Fotoğraf güncellenemedi: $e');
+      final CroppedFile? croppedFile = await ImageCropper().cropImage(
+        sourcePath: image.path,
+        uiSettings: [
+          AndroidUiSettings(
+            toolbarTitle: 'Profil Fotoğrafını Düzenle',
+            toolbarColor: primaryColor,
+            toolbarWidgetColor: Colors.white,
+            initAspectRatio: CropAspectRatioPreset.square,
+            lockAspectRatio:
+                true, // Profil fotoğrafları için her zaman kare kalmasını sağlar
+            aspectRatioPresets: [
+              CropAspectRatioPreset.square,
+            ],
+          ),
+          IOSUiSettings(
+            title: 'Profil Fotoğrafını Düzenle',
+            aspectRatioPresets: [
+              CropAspectRatioPreset.square,
+            ],
+          ),
+        ],
+      );
+
+      if (croppedFile != null && mounted) {
+        try {
+          await LoadingOverlay.show(
+            context,
+            asyncFunction: () async {
+              await Provider.of<AuthViewModel>(context, listen: false)
+                  .updateProfilePhoto(croppedFile.path);
+            },
+          );
+
+          if (!mounted) return;
+          final langVM = Provider.of<LanguageViewModel>(context, listen: false);
+          await DialogService.showSuccess(
+            context,
+            message: langVM.translate('success_settings_updated'),
+          );
+        } catch (e) {
+          if (mounted) {
+            CustomSnackbars.showError(context, 'Fotoğraf güncellenemedi: $e');
+          }
         }
       }
     }
@@ -279,17 +331,21 @@ class _SellerSettingsScreenState extends State<SellerSettingsScreen> {
     });
   }
 
-  InputDecoration _buildInputDecoration(String label, String iconPath,
+  InputDecoration _buildInputDecoration(String label, String? iconPath,
       {String? hintText}) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     return InputDecoration(
       labelText: label,
       hintText: hintText,
-      prefixIcon: Padding(
-          padding: const EdgeInsets.all(12),
-          child: SvgIcon(
-              iconPath: iconPath, color: theme.colorScheme.primary, size: 28)),
+      prefixIcon: iconPath != null
+          ? Padding(
+              padding: const EdgeInsets.all(12),
+              child: SvgIcon(
+                  iconPath: iconPath,
+                  color: theme.colorScheme.primary,
+                  size: 28))
+          : null,
       filled: true,
       fillColor: isDark ? theme.cardColor : Colors.grey.shade50,
       border: OutlineInputBorder(
@@ -314,6 +370,7 @@ class _SellerSettingsScreenState extends State<SellerSettingsScreen> {
     final authVM = Provider.of<AuthViewModel>(context);
     final theme = Theme.of(context);
     final userImage = authVM.currentUser?.profilePicturePath;
+    final bool hasImage = userImage != null && userImage.isNotEmpty;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return PopScope(
@@ -338,12 +395,11 @@ class _SellerSettingsScreenState extends State<SellerSettingsScreen> {
         }
       },
       child: Scaffold(
-        extendBodyBehindAppBar: true,
         appBar: CustomAppBar(
           title: Text(langVM.translate('seller_settings_title')),
         ),
         body: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 110, 16, 16),
+          padding: const EdgeInsets.all(16),
           child: Form(
             key: _formKey,
             child: Column(
@@ -351,44 +407,82 @@ class _SellerSettingsScreenState extends State<SellerSettingsScreen> {
               children: [
                 // Profil Fotoğrafı Alanı
                 Center(
-                  child: Stack(
-                    children: [
-                      CircleAvatar(
-                        radius: 50,
-                        backgroundColor: theme.cardColor,
-                        backgroundImage: userImage != null
-                            ? (userImage.startsWith('http')
-                                ? NetworkImage(userImage)
-                                : FileImage(File(userImage))) as ImageProvider
-                            : null,
-                        child: userImage == null
-                            ? SvgIcon(
-                                iconPath: AppIcons.market,
-                                size: 60,
-                                color: theme.colorScheme.onSurface
-                                    .withOpacity(0.4))
-                            : null,
-                      ),
-                      if (authVM.isUploadingProfilePhoto)
-                        const Positioned.fill(
-                          child: CircularProgressIndicator(),
-                        ),
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: GestureDetector(
-                          onTap: () => _showImagePicker(context),
-                          child: CircleAvatar(
-                            radius: 18,
-                            backgroundColor: theme.colorScheme.primary,
-                            child: SvgIcon(
-                                iconPath: AppIcons.camera,
-                                size: 22,
-                                color: theme.colorScheme.onPrimary),
+                  child: GestureDetector(
+                    onTap: () => _showImagePicker(context),
+                    child: Stack(
+                      children: [
+                        if (!hasImage)
+                          CustomPaint(
+                            painter: _DashedBorderPainter(
+                              color: theme.colorScheme.primary.withOpacity(0.5),
+                              borderRadius:
+                                  60.0, // 120x120 kutuyu tam daire yapar
+                            ),
+                            child: Container(
+                              height: 120,
+                              width: 120,
+                              decoration: BoxDecoration(
+                                color:
+                                    theme.colorScheme.primary.withOpacity(0.05),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.add_a_photo_outlined,
+                                    color: theme.colorScheme.primary,
+                                    size: 32,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    langVM.translate('add_photo_button'),
+                                    style: TextStyle(
+                                      color: theme.colorScheme.primary,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                        else
+                          ClipOval(
+                            child: userImage.startsWith('http')
+                                ? Image.network(
+                                    userImage,
+                                    width: 120,
+                                    height: 120,
+                                    fit: BoxFit.cover,
+                                  )
+                                : Image.file(
+                                    File(userImage),
+                                    width: 120,
+                                    height: 120,
+                                    fit: BoxFit.cover,
+                                  ),
                           ),
-                        ),
-                      ),
-                    ],
+                        if (authVM.isUploadingProfilePhoto)
+                          const Positioned.fill(
+                            child: CustomLoadingIndicator(),
+                          ),
+                        if (hasImage)
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: CircleAvatar(
+                              radius: 18,
+                              backgroundColor: theme.colorScheme.primary,
+                              child: SvgIcon(
+                                  iconPath: AppIcons.camera,
+                                  size: 22,
+                                  color: theme.colorScheme.onPrimary),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -476,19 +570,93 @@ class _SellerSettingsScreenState extends State<SellerSettingsScreen> {
                       fontWeight: FontWeight.bold, fontSize: 17),
                 ),
                 const SizedBox(height: 16),
-                TextFormField(
-                  controller: _instagramController,
-                  decoration: _buildInputDecoration(
-                      langVM.translate('instagram_label'), AppIcons.instagram),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? theme.colorScheme.surface.withOpacity(0.3)
+                        : Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(16),
+                    border:
+                        Border.all(color: theme.dividerColor.withOpacity(0.2)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          SvgIcon(
+                              iconPath: AppIcons.instagram,
+                              size: 24,
+                              color: theme.colorScheme.primary),
+                          const SizedBox(width: 8),
+                          Text(langVM.translate('instagram_label'),
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 16)),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _instagramNameController,
+                        decoration: _buildInputDecoration(
+                            'Kullanıcı Adı (Örn: @pazar_esnafi)', null),
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _instagramController,
+                        decoration: _buildInputDecoration(
+                            'Profil Linki (URL)', null,
+                            hintText: 'https://instagram.com/...'),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 16),
-                TextFormField(
-                  controller: _facebookController,
-                  decoration: _buildInputDecoration(
-                      langVM.translate('facebook_label'), AppIcons.facebook),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? theme.colorScheme.surface.withOpacity(0.3)
+                        : Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(16),
+                    border:
+                        Border.all(color: theme.dividerColor.withOpacity(0.2)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          SvgIcon(
+                              iconPath: AppIcons.facebook,
+                              size: 24,
+                              color: theme.colorScheme.primary),
+                          const SizedBox(width: 8),
+                          Text(langVM.translate('facebook_label'),
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 16)),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _facebookNameController,
+                        decoration: _buildInputDecoration(
+                            'Sayfa Adı (Örn: Pazar Esnafı)', null),
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _facebookController,
+                        decoration: _buildInputDecoration(
+                            'Profil Linki (URL)', null,
+                            hintText: 'https://facebook.com/...'),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 24),
-                ElevatedButton(
+                CustomButton(
+                  text: langVM.translate('save_changes'),
+                  isLoading: sellerVM.isLoading,
                   onPressed: (sellerVM.isLoading || !_isChanged)
                       ? null
                       : () async {
@@ -510,7 +678,11 @@ class _SellerSettingsScreenState extends State<SellerSettingsScreen> {
                                     'stallName': _nameController.text,
                                     'stallDescription': _descController.text,
                                     'stallHours': _hoursController.text,
+                                    'instagramName':
+                                        _instagramNameController.text,
                                     'instagramLink': _instagramController.text,
+                                    'facebookName':
+                                        _facebookNameController.text,
                                     'facebookLink': _facebookController.text,
                                   }, authVM.currentUser!.email);
                                 }
@@ -522,7 +694,11 @@ class _SellerSettingsScreenState extends State<SellerSettingsScreen> {
                                 _initialName = _nameController.text;
                                 _initialDesc = _descController.text;
                                 _initialHours = _hoursController.text;
+                                _initialInstagramName =
+                                    _instagramNameController.text;
                                 _initialInstagram = _instagramController.text;
+                                _initialFacebookName =
+                                    _facebookNameController.text;
                                 _initialFacebook = _facebookController.text;
                                 _isChanged = false;
                               });
@@ -536,23 +712,14 @@ class _SellerSettingsScreenState extends State<SellerSettingsScreen> {
                             }
                           }
                         },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: theme.colorScheme.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    elevation: 4,
-                    shadowColor: theme.colorScheme.primary.withOpacity(0.4),
-                  ),
-                  child: sellerVM.isLoading
-                      ? const CircularProgressIndicator()
-                      : Text(langVM.translate('save_changes')),
                 ),
                 const SizedBox(height: 32),
                 // Pazarı Değiştir Butonu
-                TextButton.icon(
+                CustomButton(
+                  text: langVM.translate('change_market'),
+                  icon: Icons.swap_horiz,
+                  backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
+                  foregroundColor: theme.colorScheme.primary,
                   onPressed: () async {
                     final bool confirm = await DialogService.showConfirmation(
                       context,
@@ -597,46 +764,15 @@ class _SellerSettingsScreenState extends State<SellerSettingsScreen> {
                       }
                     }
                   },
-                  icon: Icon(
-                    Icons.swap_horiz,
-                    color: theme.colorScheme.primary,
-                  ),
-                  label: Text(
-                    langVM.translate('change_market'),
-                    style: TextStyle(
-                        color: theme.colorScheme.primary,
-                        fontWeight: FontWeight.bold),
-                  ),
-                  style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      side: BorderSide.none,
-                    ),
-                  ),
                 ),
                 const SizedBox(height: 16),
                 // Çıkış Yap Butonu
-                TextButton.icon(
+                CustomButton(
+                  text: langVM.translate('logout'),
+                  icon: Icons.logout,
                   onPressed: _showLogoutConfirmation,
-                  icon: SvgIcon(
-                    iconPath: AppIcons.logout,
-                    color: Colors.red,
-                  ),
-                  label: Text(
-                    langVM.translate('logout'),
-                    style: const TextStyle(
-                        color: Colors.red, fontWeight: FontWeight.bold),
-                  ),
-                  style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: Colors.red.withOpacity(0.1),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      side: BorderSide.none,
-                    ),
-                  ),
+                  backgroundColor: Colors.red.withOpacity(0.1),
+                  foregroundColor: Colors.red,
                 ),
                 const SizedBox(height: 32),
               ],
@@ -645,5 +781,60 @@ class _SellerSettingsScreenState extends State<SellerSettingsScreen> {
         ),
       ),
     );
+  }
+}
+
+class _DashedBorderPainter extends CustomPainter {
+  final Color color;
+  final double strokeWidth;
+  final double dashWidth;
+  final double dashSpace;
+  final double borderRadius;
+
+  _DashedBorderPainter({
+    required this.color,
+    this.strokeWidth = 2.0,
+    this.dashWidth = 8.0,
+    this.dashSpace = 6.0,
+    this.borderRadius = 16.0,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke;
+
+    final rrect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      Radius.circular(borderRadius),
+    );
+
+    final path = Path()..addRRect(rrect);
+    final pathMetrics = path.computeMetrics();
+    final dashedPath = Path();
+
+    for (final metric in pathMetrics) {
+      double distance = 0.0;
+      while (distance < metric.length) {
+        dashedPath.addPath(
+          metric.extractPath(distance, distance + dashWidth),
+          Offset.zero,
+        );
+        distance += dashWidth + dashSpace;
+      }
+    }
+
+    canvas.drawPath(dashedPath, paint);
+  }
+
+  @override
+  bool shouldRepaint(_DashedBorderPainter oldDelegate) {
+    return oldDelegate.color != color ||
+        oldDelegate.strokeWidth != strokeWidth ||
+        oldDelegate.dashWidth != dashWidth ||
+        oldDelegate.dashSpace != dashSpace ||
+        oldDelegate.borderRadius != borderRadius;
   }
 }

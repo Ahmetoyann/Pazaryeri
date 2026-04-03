@@ -1,10 +1,14 @@
 import 'dart:io';
 import 'dart:math';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:image_cropper/image_cropper.dart';
+import 'package:http/http.dart' as http;
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../data/models/market.dart';
 import '../../viewmodels/language_viewmodel.dart';
 import '../../viewmodels/home_viewmodel.dart';
@@ -17,6 +21,8 @@ import '../../widgets/custom_bottom_sheets.dart';
 import '../../widgets/custom_snackbars.dart';
 import '../../../core/constants/app_icons.dart';
 import '../../../presentation/widgets/svg_icon.dart';
+import '../../widgets/custom_button.dart';
+import '../../widgets/loading_overlay.dart';
 
 class MarketDetailScreen extends StatefulWidget {
   final Market market;
@@ -41,16 +47,19 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
   bool _hasReportedPresence = false;
   XFile? _reviewImage;
   final ImagePicker _picker = ImagePicker();
+  String? _marketImagePath;
 
   List<Map<String, dynamic>> _reviews = [];
   final Map<String, GlobalKey> _reviewKeys = {};
   String _sortOption = 'newest';
+  final GlobalKey _reviewsTitleKey = GlobalKey();
 
   @override
   void initState() {
     super.initState();
     _currentOccupancy = _calculateDynamicOccupancy(widget.market.id);
     _loadReviews();
+    _loadMarketImage();
   }
 
   // Saate göre dinamik doluluk oranı hesapla (MarketCard ile aynı mantık)
@@ -139,7 +148,113 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
     }
   }
 
+  Future<void> _loadMarketImage() async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('markets')
+          .doc(widget.market.id)
+          .get();
+      if (doc.exists && doc.data() != null && doc.data()!['imageUrl'] != null) {
+        if (mounted) {
+          setState(() {
+            _marketImagePath = doc.data()!['imageUrl'];
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Pazar görseli yüklenemedi: $e');
+    }
+  }
+
+  Future<void> _pickMarketImage(ImageSource source) async {
+    final primaryColor = Theme.of(context).colorScheme.primary;
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: source,
+        imageQuality: 80,
+      );
+      if (image != null) {
+        final CroppedFile? croppedFile = await ImageCropper().cropImage(
+          sourcePath: image.path,
+          uiSettings: [
+            AndroidUiSettings(
+              toolbarTitle: 'Görseli Düzenle',
+              toolbarColor: primaryColor,
+              toolbarWidgetColor: Colors.white,
+              initAspectRatio: CropAspectRatioPreset.original,
+              lockAspectRatio: false,
+              aspectRatioPresets: [
+                CropAspectRatioPreset.square,
+                CropAspectRatioPreset.ratio3x2,
+                CropAspectRatioPreset.original,
+                CropAspectRatioPreset.ratio4x3,
+                CropAspectRatioPreset.ratio16x9
+              ],
+            ),
+            IOSUiSettings(
+              title: 'Görseli Düzenle',
+              aspectRatioPresets: [
+                CropAspectRatioPreset.square,
+                CropAspectRatioPreset.ratio3x2,
+                CropAspectRatioPreset.original,
+                CropAspectRatioPreset.ratio4x3,
+                CropAspectRatioPreset.ratio16x9
+              ],
+            ),
+          ],
+        );
+
+        if (croppedFile != null) {
+          await LoadingOverlay.show(
+            context,
+            asyncFunction: () async {
+              // Cloudinary'ye Yükleme
+              const cloudName = 'doe2nzhgx';
+              const uploadPreset = 'Pazaryeri';
+
+              final uri = Uri.parse(
+                  'https://api.cloudinary.com/v1_1/$cloudName/image/upload');
+              final request = http.MultipartRequest('POST', uri)
+                ..fields['upload_preset'] = uploadPreset
+                ..files.add(await http.MultipartFile.fromPath(
+                    'file', croppedFile.path));
+
+              final response = await request.send();
+              if (response.statusCode == 200) {
+                final responseData = await response.stream.bytesToString();
+                final jsonResponse = json.decode(responseData);
+                final String imageUrl = jsonResponse['secure_url'];
+
+                // Firestore'a kaydet (Herkes görebilsin diye)
+                await FirebaseFirestore.instance
+                    .collection('markets')
+                    .doc(widget.market.id)
+                    .set({
+                  'imageUrl': imageUrl,
+                  'updatedAt': FieldValue.serverTimestamp(),
+                }, SetOptions(merge: true));
+
+                setState(() {
+                  _marketImagePath = imageUrl;
+                });
+              } else {
+                throw Exception('Görsel Cloudinary\'ye yüklenemedi');
+              }
+            },
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Pazar görseli seçilemedi/yüklenemedi: $e');
+      if (mounted) {
+        CustomSnackbars.showError(
+            context, 'Görsel yüklenirken bir hata oluştu.');
+      }
+    }
+  }
+
   Future<void> _pickReviewImage(ImageSource source) async {
+    final primaryColor = Theme.of(context).colorScheme.primary;
     try {
       final XFile? image = await _picker.pickImage(
         source: source,
@@ -147,7 +262,38 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
         maxWidth: 1024,
       );
       if (image != null) {
-        setState(() => _reviewImage = image);
+        final CroppedFile? croppedFile = await ImageCropper().cropImage(
+          sourcePath: image.path,
+          uiSettings: [
+            AndroidUiSettings(
+              toolbarTitle: 'Görseli Düzenle',
+              toolbarColor: primaryColor,
+              toolbarWidgetColor: Colors.white,
+              initAspectRatio: CropAspectRatioPreset.original,
+              lockAspectRatio: false,
+              aspectRatioPresets: [
+                CropAspectRatioPreset.square,
+                CropAspectRatioPreset.ratio3x2,
+                CropAspectRatioPreset.original,
+                CropAspectRatioPreset.ratio4x3,
+                CropAspectRatioPreset.ratio16x9
+              ],
+            ),
+            IOSUiSettings(
+              title: 'Görseli Düzenle',
+              aspectRatioPresets: [
+                CropAspectRatioPreset.square,
+                CropAspectRatioPreset.ratio3x2,
+                CropAspectRatioPreset.original,
+                CropAspectRatioPreset.ratio4x3,
+                CropAspectRatioPreset.ratio16x9
+              ],
+            ),
+          ],
+        );
+        if (croppedFile != null) {
+          setState(() => _reviewImage = XFile(croppedFile.path));
+        }
       }
     } catch (e) {
       debugPrint('Resim seçilemedi: $e');
@@ -162,6 +308,48 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
       galleryText: langVM.translate('gallery'),
       onCameraTap: () => _pickReviewImage(ImageSource.camera),
       onGalleryTap: () => _pickReviewImage(ImageSource.gallery),
+    );
+  }
+
+  void _showMarketImageActionSheet() {
+    final langVM = Provider.of<LanguageViewModel>(context, listen: false);
+    CustomBottomSheets.showImagePicker(
+      context: context,
+      cameraText: langVM.translate('camera'),
+      galleryText: langVM.translate('gallery'),
+      onCameraTap: () => _pickMarketImage(ImageSource.camera),
+      onGalleryTap: () => _pickMarketImage(ImageSource.gallery),
+    );
+  }
+
+  void _showFullScreenImage() {
+    if (_marketImagePath == null) return;
+    Navigator.push(
+      context,
+      PageRouteBuilder(
+        opaque: false,
+        pageBuilder: (context, animation, secondaryAnimation) {
+          return Scaffold(
+            backgroundColor: Colors.black.withOpacity(0.9),
+            appBar: AppBar(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              iconTheme: const IconThemeData(color: Colors.white),
+            ),
+            body: Center(
+              child: InteractiveViewer(
+                child: Hero(
+                  tag: 'market_image_${widget.market.id}',
+                  child: _marketImagePath!.startsWith('http')
+                      ? Image.network(_marketImagePath!, fit: BoxFit.contain)
+                      : Image.file(File(_marketImagePath!),
+                          fit: BoxFit.contain),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -225,46 +413,66 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
       7: 'Pazar',
     };
     final todayName = daysMap[todayIndex];
-    final isOpen = widget.market.openDays.contains(todayName);
+    final isOpenDay = widget.market.openDays.contains(todayName);
+
+    // Saat kontrolü
+    final now = DateTime.now();
+    final currentMinutes = now.hour * 60 + now.minute;
+    final startMinutes = 5 * 60; // 05:00
+    final isBeforeOpening = isOpenDay && currentMinutes < startMinutes;
+    final isOpenNow = isOpenDay && currentMinutes >= startMinutes;
 
     final baseTag = widget.heroTag ?? widget.market.id;
 
     return Scaffold(
-      extendBodyBehindAppBar: true,
-      backgroundColor: isDark ? Colors.black : const Color(0xFFF5F5F5),
       appBar: CustomAppBar(
         title: Text(widget.market.name),
         actions: [
           IconButton(
-              icon:
-                  const SvgIcon(iconPath: AppIcons.share, color: Colors.white),
+              icon: const Icon(Icons.ios_share_rounded, size: 20),
               onPressed: _shareMarket),
           IconButton(
             icon: Icon(isFav ? Icons.favorite : Icons.favorite_border),
-            color: isFav ? Colors.red : Colors.white,
+            color: isFav ? Colors.red : null,
             onPressed: () async {
               if (await authVM.checkGuestStatus(context)) {
                 homeVM.toggleFavorite(widget.market.id);
               }
             },
           ),
-          Container(
-            margin: const EdgeInsets.only(right: 16),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.grey.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                const SvgIcon(
-                    iconPath: AppIcons.star, color: Colors.amber, size: 20),
-                const SizedBox(width: 4),
-                Text(
-                  _averageRating.toStringAsFixed(1),
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ],
+          GestureDetector(
+            onTap: () {
+              if (_reviewsTitleKey.currentContext != null) {
+                Scrollable.ensureVisible(
+                  _reviewsTitleKey.currentContext!,
+                  duration: const Duration(milliseconds: 800),
+                  curve: Curves.easeInOutCubic,
+                  alignment: 0.1,
+                );
+              }
+            },
+            child: Container(
+              margin: const EdgeInsets.only(right: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SvgIcon(
+                      iconPath: AppIcons.star, color: Colors.amber, size: 20),
+                  const SizedBox(width: 4),
+                  Text(
+                    _averageRating.toStringAsFixed(1),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -288,10 +496,111 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
                   ),
                 ],
               ),
-              padding: const EdgeInsets.fromLTRB(16, 110, 16, 32),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  if (_marketImagePath != null) ...[
+                    GestureDetector(
+                      onTap: _showFullScreenImage,
+                      child: Stack(
+                        children: [
+                          Hero(
+                            tag: 'market_image_${widget.market.id}',
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(16),
+                              child: _marketImagePath!.startsWith('http')
+                                  ? Image.network(
+                                      _marketImagePath!,
+                                      height: 200,
+                                      width: double.infinity,
+                                      fit: BoxFit.cover,
+                                    )
+                                  : Image.file(
+                                      File(_marketImagePath!),
+                                      height: 200,
+                                      width: double.infinity,
+                                      fit: BoxFit.cover,
+                                    ),
+                            ),
+                          ),
+                          Positioned(
+                            bottom: 12,
+                            right: 12,
+                            child: GestureDetector(
+                              onTap: _showMarketImageActionSheet,
+                              child: CircleAvatar(
+                                radius: 20,
+                                backgroundColor:
+                                    Theme.of(context).colorScheme.primary,
+                                child: Icon(
+                                  Icons.add_a_photo_outlined,
+                                  color:
+                                      Theme.of(context).colorScheme.onPrimary,
+                                  size: 20,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ] else ...[
+                    GestureDetector(
+                      onTap: _showMarketImageActionSheet,
+                      child: CustomPaint(
+                        painter: _DashedBorderPainter(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withOpacity(0.5),
+                          borderRadius: 16.0,
+                        ),
+                        child: Container(
+                          height: 160,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withOpacity(0.05),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .primary
+                                      .withOpacity(0.1),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Icons.add_a_photo_outlined,
+                                  color: Theme.of(context).colorScheme.primary,
+                                  size: 32,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'Pazar görseli ekle',
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
                   Row(
                     children: [
                       Hero(
@@ -337,46 +646,63 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: isOpen
-                              ? Theme.of(context)
-                                  .colorScheme
-                                  .primary
-                                  .withOpacity(0.1)
-                              : Theme.of(context)
-                                  .colorScheme
-                                  .error
-                                  .withOpacity(0.1),
+                          color: isBeforeOpening
+                              ? Colors.orange.withOpacity(0.1)
+                              : (isOpenNow
+                                  ? Theme.of(context)
+                                      .colorScheme
+                                      .primary
+                                      .withOpacity(0.1)
+                                  : Theme.of(context)
+                                      .colorScheme
+                                      .error
+                                      .withOpacity(0.1)),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: isOpen
-                                ? Theme.of(context).colorScheme.primary
-                                : Theme.of(context).colorScheme.error,
+                            color: isBeforeOpening
+                                ? Colors.orange
+                                : (isOpenNow
+                                    ? Theme.of(context).colorScheme.primary
+                                    : Theme.of(context).colorScheme.error),
                           ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            isOpen
-                                ? SvgIcon(
-                                    iconPath: AppIcons.check,
-                                    size: 16,
-                                    color:
-                                        Theme.of(context).colorScheme.primary,
-                                  )
-                                : SvgIcon(
-                                    iconPath: AppIcons.close,
-                                    size: 16,
-                                    color: Theme.of(context).colorScheme.error,
-                                  ),
+                            Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: isBeforeOpening
+                                    ? Colors.orange
+                                    : (isOpenNow
+                                        ? Theme.of(context).colorScheme.primary
+                                        : Theme.of(context).colorScheme.error),
+                                shape: BoxShape.circle,
+                              ),
+                              child: SvgIcon(
+                                iconPath: isOpenNow
+                                    ? AppIcons.check
+                                    : (isBeforeOpening
+                                        ? AppIcons.clock
+                                        : AppIcons.close),
+                                size: 12,
+                                color: Colors.white,
+                              ),
+                            ),
                             const SizedBox(width: 6),
                             Text(
-                              isOpen
-                                  ? langVM.translate('market_open_status')
-                                  : langVM.translate('market_closed_status'),
+                              isBeforeOpening
+                                  ? "05.00'te kurulacak"
+                                  : (isOpenNow
+                                      ? langVM.translate('market_open_status')
+                                      : langVM
+                                          .translate('market_closed_status')),
                               style: TextStyle(
-                                color: isOpen
-                                    ? Theme.of(context).colorScheme.primary
-                                    : Theme.of(context).colorScheme.error,
+                                color: isBeforeOpening
+                                    ? Colors.orange
+                                    : (isOpenNow
+                                        ? Theme.of(context).colorScheme.primary
+                                        : Theme.of(context).colorScheme.error),
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -426,21 +752,11 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
                   const SizedBox(height: 24),
                   _buildOccupancyBar(context),
                   const SizedBox(height: 24),
-                  Text(
-                    widget.market.description,
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withOpacity(0.7),
-                        ),
-                  ),
-                  const SizedBox(height: 24),
                   _buildDetailRow(
                     context,
                     AppIcons.location,
                     langVM.translate('address_label'),
-                    '${widget.market.address.neighborhood}, ${widget.market.address.district} / ${widget.market.address.city}',
+                    '${widget.market.description}\n${widget.market.address.neighborhood}, ${widget.market.address.district} / ${widget.market.address.city}',
                   ),
                   const SizedBox(height: 16),
                   Container(
@@ -494,57 +810,77 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
                   const SizedBox(height: 32),
                   Container(
                     width: double.infinity,
+                    padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          Theme.of(context).colorScheme.primary,
-                          Theme.of(context)
-                              .colorScheme
-                              .primary
-                              .withOpacity(0.8),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+                      color: isDark
+                          ? Colors.white.withOpacity(0.05)
+                          : Colors.grey.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: isDark
+                            ? Colors.white.withOpacity(0.1)
+                            : Colors.black.withOpacity(0.05),
                       ),
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .primary
-                              .withOpacity(0.3),
-                          blurRadius: 8,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
                     ),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: _openMap,
-                        borderRadius: BorderRadius.circular(16),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const SvgIcon(
-                                  iconPath: AppIcons.directionsActive,
-                                  size: 24,
-                                  color: Colors.white),
-                              const SizedBox(width: 12),
-                              Text(
-                                langVM.translate('get_directions'),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
+                    child: Column(
+                      children: [
+                        SizedBox(
+                          width: double.infinity,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  Theme.of(context).colorScheme.primary,
+                                  Theme.of(context)
+                                      .colorScheme
+                                      .primary
+                                      .withOpacity(0.8),
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .primary
+                                      .withOpacity(0.3),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: _openMap,
+                                borderRadius: BorderRadius.circular(16),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 14, horizontal: 16),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(Icons.directions,
+                                          color: Colors.white),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        langVM.translate('get_directions'),
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
-                            ],
+                            ),
                           ),
-                        ),
-                      ),
+                        )
+                      ],
                     ),
                   ),
                 ],
@@ -556,6 +892,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
+                    key: _reviewsTitleKey,
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Row(
@@ -784,7 +1121,9 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
           const SizedBox(height: 12),
           Align(
             alignment: Alignment.centerRight,
-            child: ElevatedButton(
+            child: CustomButton(
+              text: langVM.translate('send_button'),
+              isFullWidth: false,
               onPressed: () async {
                 if (_userRating == 0) {
                   CustomSnackbars.showWarning(
@@ -834,7 +1173,6 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
                 });
                 FocusScope.of(context).unfocus();
               },
-              child: Text(langVM.translate('send_button')),
             ),
           ),
         ],
@@ -1124,7 +1462,14 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
                 ),
               ),
               const SizedBox(height: 4),
-              Text(value, style: const TextStyle(fontSize: 16)),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 14,
+                  color:
+                      Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                ),
+              ),
             ],
           ),
         ),
@@ -1507,24 +1852,74 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
               ],
             ),
             const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: _hasReportedPresence ? null : _reportPresence,
-                icon: Icon(
-                  _hasReportedPresence
-                      ? Icons.check_circle
-                      : Icons.person_pin_circle,
-                ),
-                label: Text(_hasReportedPresence
-                    ? langVM.translate('presence_reported_button')
-                    : langVM.translate('report_presence_button')),
-              ),
+            CustomButton(
+              text: _hasReportedPresence
+                  ? langVM.translate('presence_reported_button')
+                  : langVM.translate('report_presence_button'),
+              icon: _hasReportedPresence
+                  ? Icons.check_circle
+                  : Icons.person_pin_circle,
+              onPressed: _hasReportedPresence ? null : _reportPresence,
             ),
           ],
         ),
       ),
     );
+  }
+}
+
+class _DashedBorderPainter extends CustomPainter {
+  final Color color;
+  final double strokeWidth;
+  final double dashWidth;
+  final double dashSpace;
+  final double borderRadius;
+
+  _DashedBorderPainter({
+    required this.color,
+    this.strokeWidth = 2.0,
+    this.dashWidth = 8.0,
+    this.dashSpace = 6.0,
+    this.borderRadius = 16.0,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke;
+
+    final rrect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      Radius.circular(borderRadius),
+    );
+
+    final path = Path()..addRRect(rrect);
+    final pathMetrics = path.computeMetrics();
+    final dashedPath = Path();
+
+    for (final metric in pathMetrics) {
+      double distance = 0.0;
+      while (distance < metric.length) {
+        dashedPath.addPath(
+          metric.extractPath(distance, distance + dashWidth),
+          Offset.zero,
+        );
+        distance += dashWidth + dashSpace;
+      }
+    }
+
+    canvas.drawPath(dashedPath, paint);
+  }
+
+  @override
+  bool shouldRepaint(_DashedBorderPainter oldDelegate) {
+    return oldDelegate.color != color ||
+        oldDelegate.strokeWidth != strokeWidth ||
+        oldDelegate.dashWidth != dashWidth ||
+        oldDelegate.dashSpace != dashSpace ||
+        oldDelegate.borderRadius != borderRadius;
   }
 }
 
@@ -1588,7 +1983,7 @@ class _AllMarketReviewsScreenState extends State<_AllMarketReviewsScreen> {
       appBar:
           CustomAppBar(title: Text('${widget.marketName} Değerlendirmeleri')),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CustomLoadingIndicator())
           : _reviews.isEmpty
               ? const Center(child: Text('Henüz değerlendirme yok.'))
               : ListView.builder(

@@ -15,6 +15,9 @@ import 'product_detail_screen.dart';
 import '../../../core/constants/app_icons.dart';
 import '../../../presentation/widgets/svg_icon.dart';
 import '../../widgets/loading_overlay.dart';
+import '../../widgets/custom_button.dart';
+import '../../widgets/product_card.dart';
+import '../../widgets/custom_search_bar.dart';
 
 class ProductsScreen extends StatefulWidget {
   const ProductsScreen({super.key});
@@ -257,7 +260,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.black,
+      backgroundColor: Colors.transparent,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) {
           return Container(
@@ -493,33 +496,20 @@ class _ProductsScreenState extends State<ProductsScreen> {
                 // Uygula Butonu
                 Padding(
                   padding: const EdgeInsets.all(24),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        // Filtreleri uygula
-                        this.setState(() {
-                          _sortOption = tempSortOption;
-                          _selectedCategories.clear();
-                          _selectedCategories.addAll(tempSelectedCategories);
-                          _filterOpenToday = tempFilterOpenToday;
-                          _priceRange = tempPriceRange;
-                        });
-                        _setupStream();
-                        Navigator.pop(context);
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context).colorScheme.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16)),
-                        elevation: 0,
-                      ),
-                      child: Text(langVM.translate('show_results_button'),
-                          style: TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.bold)),
-                    ),
+                  child: CustomButton(
+                    text: langVM.translate('show_results_button'),
+                    onPressed: () {
+                      // Filtreleri uygula
+                      this.setState(() {
+                        _sortOption = tempSortOption;
+                        _selectedCategories.clear();
+                        _selectedCategories.addAll(tempSelectedCategories);
+                        _filterOpenToday = tempFilterOpenToday;
+                        _priceRange = tempPriceRange;
+                      });
+                      _setupStream();
+                      Navigator.pop(context);
+                    },
                   ),
                 ),
               ],
@@ -609,65 +599,17 @@ class _ProductsScreenState extends State<ProductsScreen> {
                 children: [
                   // Arama Çubuğu
                   Expanded(
-                    child: TextField(
+                    child: CustomSearchBar(
                       controller: _searchController,
+                      hintText: langVM.translate('search_hint'),
+                      onMicPressed: _listen,
+                      isListening: _isListening,
                       onChanged: (value) {
                         setState(() {
                           _searchQuery = value.toLowerCase();
                           _setupStream();
                         });
                       },
-                      decoration: InputDecoration(
-                        hintText: langVM.translate('search_hint'),
-                        prefixIcon: Padding(
-                          padding: const EdgeInsets.all(12.0),
-                          child: SvgIcon(
-                            iconPath: AppIcons.search,
-                            color: Theme.of(context).hintColor,
-                          ),
-                        ),
-                        suffixIcon: _searchQuery.isNotEmpty
-                            ? IconButton(
-                                icon: SvgIcon(
-                                  iconPath: AppIcons.close,
-                                  color: Theme.of(context).hintColor,
-                                  size: 20,
-                                ),
-                                onPressed: () {
-                                  _searchController.clear();
-                                  setState(() => _searchQuery = '');
-                                  _setupStream();
-                                },
-                              )
-                            : IconButton(
-                                icon: Icon(
-                                  _isListening ? Icons.mic : Icons.mic_none,
-                                  color: _isListening
-                                      ? Colors.redAccent
-                                      : Theme.of(context).hintColor,
-                                ),
-                                onPressed: _listen,
-                              ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide:
-                              BorderSide(color: Colors.grey.withOpacity(0.3)),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide:
-                              BorderSide(color: Colors.grey.withOpacity(0.3)),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(
-                              color: Colors.grey.withOpacity(0.8), width: 1.5),
-                        ),
-                        filled: true,
-                        fillColor: Theme.of(context).cardColor,
-                        contentPadding:
-                            const EdgeInsets.symmetric(horizontal: 16),
-                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -676,13 +618,21 @@ class _ProductsScreenState extends State<ProductsScreen> {
                     children: [
                       Container(
                         decoration: BoxDecoration(
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.white.withOpacity(0.2)
-                              : Colors.black.withOpacity(0.05),
-                          shape: BoxShape.circle,
+                          color: Theme.of(context).colorScheme.surface,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: isDark
+                                  ? Colors.black.withOpacity(0.3)
+                                  : Colors.black.withOpacity(0.2),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
                         child: IconButton(
-                          icon: const Icon(Icons.filter_list),
+                          icon: Icon(Icons.filter_list,
+                              color: Theme.of(context).colorScheme.primary),
                           tooltip: 'Filtrele',
                           onPressed: _showFilterBottomSheet,
                         ),
@@ -954,10 +904,9 @@ class _ProductsScreenState extends State<ProductsScreen> {
                         itemBuilder: (context, index) {
                           final product = products[index];
                           final isPriority = priorityMarketId != null &&
-                              product['marketId'] != null &&
                               product['marketId'] == priorityMarketId;
 
-                          return _ProductCardWithGallery(
+                          return ProductCard(
                             product: product,
                             isPriority: isPriority,
                             isFavorite:
@@ -976,243 +925,6 @@ class _ProductsScreenState extends State<ProductsScreen> {
                 ),
         ),
       ],
-    );
-  }
-}
-
-class _ProductCardWithGallery extends StatefulWidget {
-  final Map<String, dynamic> product;
-  final bool isPriority;
-  final bool isFavorite;
-  final VoidCallback onFavoriteToggle;
-  final VoidCallback onDetailReturn;
-
-  const _ProductCardWithGallery({
-    required this.product,
-    required this.isPriority,
-    required this.isFavorite,
-    required this.onFavoriteToggle,
-    required this.onDetailReturn,
-  });
-
-  @override
-  State<_ProductCardWithGallery> createState() =>
-      _ProductCardWithGalleryState();
-}
-
-class _ProductCardWithGalleryState extends State<_ProductCardWithGallery> {
-  int _currentImageIndex = 0;
-
-  @override
-  Widget build(BuildContext context) {
-    final langVM = Provider.of<LanguageViewModel>(context, listen: false);
-    final product = widget.product;
-    final price = product['price'];
-    final unit = product['unit'] ?? 'unit_kg';
-
-    List<String> images = [];
-    if (product['images'] != null && (product['images'] as List).isNotEmpty) {
-      images = List<String>.from(product['images']);
-    } else if (product['imagePath'] != null &&
-        product['imagePath'].toString().isNotEmpty) {
-      images = [product['imagePath'].toString()];
-    }
-
-    return GestureDetector(
-      onTap: () async {
-        String sellerName = langVM.translate('seller_default_name');
-        if (product['sellerId'] != null) {
-          try {
-            final sellerDoc = await FirebaseFirestore.instance
-                .collection('users')
-                .doc(product['sellerId'])
-                .get();
-            if (sellerDoc.exists) {
-              final sData = sellerDoc.data()!;
-              sellerName = sData['stallName'] ??
-                  '${sData['firstName']} ${sData['lastName']}';
-            }
-          } catch (_) {}
-        }
-
-        if (mounted) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => ProductDetailScreen(
-                product: product,
-                sellerName: sellerName,
-              ),
-            ),
-          ).then((_) => widget.onDetailReturn());
-        }
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).cardColor,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 15,
-              offset: const Offset(0, 5),
-            ),
-          ],
-          border: widget.isPriority
-              ? Border.all(
-                  color: Theme.of(context).colorScheme.primary, width: 2)
-              : null,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Stack(
-                children: [
-                  ClipRRect(
-                    borderRadius:
-                        const BorderRadius.vertical(top: Radius.circular(16)),
-                    child: images.isNotEmpty
-                        ? PageView.builder(
-                            itemCount: images.length,
-                            onPageChanged: (index) {
-                              setState(() {
-                                _currentImageIndex = index;
-                              });
-                            },
-                            itemBuilder: (context, index) {
-                              final img = images[index];
-                              return Container(
-                                color: Colors.grey.withOpacity(0.1),
-                                child: img.startsWith('http')
-                                    ? Image.network(img, fit: BoxFit.cover)
-                                    : Image.file(File(img), fit: BoxFit.cover),
-                              );
-                            },
-                          )
-                        : Container(
-                            color: Colors.grey.withOpacity(0.1),
-                            child: const Center(
-                              child: Icon(Icons.image_not_supported,
-                                  color: Colors.grey),
-                            ),
-                          ),
-                  ),
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: GestureDetector(
-                      onTap: widget.onFavoriteToggle,
-                      child: Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.9),
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.2),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Icon(
-                          widget.isFavorite
-                              ? Icons.favorite
-                              : Icons.favorite_border,
-                          color: widget.isFavorite ? Colors.red : Colors.grey,
-                          size: 20,
-                        ),
-                      ),
-                    ),
-                  ),
-                  if (images.length > 1)
-                    Positioned(
-                      bottom: 8,
-                      left: 0,
-                      right: 0,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: List.generate(images.length, (index) {
-                          return Container(
-                            width: 6,
-                            height: 6,
-                            margin: const EdgeInsets.symmetric(horizontal: 2),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: _currentImageIndex == index
-                                  ? Theme.of(context).colorScheme.primary
-                                  : Colors.white.withOpacity(0.8),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.2),
-                                  blurRadius: 2,
-                                  offset: const Offset(0, 1),
-                                ),
-                              ],
-                            ),
-                          );
-                        }),
-                      ),
-                    ),
-                  if (widget.isPriority)
-                    Positioned(
-                      top: 8,
-                      left: 8,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primary,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.star,
-                                color: Colors.white, size: 12),
-                            const SizedBox(width: 4),
-                            Text(
-                              langVM.translate('sort_smart'),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    product['name'] ?? '',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 14),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '$price ₺ / ${langVM.translate(unit)}',
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.primary,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

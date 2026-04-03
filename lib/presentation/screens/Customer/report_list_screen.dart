@@ -10,9 +10,10 @@ import 'report_form_screen.dart';
 import '../../widgets/custom_bottom_sheets.dart';
 import '../../../core/constants/app_icons.dart';
 import '../../widgets/svg_icon.dart';
-import '../../widgets/custom_text_field.dart';
+import '../../widgets/custom_search_bar.dart';
 import '../../widgets/loading_overlay.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../widgets/custom_text_field.dart';
 
 class ReportListScreen extends StatelessWidget {
   const ReportListScreen({super.key});
@@ -40,18 +41,18 @@ class ReportListScreen extends StatelessWidget {
     final langVM = context.watch<LanguageViewModel>();
 
     return SingleChildScrollView(
-      padding: EdgeInsets.fromLTRB(
-          16, MediaQuery.of(context).padding.top + 32, 16, 16),
+      padding: const EdgeInsets.all(16),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
+          const SizedBox(height: 80),
           Row(
             children: [
               Expanded(
                 child: _buildOptionCard(
                   context,
                   title: langVM.translate('report_seller_option'),
-                  icon: Icons.storefront,
+                  icon: Icons.people,
                   color: Colors.orange,
                   onTap: () => _showMarketSelection(context, isForSeller: true),
                 ),
@@ -61,7 +62,7 @@ class ReportListScreen extends StatelessWidget {
                 child: _buildOptionCard(
                   context,
                   title: langVM.translate('report_market_option'),
-                  icon: Icons.location_city,
+                  icon: Icons.storefront,
                   color: Colors.blue,
                   onTap: () =>
                       _showMarketSelection(context, isForSeller: false),
@@ -280,12 +281,10 @@ class _MarketSelectionScreenState extends State<_MarketSelectionScreen> {
     });
 
     return Scaffold(
-      extendBodyBehindAppBar: true,
       appBar: CustomAppBar(
         title: Text(langVM.translate('select_market_to_report')),
       ),
-      body: Padding(
-        padding: const EdgeInsets.only(top: 110),
+      body: Container(
         child: Column(
           children: [
             if (cities.isNotEmpty)
@@ -326,7 +325,7 @@ class _MarketSelectionScreenState extends State<_MarketSelectionScreen> {
               ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: CustomTextField(
+              child: CustomSearchBar(
                 controller: _searchController,
                 onChanged: (value) {
                   setState(() {
@@ -334,32 +333,8 @@ class _MarketSelectionScreenState extends State<_MarketSelectionScreen> {
                   });
                 },
                 hintText: langVM.translate('search_placeholder'),
-                prefixIcon: Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: SvgIcon(
-                      iconPath: AppIcons.search,
-                      color: Theme.of(context).hintColor),
-                ),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: SvgIcon(
-                            iconPath: AppIcons.close,
-                            color: Theme.of(context).hintColor,
-                            size: 20),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() {
-                            _searchQuery = '';
-                          });
-                        },
-                      )
-                    : IconButton(
-                        icon: Icon(_isListening ? Icons.mic : Icons.mic_none,
-                            color: _isListening
-                                ? Colors.redAccent
-                                : Theme.of(context).hintColor),
-                        onPressed: _listen,
-                      ),
+                onMicPressed: _listen,
+                isListening: _isListening,
               ),
             ),
             Expanded(
@@ -414,8 +389,18 @@ class _MarketSelectionScreenState extends State<_MarketSelectionScreen> {
                               ),
                               subtitle: Text(
                                   '${market.address.district}, ${market.address.city} • ${(market.distanceInMeters / 1000).toStringAsFixed(1)} km'),
-                              trailing:
-                                  const Icon(Icons.arrow_forward_ios, size: 16),
+                              trailing: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: isDark
+                                      ? Colors.white.withOpacity(0.05)
+                                      : Colors.grey.withOpacity(0.05),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: _AnimatedArrowIcon(
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                              ),
                               onTap: () {
                                 Navigator.push(
                                   context,
@@ -544,11 +529,10 @@ class _SellerReportSelectionScreenState
     final langVM = context.watch<LanguageViewModel>();
 
     return Scaffold(
-      extendBodyBehindAppBar: true,
       appBar:
           CustomAppBar(title: Text(langVM.translate('report_seller_option'))),
       body: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 110, 16, 0),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
         child: Column(
           children: [
             CustomTextField(
@@ -594,101 +578,228 @@ class _SellerList extends StatelessWidget {
   Widget build(BuildContext context) {
     final langVM = context.watch<LanguageViewModel>();
 
-    return Scaffold(
-      appBar: CustomAppBar(
-        title: Text(langVM.translate('select_seller_to_report')),
-      ),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: AuthService.instance.getMarketSellers(market.id),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CustomLoadingIndicator());
-          }
-
-          if (snapshot.hasError) {
-            return Center(
-                child: Text(
-                    '${langVM.translate('error_prefix')}: ${snapshot.error}'));
-          }
-
-          final sellers = snapshot.data ?? [];
-
-          if (sellers.isEmpty) {
-            return Center(
-              child: Text(langVM.translate('no_sellers_found')),
-            );
-          }
-
-          return ListView.builder(
-            padding: const EdgeInsets.fromLTRB(16, 110, 16, 16),
-            itemCount: sellers.length,
-            itemBuilder: (context, index) {
-              final seller = sellers[index];
-              String displayName = seller['stallName'] ?? '';
-              if (displayName.isEmpty) {
-                displayName =
-                    '${seller['firstName'] ?? ''} ${seller['lastName'] ?? ''}'
-                        .trim();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+          child: Row(
+            children: [
+              Icon(
+                Icons.people_outline,
+                size: 20,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                langVM.translate('select_seller_to_report'),
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: FutureBuilder<List<Map<String, dynamic>>>(
+            future: AuthService.instance.getMarketSellers(market.id),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CustomLoadingIndicator());
               }
 
-              final isDark = Theme.of(context).brightness == Brightness.dark;
+              if (snapshot.hasError) {
+                return Center(
+                    child: Text(
+                        '${langVM.translate('error_prefix')}: ${snapshot.error}'));
+              }
 
-              return Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(
-                  color: isDark ? Theme.of(context).cardColor : Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: isDark
-                        ? Colors.white.withOpacity(0.1)
-                        : Colors.grey.withOpacity(0.1),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: ListTile(
-                    shape: RoundedRectangleBorder(
+              final sellers = snapshot.data ?? [];
+
+              if (sellers.isEmpty) {
+                return Center(
+                  child: Text(langVM.translate('no_sellers_found')),
+                );
+              }
+
+              return ListView.builder(
+                padding: const EdgeInsets.only(
+                    top: 8,
+                    bottom: 16), // Çift boşluğu önlemek için padding ayarlandı
+                itemCount: sellers.length,
+                itemBuilder: (context, index) {
+                  final seller = sellers[index];
+                  String displayName = seller['stallName'] ?? '';
+                  if (displayName.isEmpty) {
+                    displayName =
+                        '${seller['firstName'] ?? ''} ${seller['lastName'] ?? ''}'
+                            .trim();
+                  }
+                  final profilePic = seller['profilePicture'];
+
+                  final isDark =
+                      Theme.of(context).brightness == Brightness.dark;
+
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color:
+                          isDark ? Theme.of(context).cardColor : Colors.white,
                       borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isDark
+                            ? Colors.white.withOpacity(0.1)
+                            : Colors.grey.withOpacity(0.1),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
-                    leading: const CircleAvatar(child: Icon(Icons.store)),
-                    title: Text(
-                      displayName,
-                      style: const TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Text(
-                      seller['stallDescription'] ?? 'Açıklama yok',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ReportFormScreen(
-                            marketId: market.id,
-                            marketName: market.name,
-                            sellerId: seller['id'],
-                            sellerName: displayName,
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(16),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ReportFormScreen(
+                                marketId: market.id,
+                                marketName: market.name,
+                                sellerId: seller['id'],
+                                sellerName: displayName,
+                              ),
+                            ),
+                          );
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 56,
+                                height: 56,
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .primary
+                                      .withOpacity(0.1),
+                                  shape: BoxShape.circle,
+                                  image: (profilePic != null &&
+                                          profilePic.isNotEmpty)
+                                      ? DecorationImage(
+                                          image: NetworkImage(profilePic),
+                                          fit: BoxFit.cover,
+                                        )
+                                      : null,
+                                ),
+                                child:
+                                    (profilePic == null || profilePic.isEmpty)
+                                        ? Icon(Icons.people,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .primary)
+                                        : null,
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      displayName,
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      seller['stallDescription'] ??
+                                          'Açıklama yok',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium
+                                            ?.color
+                                            ?.withOpacity(0.7),
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: isDark
+                                      ? Colors.white.withOpacity(0.05)
+                                      : Colors.grey.withOpacity(0.05),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: _AnimatedArrowIcon(
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      );
-                    },
-                  ),
-                ),
+                      ),
+                    ),
+                  );
+                },
               );
             },
-          );
-        },
-      ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AnimatedArrowIcon extends StatefulWidget {
+  final Color color;
+  const _AnimatedArrowIcon({required this.color});
+
+  @override
+  State<_AnimatedArrowIcon> createState() => _AnimatedArrowIconState();
+}
+
+class _AnimatedArrowIconState extends State<_AnimatedArrowIcon>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<Offset> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    )..repeat(reverse: true);
+    _animation = Tween<Offset>(begin: Offset.zero, end: const Offset(0.25, 0))
+        .animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SlideTransition(
+      position: _animation,
+      child: Icon(Icons.arrow_forward_ios, size: 14, color: widget.color),
     );
   }
 }
@@ -839,22 +950,11 @@ class _MarketPickerSheetState extends State<_MarketPickerSheet> {
           ),
         Padding(
           padding: const EdgeInsets.all(16),
-          child: CustomTextField(
+          child: CustomSearchBar(
             controller: _searchController,
             hintText: 'Pazar Ara...',
-            prefixIcon: Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: SvgIcon(
-                  iconPath: AppIcons.search,
-                  color: Theme.of(context).hintColor),
-            ),
-            suffixIcon: IconButton(
-              icon: Icon(_isListening ? Icons.mic : Icons.mic_none,
-                  color: _isListening
-                      ? Colors.redAccent
-                      : Theme.of(context).hintColor),
-              onPressed: _listen,
-            ),
+            onMicPressed: _listen,
+            isListening: _isListening,
             onChanged: (val) => setState(() => _query = val),
           ),
         ),

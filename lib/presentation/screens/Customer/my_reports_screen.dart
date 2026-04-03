@@ -6,6 +6,11 @@ import '../../viewmodels/auth_viewmodel.dart';
 import '../../viewmodels/auth_service.dart';
 import '../../viewmodels/language_viewmodel.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../viewmodels/home_viewmodel.dart';
+import '../../../data/models/market.dart';
+import 'customer_seller_detail_screen.dart';
+import 'market_detail_screen.dart';
+import '../../widgets/loading_overlay.dart';
 
 class MyReportsScreen extends StatelessWidget {
   const MyReportsScreen({super.key});
@@ -17,10 +22,9 @@ class MyReportsScreen extends StatelessWidget {
     final userId = authVM.currentUser?.id;
 
     return Scaffold(
-      extendBodyBehindAppBar: true,
       appBar: CustomAppBar(title: Text(langVM.translate('report_history'))),
       body: userId == null
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CustomLoadingIndicator())
           : StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
                   .collection('reports')
@@ -28,7 +32,7 @@ class MyReportsScreen extends StatelessWidget {
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const Center(child: CustomLoadingIndicator());
                 }
 
                 if (snapshot.hasError) {
@@ -71,7 +75,7 @@ class MyReportsScreen extends StatelessWidget {
                 }
 
                 return ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 110, 16, 16),
+                  padding: const EdgeInsets.all(16),
                   itemCount: docs.length,
                   itemBuilder: (context, index) {
                     final report = docs[index].data() as Map<String, dynamic>;
@@ -92,74 +96,200 @@ class MyReportsScreen extends StatelessWidget {
                       statusColor = Colors.blue;
                     }
 
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    final isDark =
+                        Theme.of(context).brightness == Brightness.dark;
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color:
+                            isDark ? Theme.of(context).cardColor : Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isDark
+                              ? Colors.white.withOpacity(0.1)
+                              : Colors.grey.withOpacity(0.1),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.15),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        borderRadius: BorderRadius.circular(16),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(16),
+                          onTap: () async {
+                            if (report['type'] == 'seller' &&
+                                report['reportedId'] != null) {
+                              showDialog(
+                                context: context,
+                                barrierDismissible: false,
+                                builder: (context) => const Center(
+                                    child: CustomLoadingIndicator()),
+                              );
+
+                              try {
+                                final sellerData = await AuthService.instance
+                                    .refreshUserData(report['reportedId']);
+
+                                if (context.mounted) {
+                                  Navigator.pop(context);
+                                  if (sellerData != null) {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            CustomerSellerDetailScreen(
+                                          sellerId: sellerData['id']!,
+                                          sellerName: sellerData['stallName']
+                                                      ?.isNotEmpty ==
+                                                  true
+                                              ? sellerData['stallName']!
+                                              : '${sellerData['firstName']} ${sellerData['lastName']}',
+                                          sellerDescription:
+                                              sellerData['stallDescription'] ??
+                                                  '',
+                                          stallLocation: '',
+                                          stallHours:
+                                              sellerData['stallHours'] ?? '',
+                                          instagramLink:
+                                              sellerData['instagramLink'],
+                                          facebookLink:
+                                              sellerData['facebookLink'],
+                                          profilePicture:
+                                              sellerData['profilePicture'],
+                                          marketName: '',
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                }
+                              } catch (e) {
+                                if (context.mounted) Navigator.pop(context);
+                              }
+                            } else if (report['type'] == 'market' &&
+                                report['reportedId'] != null) {
+                              final homeVM = Provider.of<HomeViewModel>(context,
+                                  listen: false);
+                              Market? market;
+                              try {
+                                market = homeVM.nearbyMarkets.firstWhere(
+                                    (m) => m.id == report['reportedId']);
+                              } catch (_) {
+                                try {
+                                  market = homeVM.provinceMarkets.firstWhere(
+                                      (m) => m.id == report['reportedId']);
+                                } catch (_) {}
+                              }
+
+                              if (market != null) {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        MarketDetailScreen(market: market!),
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Chip(
-                                  label: Text(
-                                    report['type'] == 'seller'
-                                        ? langVM.translate('seller_label')
-                                        : langVM.translate('all_markets'),
-                                    style: const TextStyle(
-                                        fontSize: 12, color: Colors.white),
-                                  ),
-                                  backgroundColor: report['type'] == 'seller'
-                                      ? Colors.orange
-                                      : Colors.blue,
-                                  padding: EdgeInsets.zero,
-                                  visualDensity: VisualDensity.compact,
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: statusColor.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                        color: statusColor.withOpacity(0.5)),
-                                  ),
-                                  child: Text(
-                                    statusText,
-                                    style: TextStyle(
-                                      color: statusColor,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12,
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(10),
+                                      decoration: BoxDecoration(
+                                        color: (report['type'] == 'seller'
+                                                ? Colors.blue
+                                                : Colors.orange)
+                                            .withOpacity(0.1),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(
+                                        report['type'] == 'seller'
+                                            ? Icons.people
+                                            : Icons.storefront,
+                                        color: report['type'] == 'seller'
+                                            ? Colors.blue
+                                            : Colors.orange,
+                                        size: 20,
+                                      ),
                                     ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            '${report['reportedName']}',
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 16,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            formattedDate,
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .onSurface
+                                                  .withOpacity(0.5),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 10, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: statusColor.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(20),
+                                        border: Border.all(
+                                            color:
+                                                statusColor.withOpacity(0.3)),
+                                      ),
+                                      child: Text(
+                                        statusText,
+                                        style: TextStyle(
+                                          color: statusColor,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                const Divider(height: 1),
+                                const SizedBox(height: 12),
+                                Text(
+                                  report['reason'] ?? '',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    height: 1.4,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withOpacity(0.8),
                                   ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 8),
-                            Text(
-                              '${report['reportedName']}',
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              report['reason'] ?? '',
-                              style: TextStyle(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurface
-                                      .withOpacity(0.8)),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              formattedDate,
-                              style: TextStyle(
-                                  fontSize: 12, color: Colors.grey.shade500),
-                            ),
-                          ],
+                          ),
                         ),
                       ),
                     );

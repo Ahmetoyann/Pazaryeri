@@ -1,12 +1,20 @@
+import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:image_cropper/image_cropper.dart';
 import 'package:provider/provider.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 import '../../widgets/success_dialog.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../widgets/custom_bottom_sheets.dart';
+import '../../widgets/custom_snackbars.dart';
+import '../../../core/constants/app_icons.dart';
+import '../../widgets/svg_icon.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/loading_overlay.dart';
+import '../../widgets/custom_button.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -37,6 +45,66 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _lastNameController.dispose();
     _phoneController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    final picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: source);
+
+    if (image != null && mounted) {
+      final primaryColor = Theme.of(context).colorScheme.primary;
+
+      final CroppedFile? croppedFile = await ImageCropper().cropImage(
+        sourcePath: image.path,
+        uiSettings: [
+          AndroidUiSettings(
+            toolbarTitle: 'Profil Fotoğrafını Düzenle',
+            toolbarColor: primaryColor,
+            toolbarWidgetColor: Colors.white,
+            initAspectRatio: CropAspectRatioPreset.square,
+            lockAspectRatio: true,
+            aspectRatioPresets: [CropAspectRatioPreset.square],
+          ),
+          IOSUiSettings(
+            title: 'Profil Fotoğrafını Düzenle',
+            aspectRatioPresets: [CropAspectRatioPreset.square],
+          ),
+        ],
+      );
+
+      if (croppedFile != null && mounted) {
+        try {
+          await LoadingOverlay.show(
+            context,
+            asyncFunction: () async {
+              await context
+                  .read<AuthViewModel>()
+                  .updateProfilePhoto(croppedFile.path);
+            },
+          );
+          if (!mounted) return;
+          CustomSnackbars.showSuccess(context, 'Profil fotoğrafı güncellendi');
+        } catch (e) {
+          if (mounted)
+            CustomSnackbars.showError(context, 'Fotoğraf güncellenemedi: $e');
+        }
+      }
+    }
+  }
+
+  void _showImagePicker(BuildContext context) {
+    final authVM = context.read<AuthViewModel>();
+    CustomBottomSheets.showImagePicker(
+      context: context,
+      cameraText: 'Kamera',
+      galleryText: 'Galeri',
+      removeText: 'Fotoğrafı Kaldır',
+      onCameraTap: () => _pickImage(ImageSource.camera),
+      onGalleryTap: () => _pickImage(ImageSource.gallery),
+      onRemoveTap: authVM.currentUser?.profilePicturePath != null
+          ? () => authVM.removeProfilePhoto()
+          : null,
+    );
   }
 
   Future<void> _saveProfile() async {
@@ -78,16 +146,98 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final authVM = context.watch<AuthViewModel>();
+    final userImage = authVM.currentUser?.profilePicturePath;
+    final bool hasImage = userImage != null && userImage.isNotEmpty;
+
     return Scaffold(
-      extendBodyBehindAppBar: true,
       appBar: const CustomAppBar(title: Text('Profili Düzenle')),
       body: SingleChildScrollView(
-        padding:
-            const EdgeInsets.only(top: 110, left: 16, right: 16, bottom: 16),
+        padding: const EdgeInsets.all(16),
         child: Form(
           key: _formKey,
           child: Column(
             children: [
+              Center(
+                child: GestureDetector(
+                  onTap: () => _showImagePicker(context),
+                  child: Stack(
+                    children: [
+                      if (!hasImage)
+                        CustomPaint(
+                          painter: _DashedBorderPainter(
+                            color: theme.colorScheme.primary.withOpacity(0.5),
+                            borderRadius: 60.0,
+                          ),
+                          child: Container(
+                            height: 120,
+                            width: 120,
+                            decoration: BoxDecoration(
+                              color:
+                                  theme.colorScheme.primary.withOpacity(0.05),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.add_a_photo_outlined,
+                                  color: theme.colorScheme.primary,
+                                  size: 32,
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Fotoğraf Ekle',
+                                  style: TextStyle(
+                                    color: theme.colorScheme.primary,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      else
+                        ClipOval(
+                          child: userImage.startsWith('http')
+                              ? Image.network(
+                                  userImage,
+                                  width: 120,
+                                  height: 120,
+                                  fit: BoxFit.cover,
+                                )
+                              : Image.file(
+                                  File(userImage),
+                                  width: 120,
+                                  height: 120,
+                                  fit: BoxFit.cover,
+                                ),
+                        ),
+                      if (authVM.isUploadingProfilePhoto)
+                        const Positioned.fill(
+                          child: CustomLoadingIndicator(),
+                        ),
+                      if (hasImage)
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: CircleAvatar(
+                            radius: 18,
+                            backgroundColor: theme.colorScheme.primary,
+                            child: SvgIcon(
+                              iconPath: AppIcons.camera,
+                              size: 22,
+                              color: theme.colorScheme.onPrimary,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
               CustomTextField(
                 controller: _firstNameController,
                 labelText: 'İsim',
@@ -115,26 +265,71 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     v!.isEmpty ? 'Telefon numarası boş olamaz' : null,
               ),
               const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _saveProfile,
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 30,
-                          width: 30,
-                          child: CustomLoadingIndicator(size: 30),
-                        )
-                      : const Text(
-                          'Kaydet',
-                        ),
-                ),
+              CustomButton(
+                text: 'Kaydet',
+                onPressed: _saveProfile,
+                isLoading: _isLoading,
               ),
             ],
           ),
         ),
       ),
     );
+  }
+}
+
+class _DashedBorderPainter extends CustomPainter {
+  final Color color;
+  final double strokeWidth;
+  final double dashWidth;
+  final double dashSpace;
+  final double borderRadius;
+
+  _DashedBorderPainter({
+    required this.color,
+    this.strokeWidth = 2.0,
+    this.dashWidth = 8.0,
+    this.dashSpace = 6.0,
+    this.borderRadius = 16.0,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke;
+
+    final rrect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      Radius.circular(borderRadius),
+    );
+
+    final path = Path()..addRRect(rrect);
+    final pathMetrics = path.computeMetrics();
+    final dashedPath = Path();
+
+    for (final metric in pathMetrics) {
+      double distance = 0.0;
+      while (distance < metric.length) {
+        dashedPath.addPath(
+          metric.extractPath(distance, distance + dashWidth),
+          Offset.zero,
+        );
+        distance += dashWidth + dashSpace;
+      }
+    }
+
+    canvas.drawPath(dashedPath, paint);
+  }
+
+  @override
+  bool shouldRepaint(_DashedBorderPainter oldDelegate) {
+    return oldDelegate.color != color ||
+        oldDelegate.strokeWidth != strokeWidth ||
+        oldDelegate.dashWidth != dashWidth ||
+        oldDelegate.dashSpace != dashSpace ||
+        oldDelegate.borderRadius != borderRadius;
   }
 }
 

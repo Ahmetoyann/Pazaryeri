@@ -16,6 +16,7 @@ import '../../widgets/side_menu_drawer.dart';
 import '../../../core/constants/app_icons.dart';
 import '../../../presentation/widgets/svg_icon.dart';
 import '../../widgets/loading_overlay.dart';
+import '../../widgets/custom_button.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -24,9 +25,9 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen>
-    with SingleTickerProviderStateMixin {
+class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   late AnimationController _pulseController;
+  late AnimationController _glowController;
 
   @override
   void initState() {
@@ -35,11 +36,17 @@ class _HomeScreenState extends State<HomeScreen>
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat(reverse: true);
+
+    _glowController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..repeat();
   }
 
   @override
   void dispose() {
     _pulseController.dispose();
+    _glowController.dispose();
     super.dispose();
   }
 
@@ -109,18 +116,13 @@ class _HomeScreenState extends State<HomeScreen>
                     '"${vm.selectedProvince}" ${langVM.translate('province_not_found')}',
                   ),
                   const SizedBox(height: 8),
-                  ElevatedButton(
+                  CustomButton(
+                    text: langVM.translate('clear_selection'),
                     onPressed: () async {
                       vm.clearProvinceSelection();
                       await vm.loadData();
                     },
-                    style: ElevatedButton.styleFrom(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(color: Colors.white.withOpacity(0.3)),
-                      ),
-                    ),
-                    child: Text(langVM.translate('clear_selection')),
+                    isFullWidth: false,
                   ),
                 ],
               ),
@@ -192,17 +194,12 @@ class _HomeScreenState extends State<HomeScreen>
                             langVM.translate('no_nearby_markets')),
                   ),
                   const SizedBox(height: 8),
-                  ElevatedButton(
+                  CustomButton(
+                    text: langVM.translate('retry'),
                     onPressed: () async {
                       await vm.loadData();
                     },
-                    style: ElevatedButton.styleFrom(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(color: Colors.white.withOpacity(0.3)),
-                      ),
-                    ),
-                    child: Text(langVM.translate('retry')),
+                    isFullWidth: false,
                   ),
                 ],
               ),
@@ -249,9 +246,7 @@ class _HomeScreenState extends State<HomeScreen>
                         padding: const EdgeInsets.symmetric(
                             horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.black
-                              : Colors.white,
+                          color: Theme.of(context).colorScheme.surface,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
                               color: Theme.of(context).colorScheme.primary),
@@ -270,14 +265,18 @@ class _HomeScreenState extends State<HomeScreen>
                 ),
                 const SizedBox(height: 12),
                 SizedBox(
-                  height: 200,
+                  height:
+                      220, // Animasyon ve taşan etiket için yükseklik artırıldı
                   child: ListView.builder(
+                    clipBehavior: Clip.none, // Etiketin taşmasına izin ver
                     scrollDirection: Axis.horizontal,
                     itemCount: horizontalList.length,
                     itemBuilder: (context, index) {
                       final market = horizontalList[index];
                       final tag = '${market.id}_hor';
-                      return MarketCard(
+                      final isNearest = index == 0;
+
+                      Widget card = MarketCard(
                         market: market,
                         heroTag: tag,
                         showOccupancy: true,
@@ -290,6 +289,101 @@ class _HomeScreenState extends State<HomeScreen>
                             ),
                           );
                         },
+                      );
+
+                      // Eğer en yakındaki pazarsa (ilk eleman), parlama ve etiket efektini ekle
+                      if (isNearest) {
+                        return Padding(
+                          padding: const EdgeInsets.only(
+                              top: 12, left: 4, right: 8, bottom: 4),
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              AnimatedBuilder(
+                                  animation: _glowController,
+                                  builder: (context, child) {
+                                    return Container(
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(24),
+                                        gradient: SweepGradient(
+                                          colors: [
+                                            Colors.transparent,
+                                            Colors.transparent,
+                                            Theme.of(context)
+                                                .colorScheme
+                                                .primary,
+                                            Colors.transparent,
+                                          ],
+                                          stops: const [0.0, 0.75, 0.95, 1.0],
+                                          transform: GradientRotation(
+                                              _glowController.value *
+                                                  2 *
+                                                  3.1415926535),
+                                        ),
+                                      ),
+                                      padding: const EdgeInsets.all(2.5),
+                                      child: ClipRRect(
+                                        borderRadius:
+                                            BorderRadius.circular(21.5),
+                                        child: Container(
+                                          color: Theme.of(context).cardColor,
+                                          child: card,
+                                        ),
+                                      ),
+                                    );
+                                  }),
+                              Positioned(
+                                top: -10,
+                                right: -10,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color:
+                                        Theme.of(context).colorScheme.primary,
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary
+                                            .withOpacity(0.4),
+                                        blurRadius: 6,
+                                        offset: const Offset(0, 3),
+                                      ),
+                                    ],
+                                    border: Border.all(
+                                        color: Theme.of(context)
+                                            .scaffoldBackgroundColor,
+                                        width: 2),
+                                  ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.stars_rounded,
+                                          color: Colors.white, size: 14),
+                                      SizedBox(width: 4),
+                                      Text(
+                                        'En Yakın',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 11,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+
+                      // Diğer pazarlar (En yakın olmayanlar) için hizalamayı koruyan standart görünüm
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 12, bottom: 4),
+                        child: card,
                       );
                     },
                   ),
@@ -357,16 +451,31 @@ class _HomeScreenState extends State<HomeScreen>
                         // İl Filtresi
                         Expanded(
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 2),
                             decoration: BoxDecoration(
-                              color: Theme.of(context).cardColor,
-                              borderRadius: BorderRadius.circular(12),
+                              color: Theme.of(context).brightness ==
+                                      Brightness.dark
+                                  ? Theme.of(context).cardColor
+                                  : Colors.white,
+                              borderRadius: BorderRadius.circular(16),
                               border: Border.all(
                                 color: Theme.of(context)
                                     .colorScheme
                                     .primary
-                                    .withOpacity(0.5),
+                                    .withOpacity(0.2),
+                                width: 1.5,
                               ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .primary
+                                      .withOpacity(0.05),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
                             ),
                             child: DropdownButtonHideUnderline(
                               child: DropdownButton<String>(
@@ -402,20 +511,40 @@ class _HomeScreenState extends State<HomeScreen>
                         // İlçe Filtresi
                         Expanded(
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 2),
                             decoration: BoxDecoration(
                               color: vm.selectedCityFilter == null
-                                  ? Theme.of(context).cardColor.withOpacity(0.5)
-                                  : Theme.of(context).cardColor,
-                              borderRadius: BorderRadius.circular(12),
+                                  ? (Theme.of(context).brightness ==
+                                          Brightness.dark
+                                      ? Colors.white.withOpacity(0.05)
+                                      : Colors.grey.shade100)
+                                  : (Theme.of(context).brightness ==
+                                          Brightness.dark
+                                      ? Theme.of(context).cardColor
+                                      : Colors.white),
+                              borderRadius: BorderRadius.circular(16),
                               border: Border.all(
                                 color: vm.selectedCityFilter == null
-                                    ? Colors.grey.withOpacity(0.4)
+                                    ? Colors.transparent
                                     : Theme.of(context)
                                         .colorScheme
                                         .primary
-                                        .withOpacity(0.5),
+                                        .withOpacity(0.2),
+                                width: 1.5,
                               ),
+                              boxShadow: vm.selectedCityFilter == null
+                                  ? []
+                                  : [
+                                      BoxShadow(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary
+                                            .withOpacity(0.05),
+                                        blurRadius: 10,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
                             ),
                             child: DropdownButtonHideUnderline(
                               child: DropdownButton<String>(
@@ -544,32 +673,20 @@ class _HomeScreenState extends State<HomeScreen>
                           '${langVM.translate('error_prefix')}: ${vm.errorMessage}',
                         ),
                         const SizedBox(height: 12),
-                        ElevatedButton(
+                        CustomButton(
+                          text: langVM.translate('settings'),
                           onPressed: () async {
                             await Geolocator.openAppSettings();
                           },
-                          style: ElevatedButton.styleFrom(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              side: BorderSide(
-                                  color: Colors.white.withOpacity(0.3)),
-                            ),
-                          ),
-                          child: Text(langVM.translate('settings')),
+                          isFullWidth: false,
                         ),
                         const SizedBox(height: 8),
-                        ElevatedButton(
+                        CustomButton(
+                          text: langVM.translate('location_settings'),
                           onPressed: () async {
                             await Geolocator.openLocationSettings();
                           },
-                          style: ElevatedButton.styleFrom(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              side: BorderSide(
-                                  color: Colors.white.withOpacity(0.3)),
-                            ),
-                          ),
-                          child: Text(langVM.translate('location_settings')),
+                          isFullWidth: false,
                         ),
                       ],
                     ),
@@ -592,19 +709,34 @@ class _HomeScreenState extends State<HomeScreen>
           right: 16,
           child: Row(
             children: [
-              Container(
-                padding: const EdgeInsets.only(left: 8),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? Colors.white.withOpacity(0.2)
-                      : Colors.black.withOpacity(0.05),
-                  borderRadius:
-                      const BorderRadius.horizontal(right: Radius.circular(32)),
-                ),
-                child: IconButton(
-                  icon: Icon(Icons.menu,
-                      color: Theme.of(context).iconTheme.color),
-                  onPressed: () => Scaffold.of(context).openDrawer(),
+              GestureDetector(
+                onHorizontalDragUpdate: (details) {
+                  if (details.delta.dx > 0 &&
+                      !Scaffold.of(context).isDrawerOpen) {
+                    Scaffold.of(context).openDrawer();
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.only(left: 8),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surface,
+                    borderRadius: const BorderRadius.horizontal(
+                        right: Radius.circular(32)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.black.withOpacity(0.3)
+                            : Colors.black.withOpacity(0.2),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: IconButton(
+                    icon: Icon(Icons.menu,
+                        color: Theme.of(context).colorScheme.primary),
+                    onPressed: () => Scaffold.of(context).openDrawer(),
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -680,7 +812,7 @@ class _HomeScreenState extends State<HomeScreen>
                                             .primary),
                                     style: OutlinedButton.styleFrom(
                                       padding: const EdgeInsets.symmetric(
-                                          vertical: 16),
+                                          vertical: 16, horizontal: 8),
                                       side: BorderSide(
                                           color: Theme.of(context)
                                               .colorScheme
@@ -692,12 +824,21 @@ class _HomeScreenState extends State<HomeScreen>
                                       foregroundColor:
                                           Theme.of(context).colorScheme.primary,
                                     ),
-                                    label: Text(langVM.translate('settings')),
+                                    label: Flexible(
+                                      child: Text(
+                                        langVM.translate('settings'),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(
-                                  child: ElevatedButton.icon(
+                                  child: CustomButton(
+                                    text: langVM.translate('location_refresh'),
+                                    icon: Icons.refresh,
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8),
                                     onPressed: () async {
                                       vm.clearProvinceSelection();
                                       await vm.loadData();
@@ -709,21 +850,6 @@ class _HomeScreenState extends State<HomeScreen>
                                         );
                                       }
                                     },
-                                    icon: const Icon(Icons.refresh),
-                                    style: ElevatedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 16),
-                                      backgroundColor:
-                                          Theme.of(context).colorScheme.primary,
-                                      foregroundColor: Colors.white,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      elevation: 0,
-                                    ),
-                                    label: Text(
-                                      langVM.translate('location_refresh'),
-                                    ),
                                   ),
                                 ),
                               ],
@@ -736,7 +862,7 @@ class _HomeScreenState extends State<HomeScreen>
                   child: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).cardColor,
+                      color: Theme.of(context).colorScheme.surface,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: Theme.of(context)
@@ -746,7 +872,9 @@ class _HomeScreenState extends State<HomeScreen>
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.black.withOpacity(0.3)
+                              : Colors.black.withOpacity(0.1),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),

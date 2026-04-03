@@ -7,6 +7,7 @@ import '../../viewmodels/language_viewmodel.dart';
 import '../../viewmodels/auth_service.dart';
 import '../../widgets/custom_bottom_sheets.dart';
 import '../../widgets/custom_snackbars.dart';
+import '../../widgets/loading_overlay.dart';
 
 class SellerStatsScreen extends StatefulWidget {
   const SellerStatsScreen({super.key});
@@ -666,7 +667,7 @@ class _SellerStatsScreenState extends State<SellerStatsScreen> {
                   AuthService.instance.getRecentProductViewers(currentUserId),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const Center(child: CustomLoadingIndicator());
                 }
 
                 final viewers = snapshot.data ?? [];

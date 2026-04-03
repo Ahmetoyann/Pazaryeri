@@ -1,13 +1,17 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:provider/provider.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 import '../../viewmodels/language_viewmodel.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/success_dialog.dart';
 import '../../widgets/custom_bottom_sheets.dart';
+import '../../widgets/custom_snackbars.dart';
 import '../../../core/constants/app_icons.dart';
 import '../../../presentation/widgets/svg_icon.dart';
+import '../../widgets/custom_button.dart';
 
 class SellerEditProfileScreen extends StatefulWidget {
   const SellerEditProfileScreen({super.key});
@@ -25,6 +29,9 @@ class _SellerEditProfileScreenState extends State<SellerEditProfileScreen> {
   late TextEditingController _emailController;
 
   bool _isLoading = false;
+  Timer? _emailCheckTimer;
+  bool _passwordResetSent = false;
+  Timer? _passwordResetTimer;
 
   @override
   void initState() {
@@ -34,6 +41,11 @@ class _SellerEditProfileScreenState extends State<SellerEditProfileScreen> {
     _lastNameController = TextEditingController(text: user?.lastName ?? '');
     _phoneController = TextEditingController(text: user?.phoneNumber ?? '');
     _emailController = TextEditingController(text: user?.email ?? '');
+
+    final firebaseUser = firebase_auth.FirebaseAuth.instance.currentUser;
+    if (firebaseUser != null && !firebaseUser.emailVerified) {
+      _startEmailCheckTimer();
+    }
   }
 
   @override
@@ -42,7 +54,27 @@ class _SellerEditProfileScreenState extends State<SellerEditProfileScreen> {
     _lastNameController.dispose();
     _phoneController.dispose();
     _emailController.dispose();
+    _emailCheckTimer?.cancel();
+    _passwordResetTimer?.cancel();
     super.dispose();
+  }
+
+  void _startEmailCheckTimer() {
+    _emailCheckTimer?.cancel();
+    // Her 3 saniyede bir arka planda e-posta onayını kontrol et
+    _emailCheckTimer =
+        Timer.periodic(const Duration(seconds: 3), (timer) async {
+      final user = firebase_auth.FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await user
+            .reload(); // Firebase'den güncel veriyi çek (userChanges stream'ini tetikler)
+        if (user.emailVerified) {
+          timer.cancel();
+          if (mounted)
+            setState(() {}); // UI'ı yeni "Doğrulandı" durumuna güncelle
+        }
+      }
+    });
   }
 
   Future<void> _saveProfile() async {
@@ -63,18 +95,14 @@ class _SellerEditProfileScreenState extends State<SellerEditProfileScreen> {
       );
 
       if (mounted) {
-        await DialogService.showSuccess(
-          context,
-          message: langVM.translate('success_profile_updated'),
-        );
+        CustomSnackbars.showSuccess(
+            context, langVM.translate('success_profile_updated'));
         if (mounted) Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
-        await DialogService.showError(
-          context,
-          message: '${langVM.translate('error_prefix')}: $e',
-        );
+        CustomSnackbars.showError(
+            context, '${langVM.translate('error_prefix')}: $e');
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -88,14 +116,19 @@ class _SellerEditProfileScreenState extends State<SellerEditProfileScreen> {
     try {
       await authVM.resetPassword(_emailController.text);
       if (mounted) {
-        DialogService.showSuccess(
-          context,
-          message: langVM.translate('code_sent'),
-        );
+        setState(() {
+          _passwordResetSent = true;
+        });
+        _passwordResetTimer?.cancel();
+        _passwordResetTimer = Timer(const Duration(seconds: 5), () {
+          if (mounted) {
+            setState(() => _passwordResetSent = false);
+          }
+        });
       }
     } catch (e) {
       if (mounted) {
-        DialogService.showError(context, message: e.toString());
+        CustomSnackbars.showError(context, e.toString());
       }
     }
   }
@@ -136,23 +169,12 @@ class _SellerEditProfileScreenState extends State<SellerEditProfileScreen> {
               ),
               const SizedBox(width: 16),
               Expanded(
-                child: ElevatedButton(
+                child: CustomButton(
+                  text: langVM.translate('send_code'),
                   onPressed: () {
                     Navigator.pop(context);
                     _sendPasswordResetEmail();
                   },
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: theme.colorScheme.primary.withOpacity(0.2),
-                    foregroundColor: theme.colorScheme.primary,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      side: BorderSide(
-                          color: theme.colorScheme.primary.withOpacity(0.5)),
-                    ),
-                  ),
-                  child: Text(langVM.translate('send_code')),
                 ),
               ),
             ],
@@ -169,9 +191,7 @@ class _SellerEditProfileScreenState extends State<SellerEditProfileScreen> {
       prefixIcon: Padding(
           padding: const EdgeInsets.all(12),
           child: SvgIcon(
-              iconPath: iconPath,
-              color: theme.colorScheme.secondary,
-              size: 28)),
+              iconPath: iconPath, color: theme.colorScheme.primary, size: 28)),
       filled: true,
       fillColor: theme.cardColor,
       border: OutlineInputBorder(
@@ -261,6 +281,104 @@ class _SellerEditProfileScreenState extends State<SellerEditProfileScreen> {
                   fillColor: theme.disabledColor.withOpacity(0.1),
                 ),
               ),
+              StreamBuilder<firebase_auth.User?>(
+                stream: firebase_auth.FirebaseAuth.instance.userChanges(),
+                initialData: firebase_auth.FirebaseAuth.instance.currentUser,
+                builder: (context, snapshot) {
+                  final user = snapshot.data;
+                  if (user == null) return const SizedBox.shrink();
+
+                  if (user.emailVerified) {
+                    return Container(
+                      margin: const EdgeInsets.only(top: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border:
+                            Border.all(color: Colors.green.withOpacity(0.3)),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.check_circle,
+                              color: Colors.green, size: 20),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'E-posta adresiniz doğrulandı',
+                              style: TextStyle(
+                                  color: Colors.green,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  } else {
+                    // Onaylanmamışsa arka plan kontrolcüsünü başlat
+                    if (_emailCheckTimer == null ||
+                        !_emailCheckTimer!.isActive) {
+                      _startEmailCheckTimer();
+                    }
+
+                    return Container(
+                      margin: const EdgeInsets.only(top: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border:
+                            Border.all(color: Colors.orange.withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.warning_amber_rounded,
+                              color: Colors.orange, size: 20),
+                          const SizedBox(width: 8),
+                          const Expanded(
+                            child: Text(
+                              'E-posta doğrulanmadı',
+                              style:
+                                  TextStyle(color: Colors.orange, fontSize: 13),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () async {
+                              try {
+                                await user.sendEmailVerification();
+                                if (context.mounted) {
+                                  CustomSnackbars.showSuccess(context,
+                                      'Doğrulama e-postası gönderildi.');
+                                }
+                              } catch (e) {
+                                if (context.mounted) {
+                                  CustomSnackbars.showError(
+                                      context, 'Hata: $e');
+                                }
+                              }
+                            },
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 4),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            child: const Text(
+                              'Doğrula',
+                              style: TextStyle(
+                                  color: Colors.orange,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                },
+              ),
 
               const SizedBox(height: 32),
 
@@ -283,28 +401,43 @@ class _SellerEditProfileScreenState extends State<SellerEditProfileScreen> {
                 ),
               ),
 
-              const SizedBox(height: 32),
-
-              ElevatedButton(
-                onPressed: _isLoading ? null : _saveProfile,
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  backgroundColor: theme.colorScheme.primary.withOpacity(0.2),
-                  foregroundColor: theme.colorScheme.primary,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
+              // Şifre sıfırlama e-postası gönderildiğinde çıkacak yeşil kart
+              if (_passwordResetSent)
+                Container(
+                  margin: const EdgeInsets.only(top: 16),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(
-                        color: theme.colorScheme.primary.withOpacity(0.5)),
+                    border: Border.all(color: Colors.green.withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.mark_email_read,
+                          color: Colors.green, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          langVM.translate('code_sent'),
+                          style: const TextStyle(
+                              color: Colors.green,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                child: _isLoading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Text(langVM.translate('save_changes')),
+
+              const SizedBox(height: 32),
+
+              CustomButton(
+                text: langVM.translate('save_changes'),
+                onPressed: _isLoading ? null : _saveProfile,
+                isLoading: _isLoading,
+                backgroundColor: theme.colorScheme.primary.withOpacity(0.2),
+                foregroundColor: theme.colorScheme.primary,
               ),
             ],
           ),

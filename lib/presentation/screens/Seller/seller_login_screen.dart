@@ -9,6 +9,7 @@ import '../../widgets/custom_snackbars.dart';
 import '../../../core/constants/app_icons.dart';
 import '../../../presentation/widgets/svg_icon.dart';
 import '../../widgets/loading_overlay.dart';
+import '../../widgets/custom_button.dart';
 
 class SellerLoginScreen extends StatefulWidget {
   const SellerLoginScreen({super.key});
@@ -47,13 +48,15 @@ class _SellerLoginScreenState extends State<SellerLoginScreen> {
             rememberMe: _rememberMe,
           );
           if (success && mounted) {
+            CustomSnackbars.showSuccess(
+                context, langVM.translate('login_success'));
             Navigator.of(context).popUntil((route) => route.isFirst);
           }
         } catch (e) {
           if (mounted) {
             Future.delayed(const Duration(milliseconds: 100), () {
-              DialogService.showError(context,
-                  message: '${langVM.translate('error_prefix')}: $e');
+              CustomSnackbars.showError(
+                  context, '${langVM.translate('error_prefix')}: $e');
             });
           }
         }
@@ -93,7 +96,10 @@ class _SellerLoginScreenState extends State<SellerLoginScreen> {
             keyboardType: TextInputType.emailAddress,
           ),
           const SizedBox(height: 24),
-          ElevatedButton(
+          CustomButton(
+            text: langVM.translate('send_button'),
+            backgroundColor: Theme.of(context).colorScheme.secondary,
+            foregroundColor: Colors.white,
             onPressed: () async {
               if (emailController.text.trim().isEmpty) return;
               Navigator.pop(context);
@@ -102,10 +108,8 @@ class _SellerLoginScreenState extends State<SellerLoginScreen> {
                 await Provider.of<AuthViewModel>(context, listen: false)
                     .resetPassword(emailController.text.trim());
                 if (mounted) {
-                  await DialogService.showSuccess(
-                    context,
-                    message: langVM.translate('code_sent'),
-                  );
+                  CustomSnackbars.showSuccess(
+                      context, langVM.translate('code_sent'));
                 }
               } catch (e) {
                 if (mounted) {
@@ -114,18 +118,6 @@ class _SellerLoginScreenState extends State<SellerLoginScreen> {
                 }
               }
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.secondary,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: Text(
-              langVM.translate('send_button'),
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
           ),
           const SizedBox(height: 12),
           TextButton(
@@ -207,7 +199,7 @@ class _SellerLoginScreenState extends State<SellerLoginScreen> {
                               width: 1.5),
                         ),
                         child: Icon(
-                          Icons.storefront,
+                          Icons.people,
                           color: Theme.of(context).colorScheme.primary,
                           size: MediaQuery.of(context).size.width * 0.24,
                         )),
@@ -283,23 +275,9 @@ class _SellerLoginScreenState extends State<SellerLoginScreen> {
                       ],
                     ),
                     const SizedBox(height: 24),
-                    ElevatedButton(
+                    CustomButton(
+                      text: langVM.translate('login'),
                       onPressed: _login,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context).colorScheme.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: Text(
-                        langVM.translate('login'),
-                        style: const TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
                     ),
                     const SizedBox(height: 24),
                     Row(
@@ -335,7 +313,7 @@ class _SellerLoginScreenState extends State<SellerLoginScreen> {
             top: 40,
             left: 16,
             child: IconButton(
-              icon: const SvgIcon(iconPath: AppIcons.back, size: 28),
+              icon: Icon(Icons.arrow_back, size: 24),
               onPressed: () => Navigator.of(context).pop(),
             ),
           ),

@@ -338,7 +338,20 @@ class _ProductCardState extends State<ProductCard> {
                     style: const TextStyle(
                         fontWeight: FontWeight.bold, fontSize: 14),
                   ),
-                  const SizedBox(height: 4),
+                  Container(
+                    height: 40, // 2 satır, font 12 için sabit yükseklik
+                    padding: const EdgeInsets.only(top: 4.0),
+                    alignment: Alignment.topLeft,
+                    child: Text(
+                      product['description'] ?? '',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: theme.colorScheme.onSurface.withOpacity(0.7),
+                      ),
+                    ),
+                  ),
                   RichText(
                     text: TextSpan(
                       children: [

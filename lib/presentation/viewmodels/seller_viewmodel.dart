@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:image_cropper/image_cropper.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -213,8 +214,40 @@ class SellerViewModel extends ChangeNotifier {
       maxHeight: 800, // Yüksekliği 800px ile sınırla
     );
     if (image != null) {
-      _selectedImages.add(image);
-      notifyListeners();
+      final CroppedFile? croppedFile = await ImageCropper().cropImage(
+        sourcePath: image.path,
+        uiSettings: [
+          AndroidUiSettings(
+            toolbarTitle: 'Görseli Düzenle',
+            toolbarColor: Colors.orange, // Sabit bir renk verildi
+            toolbarWidgetColor: Colors.white,
+            initAspectRatio: CropAspectRatioPreset.original,
+            lockAspectRatio: false,
+            aspectRatioPresets: [
+              CropAspectRatioPreset.square,
+              CropAspectRatioPreset.ratio3x2,
+              CropAspectRatioPreset.original,
+              CropAspectRatioPreset.ratio4x3,
+              CropAspectRatioPreset.ratio16x9
+            ],
+          ),
+          IOSUiSettings(
+            title: 'Görseli Düzenle',
+            aspectRatioPresets: [
+              CropAspectRatioPreset.square,
+              CropAspectRatioPreset.ratio3x2,
+              CropAspectRatioPreset.original,
+              CropAspectRatioPreset.ratio4x3,
+              CropAspectRatioPreset.ratio16x9
+            ],
+          ),
+        ],
+      );
+
+      if (croppedFile != null) {
+        _selectedImages.add(XFile(croppedFile.path));
+        notifyListeners();
+      }
     }
   }
 
@@ -249,6 +282,7 @@ class SellerViewModel extends ChangeNotifier {
 
     final userId = AuthService.instance.currentUserId;
     if (userId != null) {
+      debugPrint('Loading products for seller: $userId');
       await _fetchProductsFromFirestore(userId);
     }
 
@@ -260,6 +294,7 @@ class SellerViewModel extends ChangeNotifier {
   Future<void> _fetchProductsFromFirestore(String userId) async {
     try {
       final productsData = await AuthService.instance.getSellerProducts(userId);
+      debugPrint('Fetched ${productsData.length} products from Firestore');
       List<SellerProduct> products =
           productsData.map((data) => SellerProduct.fromMap(data)).toList();
 
@@ -542,17 +577,17 @@ class SellerProduct {
 
   factory SellerProduct.fromMap(Map<String, dynamic> map) {
     return SellerProduct(
-      id: map['id'],
+      id: map['id'] ?? '',
       sellerId: map['sellerId'] ?? 'system',
-      name: map['name'],
-      description: map['description'],
-      price: (map['price'] as num).toDouble(),
-      category: map['category'],
+      name: map['name'] ?? '',
+      description: map['description'] ?? '',
+      price: (map['price'] as num?)?.toDouble() ?? 0.0,
+      category: map['category'] ?? 'category_other',
       imagePath: map['imagePath'],
       inStock: map['inStock'] ?? true,
-      viewCount: map['viewCount'] ?? 0,
+      viewCount: (map['viewCount'] as num?)?.toInt() ?? 0,
       salesCount: (map['salesCount'] as num?)?.toDouble() ?? 0.0,
-      stockQuantity: (map['stockQuantity'] as num).toDouble(),
+      stockQuantity: (map['stockQuantity'] as num?)?.toDouble() ?? 0.0,
       unit: map['unit'] ?? 'unit_kg',
     );
   }

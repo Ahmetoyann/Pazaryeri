@@ -11491,5 +11491,32 @@
         "openDays": [
             "Çarşamba"
         ]
+    },
+    {
+        "id": "izm_bal_kapali",
+        "name": "Balçova Kapalı Pazar Yeri",
+        "description": "Teleferik Mah. Öz Sağlık Sk. No:33 A",
+        "latitude": 38.3860,
+        "longitude": 27.0460,
+        "neighborhood": "Teleferik",
+        "district": "Balçova",
+        "city": "İzmir",
+        "openDays": [
+            "Çarşamba",
+            "Cumartesi"
+        ]
+    },
+    {
+        "id": "izm_bal_viyaduk",
+        "name": "Balçova Viyadükaltı Pazar Yeri",
+        "description": "Eğitim Mah. Mehmet Şeref Sk.",
+        "latitude": 38.3925,
+        "longitude": 27.0545,
+        "neighborhood": "Eğitim",
+        "district": "Balçova",
+        "city": "İzmir",
+        "openDays": [
+            "Pazar"
+        ]
     }
 ]

@@ -13,6 +13,9 @@ import '../../widgets/product_card.dart';
 import '../../../core/constants/app_icons.dart';
 import '../../../presentation/widgets/svg_icon.dart';
 import '../../widgets/custom_bottom_sheets.dart';
+import '../../widgets/custom_button.dart';
+import '../../widgets/loading_overlay.dart';
+import '../../widgets/custom_snackbars.dart';
 
 class CustomerSellerDetailScreen extends StatefulWidget {
   final String sellerId;
@@ -22,6 +25,8 @@ class CustomerSellerDetailScreen extends StatefulWidget {
   final String stallHours;
   final String? instagramLink;
   final String? facebookLink;
+  final String? instagramName;
+  final String? facebookName;
   final String? profilePicture;
   final String? marketName;
   final String? highlightReviewId;
@@ -35,6 +40,8 @@ class CustomerSellerDetailScreen extends StatefulWidget {
     required this.stallHours,
     this.instagramLink,
     this.facebookLink,
+    this.instagramName,
+    this.facebookName,
     this.profilePicture,
     this.marketName,
     this.highlightReviewId,
@@ -74,6 +81,24 @@ class _CustomerSellerDetailScreenState
     'category_spices',
     'category_fish',
     'category_clothing',
+    'category_electronics',
+    'category_second_hand',
+    'category_animals',
+    'category_home',
+    'category_toys',
+    'category_books',
+    'category_tools',
+    'category_plants',
+    'category_handmade',
+    'category_cosmetics',
+    'category_sports',
+    'category_automotive',
+    'category_antiques',
+    'category_jewelry',
+    'category_art',
+    'category_baby',
+    'category_music',
+    'category_office',
     'category_other',
   ];
 
@@ -527,13 +552,13 @@ class _CustomerSellerDetailScreenState
     }
 
     final commentController = TextEditingController();
-    int selectedRating = 5;
+    int selectedRating = 0;
 
     CustomBottomSheets.showContent(
       context: context,
       title: 'Satıcıyı Değerlendir',
       child: StatefulBuilder(
-        builder: (context, setState) => Column(
+        builder: (sheetContext, setState) => Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -557,57 +582,64 @@ class _CustomerSellerDetailScreenState
             const SizedBox(height: 16),
             TextField(
               controller: commentController,
-              style: TextStyle(color: Theme.of(context).colorScheme.primary),
+              style:
+                  TextStyle(color: Theme.of(sheetContext).colorScheme.primary),
               decoration: InputDecoration(
                 hintText: 'Yorumunuzu yazın...',
                 hintStyle: TextStyle(
-                    color:
-                        Theme.of(context).colorScheme.primary.withOpacity(0.7)),
+                    color: Theme.of(sheetContext)
+                        .colorScheme
+                        .primary
+                        .withOpacity(0.7)),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(
-                    color: Theme.of(context).colorScheme.primary,
+                    color: Theme.of(sheetContext).colorScheme.primary,
                   ),
                 ),
                 filled: true,
-                fillColor: Theme.of(context).cardColor,
+                fillColor: Theme.of(sheetContext).cardColor,
                 contentPadding: const EdgeInsets.all(16),
               ),
               maxLines: 3,
             ),
             const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                onPressed: () async {
-                  if (commentController.text.trim().isEmpty) return;
+            CustomButton(
+              text: 'Gönder',
+              onPressed: () async {
+                if (selectedRating == 0) {
+                  CustomSnackbars.showWarning(
+                      sheetContext, 'Lütfen puan verin.');
+                  return;
+                }
+                if (commentController.text.trim().isEmpty) {
+                  CustomSnackbars.showWarning(
+                      sheetContext, 'Lütfen yorum yazın.');
+                  return;
+                }
 
-                  final review = {
-                    'sellerId': widget.sellerId,
-                    'userId': authVM.currentUser!.id,
-                    'rating': selectedRating,
-                    'comment': commentController.text.trim(),
-                    'date': DateTime.now().toIso8601String(),
-                  };
+                final review = {
+                  'sellerId': widget.sellerId,
+                  'userId': authVM.currentUser!.id,
+                  'rating': selectedRating,
+                  'comment': commentController.text.trim(),
+                  'date': DateTime.now().toIso8601String(),
+                };
 
-                  Navigator.pop(context); // Dialog'u kapat
+                Navigator.pop(sheetContext); // Dialog'u kapat
 
-                  try {
-                    await AuthService.instance.addSellerReview(review);
-                    _loadReviews(); // Yorumları yenile
-                    _loadSellerStats(); // Puanı yenile
-                  } catch (e) {
-                    debugPrint('Yorum eklenemedi: $e');
+                try {
+                  await AuthService.instance.addSellerReview(review);
+                  _loadReviews(); // Yorumları yenile
+                  _loadSellerStats(); // Puanı yenile
+                  if (mounted) {
+                    CustomSnackbars.showSuccess(
+                        context, 'Değerlendirmeniz gönderildi.');
                   }
-                },
-                child: const Text('Gönder'),
-              ),
+                } catch (e) {
+                  debugPrint('Yorum eklenemedi: $e');
+                }
+              },
             ),
           ],
         ),
@@ -671,7 +703,7 @@ class _CustomerSellerDetailScreenState
                                 widget.profilePicture!,
                                 fit: BoxFit.cover,
                                 errorBuilder: (context, error, stackTrace) =>
-                                    const Icon(Icons.person,
+                                    const Icon(Icons.people,
                                         color: Colors.grey),
                               ),
                             )
@@ -681,11 +713,11 @@ class _CustomerSellerDetailScreenState
                                 File(widget.profilePicture!),
                                 fit: BoxFit.cover,
                                 errorBuilder: (context, error, stackTrace) =>
-                                    const Icon(Icons.person,
+                                    const Icon(Icons.people,
                                         color: Colors.grey),
                               ),
                             ))
-                      : const Icon(Icons.person, color: Colors.grey, size: 30),
+                      : const Icon(Icons.people, color: Colors.grey, size: 30),
                 ),
                 const SizedBox(width: 16),
                 // Seller info
@@ -844,7 +876,10 @@ class _CustomerSellerDetailScreenState
                                     color: Colors.white),
                                 const SizedBox(width: 8),
                                 Text(
-                                  _extractUsername(widget.instagramLink!),
+                                  (widget.instagramName != null &&
+                                          widget.instagramName!.isNotEmpty)
+                                      ? widget.instagramName!
+                                      : _extractUsername(widget.instagramLink!),
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontWeight: FontWeight.bold,
@@ -888,7 +923,10 @@ class _CustomerSellerDetailScreenState
                                     color: Colors.white),
                                 const SizedBox(width: 8),
                                 Text(
-                                  _extractUsername(widget.facebookLink!),
+                                  (widget.facebookName != null &&
+                                          widget.facebookName!.isNotEmpty)
+                                      ? widget.facebookName!
+                                      : _extractUsername(widget.facebookLink!),
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontWeight: FontWeight.bold,
@@ -950,7 +988,7 @@ class _CustomerSellerDetailScreenState
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CustomLoadingIndicator())
           : _products.isEmpty
               ? SingleChildScrollView(
                   padding: const EdgeInsets.only(bottom: 100),
@@ -979,7 +1017,31 @@ class _CustomerSellerDetailScreenState
                         SliverPersistentHeader(
                           delegate: _SliverAppBarDelegate(
                             TabBar(
-                              isScrollable: true,
+                              indicatorSize: TabBarIndicatorSize.tab,
+                              dividerColor: Colors.transparent,
+                              indicator: BoxDecoration(
+                                borderRadius: BorderRadius.circular(30),
+                                color: Theme.of(context).colorScheme.primary,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .primary
+                                        .withOpacity(0.3),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  )
+                                ],
+                              ),
+                              labelColor: Colors.white,
+                              unselectedLabelColor: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withOpacity(0.6),
+                              labelStyle:
+                                  const TextStyle(fontWeight: FontWeight.bold),
+                              splashBorderRadius: BorderRadius.circular(30),
+                              padding: const EdgeInsets.all(4),
                               tabs: [
                                 Tab(text: langVM.translate('products_tab')),
                                 Tab(text: langVM.translate('reviews')),
@@ -1040,9 +1102,18 @@ class _CustomerSellerDetailScreenState
               const SizedBox(width: 12),
               Container(
                 decoration: BoxDecoration(
+                  boxShadow: [
+                    BoxShadow(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white.withOpacity(0.25)
+                          : Colors.black.withOpacity(0.2),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                   color: Theme.of(context).brightness == Brightness.dark
-                      ? Colors.white.withOpacity(0.15)
-                      : Colors.black.withOpacity(0.05),
+                      ? Colors.black
+                      : Colors.white,
                   shape: BoxShape.circle,
                 ),
                 child: IconButton(
@@ -1111,7 +1182,7 @@ class _CustomerSellerDetailScreenState
 
   Widget _buildReviewsTab(BuildContext context, LanguageViewModel langVM) {
     if (_reviewsLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(child: CustomLoadingIndicator());
     }
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -1255,19 +1326,29 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
   _SliverAppBarDelegate(this._tabBar, this._backgroundColor);
 
   @override
-  double get minExtent => _tabBar.preferredSize.height;
+  double get minExtent => _tabBar.preferredSize.height + 16;
   @override
-  double get maxExtent => _tabBar.preferredSize.height;
+  double get maxExtent => _tabBar.preferredSize.height + 16;
 
   @override
   Widget build(
       BuildContext context, double shrinkOffset, bool overlapsContent) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return ClipRRect(
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: Container(
           color: _backgroundColor,
-          child: _tabBar,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Container(
+            decoration: BoxDecoration(
+              color: isDark
+                  ? Colors.white.withOpacity(0.05)
+                  : Colors.grey.shade200,
+              borderRadius: BorderRadius.circular(30),
+            ),
+            child: _tabBar,
+          ),
         ),
       ),
     );

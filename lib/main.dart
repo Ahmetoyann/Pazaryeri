@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'presentation/screens/Customer/home_screen.dart';
 import 'presentation/screens/Customer/search_screen.dart';
 import 'presentation/screens/Customer/report_list_screen.dart';
@@ -33,17 +34,26 @@ import 'presentation/screens/Seller/seller_market_selection_screen.dart';
 import 'presentation/screens/Seller/seller_main_screen.dart';
 import 'app_theme.dart';
 import 'presentation/widgets/success_dialog.dart';
+import 'presentation/widgets/custom_snackbars.dart';
 import 'core/constants/app_icons.dart';
 import 'presentation/widgets/svg_icon.dart';
 import 'presentation/widgets/side_menu_drawer.dart';
 import 'presentation/widgets/loading_overlay.dart';
+import 'firebase_options.dart';
 
 // Global navigasyon anahtarı
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  // Arka plan bildirimlerini işlemek için handler'ı kaydet
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+
   await NotificationService.instance.init();
   final bool showOnboarding = !(await AuthService.instance.isOnboardingSeen());
   runApp(MyApp(showOnboarding: showOnboarding));
@@ -82,37 +92,37 @@ class MyApp extends StatelessWidget {
           );
 
           // Modern Light Tema
+          final lightColorScheme = ColorScheme.fromSeed(
+            seedColor: themeVM.seedColor,
+            primary: themeVM.seedColor,
+            brightness: Brightness.light,
+            surface: Colors.white,
+          );
           final lightBase = ThemeData(
             useMaterial3: true,
             brightness: Brightness.light,
-            colorScheme: ColorScheme.fromSeed(
-              seedColor: Colors.orange,
-              primary: Colors.orange,
-              secondary: Colors.deepOrange,
-              surface: Colors.white,
-              onSurface: Colors.black87,
-              surfaceContainer: Colors.orange.shade50,
-            ),
+            colorScheme: lightColorScheme,
             scaffoldBackgroundColor: Colors.white,
             cardTheme: CardThemeData(
-              color: Colors.orange.shade50,
+              color: lightColorScheme.surfaceContainer,
               elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
-                side: BorderSide(color: Colors.orange.withOpacity(0.1)),
+                side: BorderSide(
+                    color: lightColorScheme.primary.withOpacity(0.1)),
               ),
             ),
-            appBarTheme: const AppBarTheme(
+            appBarTheme: AppBarTheme(
               backgroundColor: Colors.transparent,
               elevation: 0,
               centerTitle: true,
-              iconTheme: IconThemeData(color: Colors.black87),
+              iconTheme: IconThemeData(color: lightColorScheme.onSurface),
               titleTextStyle: TextStyle(
-                color: Colors.black87,
+                color: lightColorScheme.onSurface,
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
               ),
-              systemOverlayStyle: SystemUiOverlayStyle(
+              systemOverlayStyle: const SystemUiOverlayStyle(
                 statusBarColor: Colors.transparent,
                 statusBarIconBrightness: Brightness.dark,
                 statusBarBrightness: Brightness.light,
@@ -120,7 +130,7 @@ class MyApp extends StatelessWidget {
             ),
             inputDecorationTheme: InputDecorationTheme(
               filled: true,
-              fillColor: Colors.grey.shade100,
+              fillColor: lightColorScheme.surfaceContainer,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,
@@ -164,7 +174,10 @@ class MyApp extends StatelessWidget {
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                             colors: isDark
-                                ? [Colors.black, Colors.black]
+                                ? [
+                                    const Color(0xFF121212),
+                                    const Color(0xFF121212)
+                                  ] // Spotify benzeri koyu gri
                                 : [Colors.white, Colors.white],
                           ),
                         ),
@@ -324,10 +337,7 @@ class _GlobalConnectivityManagerState extends State<GlobalConnectivityManager> {
       message = langVM.translate('no_internet');
     } catch (_) {}
 
-    await DialogService.showError(
-      context,
-      message: message,
-    );
+    CustomSnackbars.showError(context, message);
 
     if (mounted) {
       _isDialogShowing = false;
@@ -355,10 +365,7 @@ class _GlobalConnectivityManagerState extends State<GlobalConnectivityManager> {
       }
     } catch (_) {}
 
-    await DialogService.showSuccess(
-      context,
-      message: message,
-    );
+    CustomSnackbars.showSuccess(context, message);
 
     if (mounted) {
       _isDialogShowing = false;
@@ -558,6 +565,27 @@ class _MainScaffoldState extends State<MainScaffold> {
         _handleNotificationNavigation(payload);
       }
     });
+
+    // Arka plandan (Background) bildirime tıklanarak açılış
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      String payload = message.data['type'] ?? '';
+      if (payload == 'question_reply' && message.data['questionId'] != null) {
+        payload += ':${message.data['questionId']}';
+      } else if (payload == 'review_reply' &&
+          message.data['reviewId'] != null) {
+        payload += ':${message.data['reviewId']}';
+      } else if (message.data['payload'] != null) {
+        payload = message.data['payload'];
+      }
+      if (payload.isNotEmpty) {
+        _handleNotificationNavigation(payload);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
   }
 
   Future<void> _handleNotificationLaunch(String marketId) async {
@@ -582,17 +610,27 @@ class _MainScaffoldState extends State<MainScaffold> {
     }
 
     // 1. Soru Yanıtı Bildirimi
-    if (payload == 'question_reply') {
+    if (payload.startsWith('question_reply')) {
+      String? questionId;
+      if (payload.contains(':')) {
+        questionId = payload.split(':')[1];
+      }
       navigatorKey.currentState?.push(
-        MaterialPageRoute(builder: (_) => const MyQuestionsScreen()),
+        MaterialPageRoute(
+            builder: (_) => MyQuestionsScreen(highlightQuestionId: questionId)),
       );
       return;
     }
 
     // 2. Değerlendirme Yanıtı Bildirimi
-    if (payload == 'review_reply') {
+    if (payload.startsWith('review_reply')) {
+      String? reviewId;
+      if (payload.contains(':')) {
+        reviewId = payload.split(':')[1];
+      }
       navigatorKey.currentState?.push(
-        MaterialPageRoute(builder: (_) => const MyReviewsScreen()),
+        MaterialPageRoute(
+            builder: (_) => MyReviewsScreen(highlightReviewId: reviewId)),
       );
       return;
     }
@@ -664,7 +702,73 @@ class _MainScaffoldState extends State<MainScaffold> {
   Widget build(BuildContext context) {
     final langVM = Provider.of<LanguageViewModel>(context);
     final authVM = Provider.of<AuthViewModel>(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    // Seçili olmayan ikonlar için daha okunabilir dinamik bir renk
+    final unselectedIconColor = isDark ? Colors.white60 : Colors.black54;
+    final isDesktop = MediaQuery.of(context).size.width > 800; // Web kontrolü
+    Widget navBox({
+      required Widget icon,
+      required String label,
+      required bool selected,
+    }) {
+      final base = theme.colorScheme.primary;
+      return AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOutQuint,
+        height: 48,
+        constraints: BoxConstraints(minWidth: selected ? 110 : 64),
+        padding: EdgeInsets.symmetric(
+          horizontal: selected ? 24 : 16,
+        ),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          color: selected ? base : null,
+          gradient: selected
+              ? null
+              : LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    (isDark ? Colors.white : Colors.black).withOpacity(isDark
+                        ? 0.18
+                        : 0.12), // Seçili olmayanlar için canlı glassmorphism
+                    (isDark ? Colors.white : Colors.black)
+                        .withOpacity(isDark ? 0.08 : 0.04),
+                  ],
+                ),
+          border: Border.all(
+            color: selected
+                ? base
+                : (isDark ? Colors.white : Colors.black).withOpacity(0.20),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (!selected) icon, // Seçili değilse ikonu göster
+            if (selected) // Seçiliyse sadece metni göster
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown, // Metni kesmek yerine alana sığdır
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w700,
+                      color: theme.colorScheme.onPrimary,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      );
+    }
 
     return Scaffold(
         extendBody: true,
@@ -675,10 +779,65 @@ class _MainScaffoldState extends State<MainScaffold> {
             _isDrawerOpen = isOpened;
           });
         },
-        drawer: const SideMenuDrawer(),
+        drawer:
+            isDesktop ? null : const SideMenuDrawer(), // Web'de drawer gizlenir
         body: Stack(
           children: [
-            IndexedStack(index: _index, children: _screens),
+            Row(
+              children: [
+                if (isDesktop)
+                  NavigationRail(
+                    selectedIndex: _index,
+                    onDestinationSelected: (i) => setState(() => _index = i),
+                    labelType: NavigationRailLabelType.all,
+                    backgroundColor: Theme.of(context).colorScheme.surface,
+                    destinations: [
+                      NavigationRailDestination(
+                        icon: const Icon(Icons.storefront_outlined),
+                        selectedIcon: const Icon(Icons.storefront),
+                        label: Text(langVM.translate('home_title')),
+                      ),
+                      NavigationRailDestination(
+                        icon: SvgIcon(
+                            iconPath: AppIcons.search,
+                            color: Colors.grey,
+                            size: 24),
+                        selectedIcon: SvgIcon(
+                            iconPath: AppIcons.searchActive,
+                            color: Theme.of(context).colorScheme.primary,
+                            size: 24),
+                        label: Text(langVM.translate('search_tab')),
+                      ),
+                      NavigationRailDestination(
+                        icon: SvgIcon(
+                            iconPath: AppIcons.products,
+                            color: Colors.grey,
+                            size: 24),
+                        selectedIcon: SvgIcon(
+                            iconPath: AppIcons.productsActive,
+                            color: Theme.of(context).colorScheme.primary,
+                            size: 24),
+                        label: Text(langVM.translate('products_tab')),
+                      ),
+                      NavigationRailDestination(
+                        icon: const Icon(Icons.report_outlined),
+                        selectedIcon: const Icon(Icons.report),
+                        label: Text(langVM.translate('report_tab')),
+                      ),
+                    ],
+                  ),
+                if (isDesktop) const VerticalDivider(thickness: 1, width: 1),
+                Expanded(
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(
+                          maxWidth: 1200), // İçerik çok uzamasın
+                      child: IndexedStack(index: _index, children: _screens),
+                    ),
+                  ),
+                ),
+              ],
+            ),
             // Drawer açıkken arka planı bulanıklaştır
             if (_isDrawerOpen)
               Positioned.fill(
@@ -689,108 +848,195 @@ class _MainScaffoldState extends State<MainScaffold> {
               ),
           ],
         ),
-        bottomNavigationBar: _isDrawerOpen
+        bottomNavigationBar: _isDrawerOpen || isDesktop
             ? null
             : Container(
                 decoration: BoxDecoration(
-                  boxShadow: [
-                    BoxShadow(
-                      color: isDark
-                          ? Colors.white.withOpacity(0.2)
-                          : Colors.black.withOpacity(0.3),
-                      blurRadius: 20,
-                      offset: const Offset(0, -1),
-                    ),
-                  ],
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(24),
+                  ),
+                  border: null,
+                  boxShadow: const [],
                 ),
-                child: ClipRect(
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(24),
+                  ),
                   child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                    child: Container(
-                      padding: EdgeInsets.zero,
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? Colors.black
-                            : Colors.white,
-                      ),
-                      child: BottomNavigationBar(
-                        currentIndex: _index,
-                        onTap: (i) => setState(() => _index = i),
-                        // Renkler ve stiller artık AppTheme içinden geliyor
-                        // Ancak buradaki backgroundColor transparent olmalı çünkü
-                        // üstteki Container blur efekti veriyor.
-                        backgroundColor: Colors.transparent,
-                        elevation: 0,
-                        type: BottomNavigationBarType.fixed,
-                        showSelectedLabels: true,
-                        showUnselectedLabels: true,
-                        selectedItemColor:
-                            Theme.of(context).colorScheme.primary,
-                        unselectedItemColor:
-                            Theme.of(context).brightness == Brightness.dark
-                                ? Colors.grey
-                                : Colors.grey,
-                        unselectedFontSize: 8,
-                        selectedFontSize: 10,
-                        iconSize: 24,
-                        items: [
-                          BottomNavigationBarItem(
-                            icon: Icon(
-                              Icons.storefront_outlined,
-                              color: Theme.of(context).brightness ==
-                                      Brightness.dark
-                                  ? Colors.grey
-                                  : Colors.grey,
-                              size: 34,
+                    filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                    child: SizedBox(
+                      height: 75 + MediaQuery.of(context).padding.bottom,
+                      child: Stack(
+                        children: [
+                          Positioned.fill(
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: (isDark ? Colors.black : Colors.white)
+                                    .withOpacity(isDark ? 0.4 : 0.5),
+                              ),
                             ),
-                            activeIcon: Icon(Icons.storefront,
-                                color: Theme.of(context).colorScheme.primary,
-                                size: 38),
-                            label: langVM.translate('home_title'),
                           ),
-                          BottomNavigationBarItem(
-                            icon: SvgIcon(
-                                iconPath: AppIcons.search,
-                                color: Theme.of(context).brightness ==
-                                        Brightness.dark
-                                    ? Colors.grey
-                                    : Colors.grey,
-                                size: 34),
-                            activeIcon: SvgIcon(
-                                iconPath: AppIcons.searchActive,
-                                color: Theme.of(context).colorScheme.primary,
-                                size: 38),
-                            label: langVM.translate('search_tab'),
-                          ),
-                          BottomNavigationBarItem(
-                            icon: SvgIcon(
-                                iconPath: AppIcons.products,
-                                color: Theme.of(context).brightness ==
-                                        Brightness.dark
-                                    ? Colors.grey
-                                    : Colors.grey,
-                                size: 34),
-                            activeIcon: SvgIcon(
-                                iconPath: AppIcons.productsActive,
-                                color: Theme.of(context).colorScheme.primary,
-                                size: 38),
-                            label: langVM.translate('products_tab'),
-                          ),
-                          BottomNavigationBarItem(
-                            icon: Icon(
-                              Icons.report_outlined,
-                              color: Theme.of(context).brightness ==
-                                      Brightness.dark
-                                  ? Colors.grey
-                                  : Colors.grey,
-                              size: 34,
+                          Padding(
+                            padding: EdgeInsets.only(
+                              left: 12,
+                              right: 12,
+                              bottom: MediaQuery.of(context).padding.bottom,
                             ),
-                            activeIcon: Icon(
-                              Icons.report,
-                              color: Theme.of(context).colorScheme.primary,
-                              size: 38,
+                            child: MediaQuery.removePadding(
+                              context: context,
+                              removeBottom: true,
+                              child: Theme(
+                                data: Theme.of(context).copyWith(
+                                  splashColor: Colors.transparent,
+                                  highlightColor: Colors.transparent,
+                                  splashFactory: NoSplash.splashFactory,
+                                ),
+                                child: BottomNavigationBar(
+                                  currentIndex: _index,
+                                  onTap: (i) {
+                                    if (_index == i) return;
+                                    setState(() {
+                                      _index = i;
+                                    });
+                                  },
+                                  backgroundColor: Colors.transparent,
+                                  elevation: 0,
+                                  type: BottomNavigationBarType.fixed,
+                                  showSelectedLabels: false,
+                                  showUnselectedLabels: false,
+                                  selectedItemColor: theme.colorScheme.primary,
+                                  unselectedItemColor: Colors.grey,
+                                  unselectedFontSize: 8,
+                                  selectedFontSize: 10,
+                                  iconSize: 24,
+                                  items: [
+                                    BottomNavigationBarItem(
+                                      icon: navBox(
+                                        label: langVM.translate('home_title'),
+                                        selected: false,
+                                        icon: Icon(
+                                          Icons.storefront_outlined,
+                                          color: unselectedIconColor,
+                                          size: 24,
+                                        ),
+                                      ),
+                                      activeIcon: TweenAnimationBuilder<double>(
+                                        duration:
+                                            const Duration(milliseconds: 400),
+                                        curve: Curves.easeOutBack,
+                                        tween: Tween(begin: 0.5, end: 1.0),
+                                        builder: (context, value, child) =>
+                                            Transform.scale(
+                                          scale: value,
+                                          child: child,
+                                        ),
+                                        child: navBox(
+                                          label: langVM.translate('home_title'),
+                                          selected: true,
+                                          icon: Icon(Icons.storefront,
+                                              color: theme.colorScheme.primary,
+                                              size: 24),
+                                        ),
+                                      ),
+                                      label: '',
+                                    ),
+                                    BottomNavigationBarItem(
+                                      icon: navBox(
+                                        label: langVM.translate('search_tab'),
+                                        selected: false,
+                                        icon: SvgIcon(
+                                          iconPath: AppIcons.search,
+                                          color: unselectedIconColor,
+                                          size: 24,
+                                        ),
+                                      ),
+                                      activeIcon: TweenAnimationBuilder<double>(
+                                        duration:
+                                            const Duration(milliseconds: 400),
+                                        curve: Curves.easeOutBack,
+                                        tween: Tween(begin: 0.5, end: 1.0),
+                                        builder: (context, value, child) =>
+                                            Transform.scale(
+                                          scale: value,
+                                          child: child,
+                                        ),
+                                        child: navBox(
+                                          label: langVM.translate('search_tab'),
+                                          selected: true,
+                                          icon: SvgIcon(
+                                              iconPath: AppIcons.searchActive,
+                                              color: theme.colorScheme.primary,
+                                              size: 24),
+                                        ),
+                                      ),
+                                      label: '',
+                                    ),
+                                    BottomNavigationBarItem(
+                                      icon: navBox(
+                                        label: langVM.translate('products_tab'),
+                                        selected: false,
+                                        icon: SvgIcon(
+                                          iconPath: AppIcons.products,
+                                          color: unselectedIconColor,
+                                          size: 24,
+                                        ),
+                                      ),
+                                      activeIcon: TweenAnimationBuilder<double>(
+                                        duration:
+                                            const Duration(milliseconds: 400),
+                                        curve: Curves.easeOutBack,
+                                        tween: Tween(begin: 0.5, end: 1.0),
+                                        builder: (context, value, child) =>
+                                            Transform.scale(
+                                          scale: value,
+                                          child: child,
+                                        ),
+                                        child: navBox(
+                                          label:
+                                              langVM.translate('products_tab'),
+                                          selected: true,
+                                          icon: SvgIcon(
+                                              iconPath: AppIcons.productsActive,
+                                              color: theme.colorScheme.primary,
+                                              size: 24),
+                                        ),
+                                      ),
+                                      label: '',
+                                    ),
+                                    BottomNavigationBarItem(
+                                      icon: navBox(
+                                        label: langVM.translate('report_tab'),
+                                        selected: false,
+                                        icon: Icon(
+                                          Icons.report_outlined,
+                                          color: unselectedIconColor,
+                                          size: 24,
+                                        ),
+                                      ),
+                                      activeIcon: TweenAnimationBuilder<double>(
+                                        duration:
+                                            const Duration(milliseconds: 400),
+                                        curve: Curves.easeOutBack,
+                                        tween: Tween(begin: 0.5, end: 1.0),
+                                        builder: (context, value, child) =>
+                                            Transform.scale(
+                                          scale: value,
+                                          child: child,
+                                        ),
+                                        child: navBox(
+                                          label: langVM.translate('report_tab'),
+                                          selected: true,
+                                          icon: Icon(Icons.report,
+                                              color: theme.colorScheme.primary,
+                                              size: 24),
+                                        ),
+                                      ),
+                                      label: '',
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
-                            label: langVM.translate('report_tab'),
                           ),
                         ],
                       ),
