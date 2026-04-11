@@ -261,258 +261,314 @@ class _ProductsScreenState extends State<ProductsScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withOpacity(
+          Theme.of(context).brightness == Brightness.dark ? 0.85 : 0.6),
       builder: (context) => StatefulBuilder(
         builder: (context, setState) {
-          return Container(
-            height: MediaQuery.of(context).size.height * 0.7,
-            decoration: BoxDecoration(
-              color: Theme.of(context).scaffoldBackgroundColor,
+          return GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+            child: ClipRRect(
               borderRadius:
                   const BorderRadius.vertical(top: Radius.circular(24)),
-            ),
-            child: Column(
-              children: [
-                // Drag Handle
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    margin: const EdgeInsets.symmetric(vertical: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.withOpacity(0.3),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                child: Container(
+                  height: MediaQuery.of(context).size.height * 0.75,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? const Color(0xFF121212)
+                        : Colors.white,
                   ),
-                ),
-                // Header
-                Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  child: Column(
                     children: [
-                      Text(
-                        langVM.translate('filter_sort_title'),
-                        style:
-                            Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          this.setState(() {
-                            _sortOption = 'smart';
-                            _selectedCategories.clear();
-                            _filterOpenToday = false;
-                            _priceRange = const RangeValues(0, 2000);
-                          });
-                          _setupStream();
-                          Navigator.pop(context);
-                        },
-                        child: Text(
-                          langVM.translate('clear_button'),
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.error,
-                            fontWeight: FontWeight.bold,
+                      // Drag Handle
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          margin: const EdgeInsets.symmetric(vertical: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.withOpacity(0.3),
+                            borderRadius: BorderRadius.circular(2),
                           ),
                         ),
                       ),
-                    ],
-                  ),
-                ),
-                const Divider(height: 1),
-                Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.all(24),
-                    children: [
-                      // Sıralama
-                      Text(langVM.translate('sort_title'),
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleMedium
-                              ?.copyWith(fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 12),
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
+                      // Header
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 24, vertical: 8),
                         child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            _buildSortChip(
-                                setState,
-                                'smart',
-                                langVM.translate('sort_smart'),
-                                tempSortOption,
-                                (val) => tempSortOption = val),
-                            const SizedBox(width: 8),
-                            _buildSortChip(
-                                setState,
-                                'newest',
-                                langVM.translate('sort_newest'),
-                                tempSortOption,
-                                (val) => tempSortOption = val),
-                            const SizedBox(width: 8),
-                            _buildSortChip(
-                                setState,
-                                'price_asc',
-                                langVM.translate('sort_price_asc'),
-                                tempSortOption,
-                                (val) => tempSortOption = val),
-                            const SizedBox(width: 8),
-                            _buildSortChip(
-                                setState,
-                                'price_desc',
-                                langVM.translate('sort_price_desc'),
-                                tempSortOption,
-                                (val) => tempSortOption = val),
+                            Text(
+                              langVM.translate('filter_sort_title'),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .headlineSmall
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                this.setState(() {
+                                  _sortOption = 'smart';
+                                  _selectedCategories.clear();
+                                  _filterOpenToday = false;
+                                  _priceRange = const RangeValues(0, 2000);
+                                });
+                                _setupStream();
+                                Navigator.pop(context);
+                              },
+                              child: Text(
+                                langVM.translate('clear_button'),
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.error,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                       ),
-                      const SizedBox(height: 24),
-
-                      // Kategoriler
-                      Text(langVM.translate('categories_title'),
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleMedium
-                              ?.copyWith(fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 12),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: _categories.map((cat) {
-                          final isSelected =
-                              tempSelectedCategories.contains(cat);
-                          return FilterChip(
-                            label: Text(Provider.of<LanguageViewModel>(context,
-                                    listen: false)
-                                .translate(cat)),
-                            selected: isSelected,
-                            onSelected: (selected) {
-                              setState(() {
-                                if (selected) {
-                                  tempSelectedCategories.add(cat);
-                                } else {
-                                  tempSelectedCategories.remove(cat);
-                                }
-                              });
-                            },
-                            backgroundColor:
-                                Theme.of(context).cardColor.withOpacity(0.7),
-                            selectedColor:
-                                Theme.of(context).colorScheme.primary,
-                            checkmarkColor: Colors.white,
-                            labelStyle: TextStyle(
-                              color: isSelected
-                                  ? Colors.white
-                                  : Theme.of(context)
-                                      .textTheme
-                                      .bodyMedium
-                                      ?.color,
-                              fontWeight: isSelected
-                                  ? FontWeight.bold
-                                  : FontWeight.normal,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
-                              side: BorderSide(
-                                color: isSelected
-                                    ? Colors.transparent
-                                    : Colors.grey.withOpacity(0.2),
+                      const Divider(height: 1),
+                      Expanded(
+                        child: ListView(
+                          padding: const EdgeInsets.all(24),
+                          children: [
+                            // Sıralama
+                            Text(langVM.translate('sort_title'),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleMedium
+                                    ?.copyWith(fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 12),
+                            SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Row(
+                                children: [
+                                  _buildSortChip(
+                                      setState,
+                                      'smart',
+                                      langVM.translate('sort_smart'),
+                                      tempSortOption,
+                                      (val) => tempSortOption = val),
+                                  const SizedBox(width: 8),
+                                  _buildSortChip(
+                                      setState,
+                                      'newest',
+                                      langVM.translate('sort_newest'),
+                                      tempSortOption,
+                                      (val) => tempSortOption = val),
+                                  const SizedBox(width: 8),
+                                  _buildSortChip(
+                                      setState,
+                                      'price_asc',
+                                      langVM.translate('sort_price_asc'),
+                                      tempSortOption,
+                                      (val) => tempSortOption = val),
+                                  const SizedBox(width: 8),
+                                  _buildSortChip(
+                                      setState,
+                                      'price_desc',
+                                      langVM.translate('sort_price_desc'),
+                                      tempSortOption,
+                                      (val) => tempSortOption = val),
+                                ],
                               ),
                             ),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 4, vertical: 8),
-                          );
-                        }).toList(),
-                      ),
-                      const SizedBox(height: 24),
+                            const SizedBox(height: 24),
 
-                      // Fiyat Aralığı
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(langVM.translate('price_range_title'),
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
-                                  ?.copyWith(fontWeight: FontWeight.bold)),
-                          Text(
-                            '${tempPriceRange.start.round()}₺ - ${tempPriceRange.end.round()}₺',
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.primary,
-                              fontWeight: FontWeight.bold,
+                            // Kategoriler
+                            Text(langVM.translate('categories_title'),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleMedium
+                                    ?.copyWith(fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 12),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: _categories.map((cat) {
+                                final isSelected =
+                                    tempSelectedCategories.contains(cat);
+                                return FilterChip(
+                                  label: Text(Provider.of<LanguageViewModel>(
+                                          context,
+                                          listen: false)
+                                      .translate(cat)),
+                                  selected: isSelected,
+                                  onSelected: (selected) {
+                                    setState(() {
+                                      if (selected) {
+                                        tempSelectedCategories.add(cat);
+                                      } else {
+                                        tempSelectedCategories.remove(cat);
+                                      }
+                                    });
+                                  },
+                                  backgroundColor:
+                                      Theme.of(context).brightness ==
+                                              Brightness.dark
+                                          ? Colors.white.withOpacity(0.05)
+                                          : Colors.grey.withOpacity(0.05),
+                                  selectedColor: Theme.of(context)
+                                      .colorScheme
+                                      .primary
+                                      .withOpacity(0.15),
+                                  checkmarkColor:
+                                      Theme.of(context).colorScheme.primary,
+                                  labelStyle: TextStyle(
+                                    color: isSelected
+                                        ? Theme.of(context).colorScheme.primary
+                                        : Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium
+                                            ?.color,
+                                    fontWeight: isSelected
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(20),
+                                    side: BorderSide(
+                                      color: isSelected
+                                          ? Theme.of(context)
+                                              .colorScheme
+                                              .primary
+                                              .withOpacity(0.5)
+                                          : Theme.of(context)
+                                              .colorScheme
+                                              .primary
+                                              .withOpacity(0.1),
+                                    ),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 4, vertical: 8),
+                                );
+                              }).toList(),
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      RangeSlider(
-                        values: tempPriceRange,
-                        min: 0,
-                        max: 2000,
-                        divisions: 40,
-                        labels: RangeLabels(
-                          '${tempPriceRange.start.round()}₺',
-                          '${tempPriceRange.end.round()}₺',
-                        ),
-                        onChanged: (values) {
-                          setState(() => tempPriceRange = values);
-                        },
-                        activeColor: Theme.of(context).colorScheme.primary,
-                        inactiveColor: Theme.of(context)
-                            .colorScheme
-                            .primary
-                            .withOpacity(0.2),
-                      ),
-                      const SizedBox(height: 24),
+                            const SizedBox(height: 24),
 
-                      // Diğer Filtreler
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).cardColor,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: Colors.grey.withOpacity(0.2),
-                          ),
+                            // Fiyat Aralığı
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(langVM.translate('price_range_title'),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium
+                                        ?.copyWith(
+                                            fontWeight: FontWeight.bold)),
+                                Text(
+                                  '${tempPriceRange.start.round()}₺ - ${tempPriceRange.end.round()}₺',
+                                  style: TextStyle(
+                                    color:
+                                        Theme.of(context).colorScheme.primary,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            RangeSlider(
+                              values: tempPriceRange,
+                              min: 0,
+                              max: 2000,
+                              divisions: 40,
+                              labels: RangeLabels(
+                                '${tempPriceRange.start.round()}₺',
+                                '${tempPriceRange.end.round()}₺',
+                              ),
+                              onChanged: (values) {
+                                setState(() => tempPriceRange = values);
+                              },
+                              activeColor:
+                                  Theme.of(context).colorScheme.primary,
+                              inactiveColor: Theme.of(context)
+                                  .colorScheme
+                                  .primary
+                                  .withOpacity(0.2),
+                            ),
+                            const SizedBox(height: 24),
+
+                            // Diğer Filtreler
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).brightness ==
+                                        Brightness.dark
+                                    ? Colors.white.withOpacity(0.05)
+                                    : Colors.grey.withOpacity(0.05),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .primary
+                                      .withOpacity(0.1),
+                                ),
+                              ),
+                              child: CheckboxListTile(
+                                contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 8),
+                                secondary: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .primary
+                                        .withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Icon(Icons.calendar_today_rounded,
+                                      color:
+                                          Theme.of(context).colorScheme.primary,
+                                      size: 20),
+                                ),
+                                title: Text(
+                                    langVM.translate('filter_open_today_only'),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium
+                                        ?.copyWith(
+                                            fontWeight: FontWeight.w600)),
+                                value: tempFilterOpenToday,
+                                onChanged: (val) => setState(
+                                    () => tempFilterOpenToday = val ?? false),
+                                activeColor:
+                                    Theme.of(context).colorScheme.primary,
+                                controlAffinity:
+                                    ListTileControlAffinity.trailing,
+                              ),
+                            ),
+                          ],
                         ),
-                        child: CheckboxListTile(
-                          contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 4),
-                          title: Text(
-                              langVM.translate('filter_open_today_only'),
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
-                                  ?.copyWith(fontWeight: FontWeight.w600)),
-                          value: tempFilterOpenToday,
-                          onChanged: (val) => setState(
-                              () => tempFilterOpenToday = val ?? false),
-                          activeColor: Theme.of(context).colorScheme.primary,
-                          controlAffinity: ListTileControlAffinity.trailing,
+                      ),
+                      // Uygula Butonu
+                      Padding(
+                        padding: EdgeInsets.fromLTRB(24, 24, 24,
+                            24 + MediaQuery.of(context).padding.bottom),
+                        child: CustomButton(
+                          text: langVM.translate('show_results_button'),
+                          onPressed: () {
+                            // Filtreleri uygula
+                            this.setState(() {
+                              _sortOption = tempSortOption;
+                              _selectedCategories.clear();
+                              _selectedCategories
+                                  .addAll(tempSelectedCategories);
+                              _filterOpenToday = tempFilterOpenToday;
+                              _priceRange = tempPriceRange;
+                            });
+                            _setupStream();
+                            Navigator.pop(context);
+                          },
                         ),
                       ),
                     ],
                   ),
                 ),
-                // Uygula Butonu
-                Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: CustomButton(
-                    text: langVM.translate('show_results_button'),
-                    onPressed: () {
-                      // Filtreleri uygula
-                      this.setState(() {
-                        _sortOption = tempSortOption;
-                        _selectedCategories.clear();
-                        _selectedCategories.addAll(tempSelectedCategories);
-                        _filterOpenToday = tempFilterOpenToday;
-                        _priceRange = tempPriceRange;
-                      });
-                      _setupStream();
-                      Navigator.pop(context);
-                    },
-                  ),
-                ),
-              ],
+              ),
             ),
           );
         },
@@ -531,18 +587,22 @@ class _ProductsScreenState extends State<ProductsScreen> {
           setState(() => onSelect(value));
         }
       },
-      backgroundColor: Theme.of(context).cardColor.withOpacity(0.7),
-      selectedColor: Theme.of(context).colorScheme.primary,
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? Colors.white.withOpacity(0.05)
+          : Colors.grey.withOpacity(0.05),
+      selectedColor: Theme.of(context).colorScheme.primary.withOpacity(0.15),
       labelStyle: TextStyle(
         color: isSelected
-            ? Colors.white
+            ? Theme.of(context).colorScheme.primary
             : Theme.of(context).textTheme.bodyMedium?.color,
         fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
       ),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
         side: BorderSide(
-          color: isSelected ? Colors.transparent : Colors.grey.withOpacity(0.2),
+          color: isSelected
+              ? Theme.of(context).colorScheme.primary.withOpacity(0.5)
+              : Theme.of(context).colorScheme.primary.withOpacity(0.1),
         ),
       ),
       showCheckmark: false,
@@ -672,6 +732,9 @@ class _ProductsScreenState extends State<ProductsScreen> {
                         onRefresh: _refreshProducts,
                         child: ListView(
                           physics: const AlwaysScrollableScrollPhysics(),
+                          padding: EdgeInsets.only(
+                              bottom:
+                                  100 + MediaQuery.of(context).padding.bottom),
                           children: [
                             SizedBox(
                               height: MediaQuery.of(context).size.height * 0.6,
@@ -762,6 +825,9 @@ class _ProductsScreenState extends State<ProductsScreen> {
                         onRefresh: _refreshProducts,
                         child: ListView(
                           physics: const AlwaysScrollableScrollPhysics(),
+                          padding: EdgeInsets.only(
+                              bottom:
+                                  100 + MediaQuery.of(context).padding.bottom),
                           children: [
                             SizedBox(
                               height: MediaQuery.of(context).size.height * 0.6,
@@ -892,7 +958,8 @@ class _ProductsScreenState extends State<ProductsScreen> {
                       child: GridView.builder(
                         controller: _scrollController,
                         physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+                        padding: EdgeInsets.fromLTRB(16, 16, 16,
+                            100 + MediaQuery.of(context).padding.bottom),
                         gridDelegate:
                             const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 2,

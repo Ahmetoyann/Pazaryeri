@@ -201,186 +201,284 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
 
     return Scaffold(
       appBar: CustomAppBar(title: Text(title)),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              DropdownButtonFormField<String>(
-                value: _selectedSubject,
-                style: TextStyle(
-                    color: Theme.of(context).textTheme.bodyLarge?.color,
-                    fontSize: 16),
-                dropdownColor: isDark ? Colors.black : Colors.white,
-                decoration: InputDecoration(
-                  labelText: 'Konu Seçiniz',
-                  prefixIcon: Icon(Icons.subject,
-                      color: Theme.of(context).colorScheme.primary),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(
-                      color: isDark
-                          ? Colors.white.withOpacity(0.1)
-                          : Colors.grey.shade300,
-                    ),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(
-                      color: isDark
-                          ? Colors.white.withOpacity(0.1)
-                          : Colors.grey.shade300,
-                    ),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(
-                        color: Theme.of(context).colorScheme.primary, width: 2),
-                  ),
-                  filled: true,
-                  fillColor: isDark
-                      ? Theme.of(context).cardColor
-                      : Colors.grey.shade100,
-                ),
-                items: _subjects.map((s) {
-                  return DropdownMenuItem(
-                    value: s,
-                    child: Text(s,
-                        style: TextStyle(
-                            color:
-                                Theme.of(context).textTheme.bodyLarge?.color)),
-                  );
-                }).toList(),
-                onChanged: (val) => setState(() => _selectedSubject = val),
+      body: SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(
+            16, 16, 16, 16 + MediaQuery.of(context).padding.bottom),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            DropdownButtonFormField<String>(
+              value: _selectedSubject,
+              style: TextStyle(
+                color: Theme.of(context).textTheme.bodyLarge?.color,
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
               ),
-              const SizedBox(height: 16),
-              CustomTextField(
-                controller: _controller,
-                maxLines: 6,
-                hintText: 'Sorunuzu/yorumunuzu yazın',
-                suffixIcon: IconButton(
-                  icon: Icon(_isListening ? Icons.mic : Icons.mic_none,
-                      color: _isListening
-                          ? Colors.redAccent
-                          : Theme.of(context).iconTheme.color),
-                  onPressed: _listen,
+              dropdownColor: Theme.of(context).cardColor,
+              icon: Icon(Icons.expand_more_rounded,
+                  color: Theme.of(context).colorScheme.primary),
+              decoration: InputDecoration(
+                labelText: 'Konu Seçiniz',
+                labelStyle:
+                    TextStyle(color: Theme.of(context).colorScheme.primary),
+                filled: true,
+                fillColor: isDark
+                    ? Colors.white.withOpacity(0.05)
+                    : Colors.grey.withOpacity(0.05),
+                prefixIcon: Container(
+                  margin: const EdgeInsets.only(
+                      left: 12, right: 8, top: 4, bottom: 4),
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color:
+                        Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(Icons.subject_rounded,
+                      color: Theme.of(context).colorScheme.primary, size: 20),
                 ),
-              ),
-              const SizedBox(height: 16),
-              if (_selectedImage == null)
-                GestureDetector(
-                  onTap: _pickImage,
-                  child: CustomPaint(
-                    painter: _DashedBorderPainter(
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  borderSide: BorderSide(
                       color: Theme.of(context)
                           .colorScheme
                           .primary
-                          .withOpacity(0.5),
-                      borderRadius: 16.0,
-                    ),
-                    child: Container(
-                      height: 150,
-                      width: double.infinity,
+                          .withOpacity(0.1),
+                      width: 1),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  borderSide: BorderSide(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withOpacity(0.1),
+                      width: 1),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  borderSide: BorderSide(
+                      color: Theme.of(context).colorScheme.primary, width: 2),
+                ),
+              ),
+              items: _subjects.map((s) {
+                return DropdownMenuItem(
+                  value: s,
+                  child: Text(s,
+                      style: TextStyle(
+                          color: Theme.of(context).textTheme.bodyLarge?.color)),
+                );
+              }).toList(),
+              onChanged: (val) => setState(() => _selectedSubject = val),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _controller,
+              maxLines: 6,
+              minLines: 3,
+              style: TextStyle(
+                color: Theme.of(context).textTheme.bodyLarge?.color,
+                fontSize: 15,
+              ),
+              decoration: InputDecoration(
+                alignLabelWithHint: true,
+                labelText: 'Sorunuzu/yorumunuzu yazın',
+                labelStyle:
+                    TextStyle(color: Theme.of(context).colorScheme.primary),
+                filled: true,
+                fillColor: isDark
+                    ? Colors.white.withOpacity(0.05)
+                    : Colors.grey.withOpacity(0.05),
+                prefixIcon: Column(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      margin:
+                          const EdgeInsets.only(left: 12, right: 8, top: 12),
+                      padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
                         color: Theme.of(context)
                             .colorScheme
                             .primary
-                            .withOpacity(0.05),
-                        borderRadius: BorderRadius.circular(16),
+                            .withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context)
+                      child: Icon(Icons.edit_document,
+                          color: Theme.of(context).colorScheme.primary,
+                          size: 20),
+                    ),
+                  ],
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  borderSide: BorderSide(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withOpacity(0.1),
+                      width: 1),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  borderSide: BorderSide(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withOpacity(0.1),
+                      width: 1),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  borderSide: BorderSide(
+                      color: Theme.of(context).colorScheme.primary, width: 2),
+                ),
+                suffixIcon: Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        decoration: BoxDecoration(
+                          color: _isListening
+                              ? Theme.of(context)
+                                  .colorScheme
+                                  .error
+                                  .withOpacity(0.15)
+                              : Theme.of(context)
                                   .colorScheme
                                   .primary
                                   .withOpacity(0.1),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              Icons.add_a_photo_outlined,
-                              color: Theme.of(context).colorScheme.primary,
-                              size: 32,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            'Fotoğraf Ekle (İsteğe Bağlı)',
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.primary,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                )
-              else
-                Stack(
-                  children: [
-                    GestureDetector(
-                      onTap: _pickImage,
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
-                        child: Image.file(
-                          File(_selectedImage!.path),
-                          height: 150,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
+                          shape: BoxShape.circle,
                         ),
-                      ),
-                    ),
-                    Positioned(
-                      bottom: 12,
-                      right: 12,
-                      child: GestureDetector(
-                        onTap: _pickImage,
-                        child: CircleAvatar(
-                          radius: 20,
-                          backgroundColor:
-                              Theme.of(context).colorScheme.primary,
-                          child: Icon(
-                            Icons.add_a_photo_outlined,
-                            color: Theme.of(context).colorScheme.onPrimary,
-                            size: 20,
-                          ),
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      top: 8,
-                      right: 8,
-                      child: GestureDetector(
-                        onTap: () => setState(() => _selectedImage = null),
-                        child: Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: Colors.red.withOpacity(0.9),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const SvgIcon(
-                              iconPath: AppIcons.close,
-                              color: Colors.white,
-                              size: 20),
+                        child: IconButton(
+                          icon: Icon(_isListening
+                              ? Icons.mic
+                              : Icons.mic_none_rounded),
+                          color: _isListening
+                              ? Theme.of(context).colorScheme.error
+                              : Theme.of(context).colorScheme.primary,
+                          onPressed: _listen,
                         ),
                       ),
                     ),
                   ],
                 ),
-              const SizedBox(height: 24),
-              CustomButton(
-                text: 'Gönder',
-                onPressed: _sendReport,
               ),
-              const SizedBox(height: 12),
-            ],
-          ),
+            ),
+            const SizedBox(height: 16),
+            if (_selectedImage == null)
+              GestureDetector(
+                onTap: _pickImage,
+                child: CustomPaint(
+                  painter: _DashedBorderPainter(
+                    color:
+                        Theme.of(context).colorScheme.primary.withOpacity(0.5),
+                    borderRadius: 16.0,
+                  ),
+                  child: Container(
+                    height: 150,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withOpacity(0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.add_a_photo_outlined,
+                            color: Theme.of(context).colorScheme.primary,
+                            size: 32,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Fotoğraf Ekle (İsteğe Bağlı)',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.primary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              )
+            else
+              Stack(
+                children: [
+                  GestureDetector(
+                    onTap: _pickImage,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: Image.file(
+                        File(_selectedImage!.path),
+                        height: 150,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 12,
+                    right: 12,
+                    child: GestureDetector(
+                      onTap: _pickImage,
+                      child: CircleAvatar(
+                        radius: 20,
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        child: Icon(
+                          Icons.add_a_photo_outlined,
+                          color: Theme.of(context).colorScheme.onPrimary,
+                          size: 20,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: GestureDetector(
+                      onTap: () => setState(() => _selectedImage = null),
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.9),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const SvgIcon(
+                            iconPath: AppIcons.close,
+                            color: Colors.white,
+                            size: 20),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            const SizedBox(height: 24),
+            CustomButton(
+              text: 'Gönder',
+              icon: Icons.send_rounded,
+              onPressed: _sendReport,
+            ),
+            const SizedBox(height: 12),
+          ],
         ),
       ),
     );

@@ -178,107 +178,221 @@ class SideMenuDrawer extends StatelessWidget {
             }
           }
 
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DropdownButtonFormField<String>(
-                value: selectedSubject,
-                dropdownColor: Colors.black,
-                style: TextStyle(
-                    color: Theme.of(context).textTheme.bodyLarge?.color),
-                decoration: InputDecoration(
-                  labelText: langVM.translate('subject_label'),
-                  filled: true,
-                  fillColor: Theme.of(context).cardColor,
-                  prefixIcon: Icon(Icons.subject,
-                      color: Theme.of(context).colorScheme.primary),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide.none,
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide.none,
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(
-                        color: Theme.of(context).colorScheme.primary,
-                        width: 1.5),
-                  ),
-                ),
-                items: subjectKeys.map((String key) {
-                  return DropdownMenuItem<String>(
-                    value: langVM.translate(key),
-                    child: Text(langVM.translate(key),
-                        style: TextStyle(
-                            color:
-                                Theme.of(context).textTheme.bodyLarge?.color)),
-                  );
-                }).toList(),
-                onChanged: (String? newValue) {
-                  setState(() {
-                    selectedSubject = newValue;
-                  });
-                },
-                hint: Text(
-                  langVM.translate('select_hint'),
+          return Padding(
+            padding: const EdgeInsets.only(top: 8.0, bottom: 8.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  langVM.translate('contact_us_desc') ??
+                      'Size nasıl yardımcı olabiliriz? Lütfen konuyu seçin ve mesajınızı yazın.',
+                  textAlign: TextAlign.center,
                   style: TextStyle(
-                      color: Theme.of(context)
-                          .textTheme
-                          .bodyMedium
-                          ?.color
-                          ?.withOpacity(0.5)),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: messageController,
-                maxLines: 4,
-                decoration: InputDecoration(
-                  labelText: langVM.translate('message_label'),
-                  hintText: langVM.translate('message_hint'),
-                  filled: true,
-                  fillColor: Theme.of(context).cardColor,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide.none,
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide.none,
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(
-                        color: Theme.of(context).colorScheme.primary,
-                        width: 1.5),
-                  ),
-                  suffixIcon: IconButton(
-                    icon: Icon(isListening ? Icons.mic : Icons.mic_none),
-                    color: isListening
-                        ? Colors.red
-                        : Theme.of(context).iconTheme.color,
-                    onPressed: toggleListening,
+                    fontSize: 14,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withOpacity(0.6),
                   ),
                 ),
-              ),
-              const SizedBox(height: 24),
-              CustomButton(
-                text: langVM.translate('send_button'),
-                icon: Icons.send,
-                onPressed: () {
-                  if (selectedSubject == null ||
-                      messageController.text.isEmpty) {
-                    CustomSnackbars.showWarning(
-                        context, langVM.translate('fill_all_fields'));
-                    return;
-                  }
-                  Navigator.pop(context); // Formu kapat
-                  _sendEmail(context, selectedSubject!, messageController.text);
-                },
-              ),
-            ],
+                const SizedBox(height: 24),
+                DropdownButtonFormField<String>(
+                  value: selectedSubject,
+                  dropdownColor: Theme.of(context).cardColor,
+                  icon: Icon(Icons.expand_more_rounded,
+                      color: Theme.of(context).colorScheme.primary),
+                  style: TextStyle(
+                    color: Theme.of(context).textTheme.bodyLarge?.color,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  decoration: InputDecoration(
+                    labelText: langVM.translate('subject_label'),
+                    labelStyle:
+                        TextStyle(color: Theme.of(context).colorScheme.primary),
+                    filled: true,
+                    fillColor: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white.withOpacity(0.05)
+                        : Colors.grey.withOpacity(0.05),
+                    prefixIcon: Container(
+                      margin: const EdgeInsets.only(
+                          left: 12, right: 8, top: 4, bottom: 4),
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(Icons.subject_rounded,
+                          color: Theme.of(context).colorScheme.primary,
+                          size: 20),
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(20),
+                      borderSide: BorderSide(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withOpacity(0.1),
+                          width: 1),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(20),
+                      borderSide: BorderSide(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withOpacity(0.1),
+                          width: 1),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(20),
+                      borderSide: BorderSide(
+                          color: Theme.of(context).colorScheme.primary,
+                          width: 2),
+                    ),
+                  ),
+                  items: subjectKeys.map((String key) {
+                    return DropdownMenuItem<String>(
+                      value: langVM.translate(key),
+                      child: Text(langVM.translate(key)),
+                    );
+                  }).toList(),
+                  onChanged: (String? newValue) {
+                    setState(() {
+                      selectedSubject = newValue;
+                    });
+                  },
+                  hint: Text(
+                    langVM.translate('select_hint'),
+                    style: TextStyle(
+                        color: Theme.of(context)
+                            .textTheme
+                            .bodyMedium
+                            ?.color
+                            ?.withOpacity(0.5)),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: messageController,
+                  maxLines: 5,
+                  minLines: 3,
+                  style: TextStyle(
+                    color: Theme.of(context).textTheme.bodyLarge?.color,
+                    fontSize: 15,
+                  ),
+                  decoration: InputDecoration(
+                    alignLabelWithHint: true,
+                    labelText: langVM.translate('message_label'),
+                    labelStyle:
+                        TextStyle(color: Theme.of(context).colorScheme.primary),
+                    hintText: langVM.translate('message_hint'),
+                    filled: true,
+                    fillColor: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white.withOpacity(0.05)
+                        : Colors.grey.withOpacity(0.05),
+                    prefixIcon: Column(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          margin: const EdgeInsets.only(
+                              left: 12, right: 8, top: 12),
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(Icons.edit_document,
+                              color: Theme.of(context).colorScheme.primary,
+                              size: 20),
+                        ),
+                      ],
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(20),
+                      borderSide: BorderSide(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withOpacity(0.1),
+                          width: 1),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(20),
+                      borderSide: BorderSide(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withOpacity(0.1),
+                          width: 1),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(20),
+                      borderSide: BorderSide(
+                          color: Theme.of(context).colorScheme.primary,
+                          width: 2),
+                    ),
+                    suffixIcon: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            decoration: BoxDecoration(
+                              color: isListening
+                                  ? Theme.of(context)
+                                      .colorScheme
+                                      .error
+                                      .withOpacity(0.15)
+                                  : Theme.of(context)
+                                      .colorScheme
+                                      .primary
+                                      .withOpacity(0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: IconButton(
+                              icon: Icon(isListening
+                                  ? Icons.mic
+                                  : Icons.mic_none_rounded),
+                              color: isListening
+                                  ? Theme.of(context).colorScheme.error
+                                  : Theme.of(context).colorScheme.primary,
+                              onPressed: toggleListening,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 28),
+                CustomButton(
+                  text: langVM.translate('send_button'),
+                  icon: Icons.send_rounded,
+                  onPressed: () {
+                    if (selectedSubject == null ||
+                        messageController.text.isEmpty) {
+                      CustomSnackbars.showWarning(
+                          context, langVM.translate('fill_all_fields'));
+                      return;
+                    }
+                    Navigator.pop(context); // Formu kapat
+                    _sendEmail(
+                        context, selectedSubject!, messageController.text);
+                  },
+                ),
+              ],
+            ),
           );
         },
       ),

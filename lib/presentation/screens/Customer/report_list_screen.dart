@@ -41,7 +41,8 @@ class ReportListScreen extends StatelessWidget {
     final langVM = context.watch<LanguageViewModel>();
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.fromLTRB(
+          16, 16, 16, 16 + MediaQuery.of(context).padding.bottom),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -117,9 +118,9 @@ class ReportListScreen extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -341,7 +342,10 @@ class _MarketSelectionScreenState extends State<_MarketSelectionScreen> {
               child: marketList.isEmpty
                   ? Center(child: Text(langVM.translate('no_results')))
                   : ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      padding: EdgeInsets.only(
+                          left: 16,
+                          right: 16,
+                          bottom: 16 + MediaQuery.of(context).padding.bottom),
                       itemCount: marketList.length,
                       itemBuilder: (context, index) {
                         final market = marketList[index];
@@ -362,9 +366,9 @@ class _MarketSelectionScreenState extends State<_MarketSelectionScreen> {
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
+                                color: Colors.black.withOpacity(0.04),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
                               ),
                             ],
                           ),
@@ -532,7 +536,8 @@ class _SellerReportSelectionScreenState
       appBar:
           CustomAppBar(title: Text(langVM.translate('report_seller_option'))),
       body: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+        padding: EdgeInsets.fromLTRB(
+            16, 16, 16, MediaQuery.of(context).padding.bottom),
         child: Column(
           children: [
             CustomTextField(
@@ -623,9 +628,8 @@ class _SellerList extends StatelessWidget {
               }
 
               return ListView.builder(
-                padding: const EdgeInsets.only(
-                    top: 8,
-                    bottom: 16), // Çift boşluğu önlemek için padding ayarlandı
+                padding: EdgeInsets.only(
+                    top: 8, bottom: 16 + MediaQuery.of(context).padding.bottom),
                 itemCount: sellers.length,
                 itemBuilder: (context, index) {
                   final seller = sellers[index];
@@ -653,9 +657,9 @@ class _SellerList extends StatelessWidget {
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
+                          color: Colors.black.withOpacity(0.04),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
                         ),
                       ],
                     ),

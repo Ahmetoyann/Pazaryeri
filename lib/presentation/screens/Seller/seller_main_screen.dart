@@ -33,7 +33,6 @@ class SellerMainScreen extends StatefulWidget {
 class _SellerMainScreenState extends State<SellerMainScreen>
     with SingleTickerProviderStateMixin {
   late int _currentIndex;
-  late AnimationController _pulseController;
   bool _isVerificationDismissed = false;
   Timer? _indicatorTimer;
   bool _isMoving = false;
@@ -43,11 +42,6 @@ class _SellerMainScreenState extends State<SellerMainScreen>
     super.initState();
     // Başlangıç sekmesini parametreden al
     _currentIndex = widget.initialIndex;
-
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    )..repeat(reverse: true);
 
     // Ekran açıldığında ürünleri yükle
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -70,7 +64,6 @@ class _SellerMainScreenState extends State<SellerMainScreen>
 
   @override
   void dispose() {
-    _pulseController.dispose();
     _indicatorTimer?.cancel();
     super.dispose();
   }
@@ -272,12 +265,11 @@ class _SellerMainScreenState extends State<SellerMainScreen>
           maxWidth:
               selected ? 88 : 68, // Hem taşmayı önler hem hapları genişletir
         ),
-        padding: EdgeInsets.symmetric(
-          horizontal: selected ? 10 : 2,
-        ),
+        padding: selected
+            ? const EdgeInsets.all(4)
+            : const EdgeInsets.symmetric(horizontal: 2),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(24),
-          color: selected ? base : null,
           gradient: selected
               ? null
               : LinearGradient(
@@ -292,20 +284,21 @@ class _SellerMainScreenState extends State<SellerMainScreen>
                 ),
           border: Border.all(
             color: selected
-                ? base
+                ? base.withOpacity(0.5) // Dış zarı yarı saydam yapıyoruz
                 : (isDark ? Colors.white : Colors.black).withOpacity(0.20),
-            width: 1,
+            width: selected ? 2 : 1, // Dış zar kalınlığı
           ),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (!selected) icon, // Seçili değilse ikonu göster
-            if (selected) // Seçiliyse sadece metni göster
-              Flexible(
+        child: selected
+            ? Container(
+                alignment: Alignment.center,
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                decoration: BoxDecoration(
+                  color: base, // İç hapın boyalı kısmı
+                  borderRadius: BorderRadius.circular(20),
+                ),
                 child: FittedBox(
-                  fit: BoxFit.scaleDown, // Metni kesmek yerine alana sığdır
+                  fit: BoxFit.scaleDown,
                   child: Text(
                     label,
                     maxLines: 1,
@@ -317,9 +310,14 @@ class _SellerMainScreenState extends State<SellerMainScreen>
                     ),
                   ),
                 ),
+              )
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  icon,
+                ],
               ),
-          ],
-        ),
       );
     }
 
@@ -640,86 +638,39 @@ class _SellerMainScreenState extends State<SellerMainScreen>
                                 label: '',
                               ),
                               BottomNavigationBarItem(
-                                icon: ScaleTransition(
-                                  scale: Tween<double>(begin: 1.0, end: 1.1)
-                                      .animate(
-                                    CurvedAnimation(
-                                      parent: _pulseController,
-                                      curve: Curves.easeInOut,
-                                    ),
-                                  ),
-                                  child: Transform.translate(
-                                    offset: const Offset(0, 0),
+                                icon: AnimatedScale(
+                                  scale: _isMoving ? 0.8 : 1.0,
+                                  duration: const Duration(milliseconds: 150),
+                                  child: AnimatedOpacity(
+                                    opacity: _isMoving ? 0.5 : 1.0,
+                                    duration: const Duration(milliseconds: 150),
                                     child: navBox(
                                       label:
                                           langVM.translate('add_product_tab'),
                                       selected: false,
-                                      icon: Container(
-                                        width: 36,
-                                        height: 36,
-                                        decoration: BoxDecoration(
-                                          color: theme.colorScheme.primary,
-                                          shape: BoxShape.circle,
-                                          border: Border.all(
-                                            color: isDark
-                                                ? darkNavBackground
-                                                : Colors.white,
-                                            width: 2,
-                                          ),
-                                        ),
-                                        child: const Center(
-                                          child: SvgIcon(
-                                              iconPath: AppIcons.add,
-                                              size: 20,
-                                              color: Colors.white),
-                                        ),
-                                      ),
+                                      icon: SvgIcon(
+                                          iconPath: AppIcons.add,
+                                          size: 24,
+                                          color: unselectedIconColor),
                                     ),
                                   ),
                                 ),
-                                activeIcon: ScaleTransition(
-                                  scale: Tween<double>(begin: 1.0, end: 1.1)
-                                      .animate(
-                                    CurvedAnimation(
-                                      parent: _pulseController,
-                                      curve: Curves.easeInOut,
-                                    ),
+                                activeIcon: TweenAnimationBuilder<double>(
+                                  duration: const Duration(milliseconds: 400),
+                                  curve: Curves.easeOutBack,
+                                  tween: Tween(begin: 0.5, end: 1.0),
+                                  builder: (context, value, child) =>
+                                      Transform.scale(
+                                    scale: value,
+                                    child: child,
                                   ),
-                                  child: Transform.translate(
-                                    offset: const Offset(0, 0),
-                                    child: navBox(
-                                      label:
-                                          langVM.translate('add_product_tab'),
-                                      selected: true,
-                                      icon: Container(
-                                        width: 36,
-                                        height: 36,
-                                        decoration: BoxDecoration(
-                                          color: theme.colorScheme.primary,
-                                          shape: BoxShape.circle,
-                                          border: Border.all(
-                                            color: isDark
-                                                ? darkNavBackground
-                                                : Colors.white,
-                                            width: 2,
-                                          ),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: theme.colorScheme.primary
-                                                  .withOpacity(0.35),
-                                              blurRadius: 8,
-                                              offset: const Offset(0, 2),
-                                            ),
-                                          ],
-                                        ),
-                                        child: const Center(
-                                          child: SvgIcon(
-                                              iconPath: AppIcons.addActive,
-                                              size: 20,
-                                              color: Colors.white),
-                                        ),
-                                      ),
-                                    ),
+                                  child: navBox(
+                                    label: langVM.translate('add_product_tab'),
+                                    selected: true,
+                                    icon: SvgIcon(
+                                        iconPath: AppIcons.addActive,
+                                        size: 24,
+                                        color: theme.colorScheme.primary),
                                   ),
                                 ),
                                 label: '',

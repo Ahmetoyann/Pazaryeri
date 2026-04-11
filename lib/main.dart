@@ -9,6 +9,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:app_settings/app_settings.dart';
 import 'presentation/screens/Customer/home_screen.dart';
 import 'presentation/screens/Customer/search_screen.dart';
 import 'presentation/screens/Customer/report_list_screen.dart';
@@ -46,6 +47,16 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Uygulamayı kenardan kenara (Edge-to-Edge) çizer. Durum çubuğu ve navigasyon çubuğu hep görünür ve arka planla bütünleşir.
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+
+  // Durum çubuğu (Status Bar) ve Navigasyon çubuğunun arka planını tamamen şeffaf yapar.
+  // Böylece uygulama arka planı (Scaffold veya Gradient) üst çubuğun altından da kusursuzca görünür.
+  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    systemNavigationBarColor: Colors.transparent,
+  ));
 
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
@@ -220,6 +231,7 @@ class StartupConnectivityWrapper extends StatefulWidget {
 class _StartupConnectivityWrapperState
     extends State<StartupConnectivityWrapper> {
   bool? _hasConnection;
+  bool _isRetrying = false;
 
   @override
   void initState() {
@@ -231,9 +243,16 @@ class _StartupConnectivityWrapperState
     final result = await Connectivity().checkConnectivity();
     final hasConnection = !result.contains(ConnectivityResult.none);
 
+    // Yeniden dene butonuna basıldığında ve internet hala yoksa,
+    // spinner animasyonunun çok hızlı yanıp sönmesini engellemek için ufak bir gecikme:
+    if (_isRetrying && !hasConnection) {
+      await Future.delayed(const Duration(milliseconds: 600));
+    }
+
     if (mounted) {
       setState(() {
         _hasConnection = hasConnection;
+        _isRetrying = false;
       });
     }
   }
@@ -249,33 +268,102 @@ class _StartupConnectivityWrapperState
     }
 
     if (_hasConnection == false) {
+      final theme = Theme.of(context);
+      final isDark = theme.brightness == Brightness.dark;
+
       return Scaffold(
         backgroundColor: Colors.transparent,
         body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.wifi_off, size: 80, color: Colors.white70),
-              const SizedBox(height: 20),
-              const Text(
-                'İnternet Bağlantısı Yok',
-                style: TextStyle(
-                    fontSize: 18,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(32),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.errorContainer
+                        .withOpacity(isDark ? 0.2 : 0.5),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: theme.colorScheme.error.withOpacity(0.3),
+                      width: 2,
+                    ),
+                  ),
+                  child: Icon(
+                    Icons.wifi_off_rounded,
+                    size: 80,
+                    color: theme.colorScheme.error,
+                  ),
+                ),
+                const SizedBox(height: 32),
+                Text(
+                  'İnternet Bağlantısı Yok',
+                  style: theme.textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: Colors.white),
-              ),
-              const SizedBox(height: 10),
-              const Text('Lütfen bağlantınızı kontrol edin.',
-                  style: TextStyle(color: Colors.white70)),
-              const SizedBox(height: 30),
-              ElevatedButton(
-                onPressed: () {
-                  setState(() => _hasConnection = null);
-                  _checkConnection();
-                },
-                child: const Text('Yeniden Dene'),
-              ),
-            ],
+                    color: theme.colorScheme.onSurface,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Pazaryeri\'ne erişebilmek için lütfen internet bağlantınızı kontrol edin.',
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: theme.colorScheme.onSurface.withOpacity(0.7),
+                    height: 1.5,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 40),
+                FilledButton.icon(
+                  onPressed: () {
+                    if (_isRetrying) return;
+                    setState(() => _isRetrying = true);
+                    _checkConnection();
+                  },
+                  icon: _isRetrying
+                      ? SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: theme.colorScheme.onPrimary,
+                          ),
+                        )
+                      : const Icon(Icons.refresh_rounded),
+                  label: Text(
+                    _isRetrying ? 'Kontrol ediliyor...' : 'Yeniden Dene',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: theme.colorScheme.primary,
+                    foregroundColor: theme.colorScheme.onPrimary,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 32, vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    elevation: 0,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextButton.icon(
+                  onPressed: () {
+                    AppSettings.openAppSettings(type: AppSettingsType.wifi);
+                  },
+                  icon: const Icon(Icons.settings_rounded, size: 18),
+                  label: const Text('WiFi Ayarlarına Git'),
+                  style: TextButton.styleFrom(
+                    foregroundColor:
+                        theme.colorScheme.onSurface.withOpacity(0.7),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    textStyle: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -330,31 +418,121 @@ class _GlobalConnectivityManagerState extends State<GlobalConnectivityManager> {
 
     _isDialogShowing = true;
 
-    // Dil desteği için güvenli erişim
-    String message = 'İnternet bağlantısı yok';
-    try {
-      final langVM = Provider.of<LanguageViewModel>(context, listen: false);
-      message = langVM.translate('no_internet');
-    } catch (_) {}
+    showDialog(
+      context: context,
+      barrierDismissible: false, // Dışarı tıklanarak kapatılmasını engeller
+      builder: (BuildContext context) {
+        final theme = Theme.of(context);
+        final isDark = theme.brightness == Brightness.dark;
 
-    CustomSnackbars.showError(context, message);
+        String message = 'İnternet bağlantısı yok';
+        try {
+          final langVM = Provider.of<LanguageViewModel>(context, listen: false);
+          message = langVM.translate('no_internet');
+        } catch (_) {}
 
-    if (mounted) {
-      _isDialogShowing = false;
-    }
+        return PopScope(
+          canPop:
+              false, // Geri tuşu (Android) veya kaydırma (iOS) ile kapatılmasını engeller
+          child: BackdropFilter(
+            filter: ImageFilter.blur(
+                sigmaX: 8, sigmaY: 8), // Arka planı bulanıklaştırır
+            child: Dialog(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              child: Container(
+                padding: const EdgeInsets.all(32),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surface,
+                  borderRadius: BorderRadius.circular(28),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 24,
+                      offset: const Offset(0, 12),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.errorContainer
+                            .withOpacity(isDark ? 0.2 : 0.5),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: theme.colorScheme.error.withOpacity(0.3),
+                          width: 2,
+                        ),
+                      ),
+                      child: Icon(
+                        Icons.wifi_off_rounded,
+                        size: 48,
+                        color: theme.colorScheme.error,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      message,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Bağlantınız koptu. Lütfen internet ayarlarınızı kontrol edin. Sistem bağlantıyı otomatik olarak bekliyor...',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurface.withOpacity(0.7),
+                        height: 1.5,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 32),
+                    SizedBox(
+                      width: 32,
+                      height: 32,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 3,
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    TextButton.icon(
+                      onPressed: () {
+                        AppSettings.openAppSettings(type: AppSettingsType.wifi);
+                      },
+                      icon: const Icon(Icons.settings_rounded, size: 18),
+                      label: const Text('WiFi Ayarlarına Git'),
+                      style: TextButton.styleFrom(
+                        foregroundColor:
+                            theme.colorScheme.onSurface.withOpacity(0.7),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
+                        textStyle: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _showConnectionRestoredDialog() async {
-    // Eğer şu an "İnternet yok" diyaloğu açıksa kapanmasını bekle
-    while (_isDialogShowing) {
-      await Future.delayed(const Duration(milliseconds: 100));
-      if (!mounted) return;
-    }
-
     final context = navigatorKey.currentContext;
     if (context == null) return;
 
-    _isDialogShowing = true;
+    if (_isDialogShowing) {
+      Navigator.of(context, rootNavigator: true)
+          .pop(); // Pencereyi programatik olarak kapat
+      _isDialogShowing = false;
+    }
 
     String message = 'Connection restored';
     try {
@@ -366,10 +544,6 @@ class _GlobalConnectivityManagerState extends State<GlobalConnectivityManager> {
     } catch (_) {}
 
     CustomSnackbars.showSuccess(context, message);
-
-    if (mounted) {
-      _isDialogShowing = false;
-    }
   }
 
   @override
@@ -718,12 +892,11 @@ class _MainScaffoldState extends State<MainScaffold> {
         curve: Curves.easeOutQuint,
         height: 48,
         constraints: BoxConstraints(minWidth: selected ? 110 : 64),
-        padding: EdgeInsets.symmetric(
-          horizontal: selected ? 24 : 16,
-        ),
+        padding: selected
+            ? const EdgeInsets.all(4)
+            : const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(24),
-          color: selected ? base : null,
           gradient: selected
               ? null
               : LinearGradient(
@@ -739,20 +912,21 @@ class _MainScaffoldState extends State<MainScaffold> {
                 ),
           border: Border.all(
             color: selected
-                ? base
+                ? base.withOpacity(0.5) // Dış zarı yarı saydam yapıyoruz
                 : (isDark ? Colors.white : Colors.black).withOpacity(0.20),
-            width: 1,
+            width: selected ? 2 : 1, // Dış zarın kalınlığı
           ),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (!selected) icon, // Seçili değilse ikonu göster
-            if (selected) // Seçiliyse sadece metni göster
-              Flexible(
+        child: selected
+            ? Container(
+                alignment: Alignment.center,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: base, // İç hapın tamamen boyalı kısmı
+                  borderRadius: BorderRadius.circular(20),
+                ),
                 child: FittedBox(
-                  fit: BoxFit.scaleDown, // Metni kesmek yerine alana sığdır
+                  fit: BoxFit.scaleDown,
                   child: Text(
                     label,
                     maxLines: 1,
@@ -764,9 +938,14 @@ class _MainScaffoldState extends State<MainScaffold> {
                     ),
                   ),
                 ),
+              )
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  icon,
+                ],
               ),
-          ],
-        ),
       );
     }
 

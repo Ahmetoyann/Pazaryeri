@@ -105,7 +105,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
   Widget _buildMenu(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.fromLTRB(
+          16, 16, 16, 16 + MediaQuery.of(context).padding.bottom),
       child: Column(
         children: [
           _buildMenuButton(
@@ -248,7 +249,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         }
 
         return ListView.builder(
-          padding: const EdgeInsets.all(12),
+          padding: EdgeInsets.fromLTRB(
+              12, 12, 12, 12 + MediaQuery.of(context).padding.bottom),
           itemCount: homeVM.favoriteMarkets.length,
           itemBuilder: (context, index) {
             var market = homeVM.favoriteMarkets[index];
@@ -299,7 +301,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
         final sellers = snapshot.data!;
         return ListView.builder(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.fromLTRB(
+              16, 16, 16, 16 + MediaQuery.of(context).padding.bottom),
           itemCount: sellers.length,
           itemBuilder: (context, index) {
             final seller = sellers[index];
@@ -339,9 +342,9 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
+                      color: Colors.black.withOpacity(0.04),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
                     ),
                   ],
                   border: Border.all(
@@ -476,7 +479,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
         final products = snapshot.data!;
         return GridView.builder(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.fromLTRB(
+              16, 16, 16, 16 + MediaQuery.of(context).padding.bottom),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2,
             childAspectRatio: 0.62,

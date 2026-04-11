@@ -465,6 +465,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
     await CustomBottomSheets.showContent(
       context: context,
       title: langVM.translate('add_review'),
+      icon: Icons.star_rate_rounded,
       child: StatefulBuilder(
         builder: (context, setState) {
           return Column(
@@ -472,40 +473,111 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Center(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(5, (index) {
-                    return IconButton(
-                      iconSize: 40,
-                      icon: Icon(
-                        index < rating ? Icons.star : Icons.star_border,
-                        color: Colors.amber,
-                      ),
-                      onPressed: () => setState(() => rating = index + 1),
-                    );
-                  }),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: commentController,
-                decoration: InputDecoration(
-                  hintText: langVM.translate('write_review_hint'),
-                  hintStyle: TextStyle(
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  decoration: BoxDecoration(
+                    color:
+                        Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
                       color: Theme.of(context)
                           .colorScheme
                           .primary
-                          .withOpacity(0.7)),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(
-                        color: Theme.of(context).colorScheme.primary),
+                          .withOpacity(0.2),
+                    ),
                   ),
-                  filled: true,
-                  fillColor: Theme.of(context).cardColor,
-                  contentPadding: const EdgeInsets.all(16),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: List.generate(5, (index) {
+                      return GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            rating = index + 1;
+                          });
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                          child: AnimatedScale(
+                            scale: rating >= index + 1 ? 1.2 : 1.0,
+                            duration: const Duration(milliseconds: 200),
+                            child: Icon(
+                              rating >= index + 1
+                                  ? Icons.star_rounded
+                                  : Icons.star_outline_rounded,
+                              color: Colors.amber,
+                              size: 36,
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
+                  ),
                 ),
-                maxLines: 3,
+              ),
+              const SizedBox(height: 24),
+              TextField(
+                controller: commentController,
+                maxLines: 4,
+                minLines: 3,
+                style: TextStyle(
+                  color: Theme.of(context).textTheme.bodyLarge?.color,
+                  fontSize: 15,
+                ),
+                decoration: InputDecoration(
+                  alignLabelWithHint: true,
+                  labelText: langVM.translate('write_review_hint'),
+                  labelStyle:
+                      TextStyle(color: Theme.of(context).colorScheme.primary),
+                  filled: true,
+                  fillColor: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white.withOpacity(0.05)
+                      : Colors.grey.withOpacity(0.05),
+                  prefixIcon: Column(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        margin:
+                            const EdgeInsets.only(left: 12, right: 8, top: 12),
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(Icons.rate_review_rounded,
+                            color: Theme.of(context).colorScheme.primary,
+                            size: 20),
+                      ),
+                    ],
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(20),
+                    borderSide: BorderSide(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withOpacity(0.1),
+                        width: 1),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(20),
+                    borderSide: BorderSide(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withOpacity(0.1),
+                        width: 1),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(20),
+                    borderSide: BorderSide(
+                        color: Theme.of(context).colorScheme.primary, width: 2),
+                  ),
+                ),
               ),
               const SizedBox(height: 12),
               Row(
@@ -562,6 +634,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
               const SizedBox(height: 24),
               CustomButton(
                 text: langVM.translate('send_button'),
+                icon: Icons.send_rounded,
                 onPressed: () async {
                   if (rating == 0) {
                     CustomSnackbars.showWarning(
@@ -620,32 +693,72 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
     await CustomBottomSheets.showContent(
       context: context,
       title: 'Soru Sor',
+      icon: Icons.help_outline_rounded,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           TextField(
             controller: questionController,
+            maxLines: 4,
+            minLines: 3,
+            style: TextStyle(
+              color: Theme.of(context).textTheme.bodyLarge?.color,
+              fontSize: 15,
+            ),
             decoration: InputDecoration(
-              hintText: 'Sorunuzu buraya yazın...',
-              hintStyle: TextStyle(
-                  color:
-                      Theme.of(context).colorScheme.primary.withOpacity(0.7)),
+              alignLabelWithHint: true,
+              labelText: 'Sorunuzu buraya yazın...',
+              labelStyle:
+                  TextStyle(color: Theme.of(context).colorScheme.primary),
+              filled: true,
+              fillColor: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.white.withOpacity(0.05)
+                  : Colors.grey.withOpacity(0.05),
+              prefixIcon: Column(
+                mainAxisAlignment: MainAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    margin: const EdgeInsets.only(left: 12, right: 8, top: 12),
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(Icons.edit_document,
+                        color: Theme.of(context).colorScheme.primary, size: 20),
+                  ),
+                ],
+              ),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(20),
                 borderSide: BorderSide(
                     color:
-                        Theme.of(context).colorScheme.primary.withOpacity(0.3)),
+                        Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                    width: 1),
               ),
-              filled: true,
-              fillColor: Theme.of(context).cardColor,
-              contentPadding: const EdgeInsets.all(16),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(20),
+                borderSide: BorderSide(
+                    color:
+                        Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                    width: 1),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(20),
+                borderSide: BorderSide(
+                    color: Theme.of(context).colorScheme.primary, width: 2),
+              ),
             ),
-            maxLines: 3,
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 28),
           CustomButton(
             text: langVM.translate('send_button'),
+            icon: Icons.send_rounded,
             onPressed: () async {
               if (questionController.text.trim().isEmpty) return;
 
@@ -1769,7 +1882,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
   Widget _buildReviewsTab(BuildContext context, LanguageViewModel langVM,
       AuthViewModel authVM, Color backgroundColor, Color contentColor) {
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.fromLTRB(
+          16, 16, 16, 80 + MediaQuery.of(context).padding.bottom),
       children: [
         CustomButton(
           text: langVM.translate('add_review'),
@@ -1843,9 +1957,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
+                          color: Colors.black.withOpacity(0.04),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
                         ),
                       ],
                     ),
@@ -2101,7 +2215,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
   Widget _buildQuestionsTab(
       BuildContext context, LanguageViewModel langVM, AuthViewModel authVM) {
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.fromLTRB(
+          16, 16, 16, 80 + MediaQuery.of(context).padding.bottom),
       children: [
         CustomButton(
           text: langVM.translate('ask_question_title'),
@@ -2171,9 +2286,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
+                          color: Colors.black.withOpacity(0.04),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
                         ),
                       ],
                     ),

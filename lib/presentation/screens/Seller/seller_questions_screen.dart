@@ -162,32 +162,60 @@ class _SellerQuestionsScreenState extends State<SellerQuestionsScreen> {
               TextField(
                 controller: controller,
                 autofocus: true,
+                maxLines: 4,
+                minLines: 3,
+                style: TextStyle(
+                  color: theme.textTheme.bodyLarge?.color,
+                  fontSize: 15,
+                ),
                 decoration: InputDecoration(
-                  hintText: langVM.translate('answer_hint'),
+                  alignLabelWithHint: true,
+                  labelText: langVM.translate('answer_hint'),
+                  labelStyle: TextStyle(color: theme.colorScheme.primary),
+                  filled: true,
+                  fillColor: theme.brightness == Brightness.dark
+                      ? Colors.white.withOpacity(0.05)
+                      : Colors.grey.withOpacity(0.05),
+                  prefixIcon: Column(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        margin:
+                            const EdgeInsets.only(left: 12, right: 8, top: 12),
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(Icons.reply_rounded,
+                            color: theme.colorScheme.primary, size: 20),
+                      ),
+                    ],
+                  ),
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(20),
                     borderSide: BorderSide(
-                        color: theme.colorScheme.primary.withOpacity(0.5)),
+                        color: theme.colorScheme.primary.withOpacity(0.1),
+                        width: 1),
                   ),
                   enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(20),
                     borderSide: BorderSide(
-                        color: theme.colorScheme.primary.withOpacity(0.5)),
+                        color: theme.colorScheme.primary.withOpacity(0.1),
+                        width: 1),
                   ),
                   focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(20),
                     borderSide:
                         BorderSide(color: theme.colorScheme.primary, width: 2),
                   ),
-                  filled: true,
-                  fillColor: theme.cardColor,
-                  contentPadding: const EdgeInsets.all(16),
                 ),
-                maxLines: 4,
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 28),
               CustomButton(
                 text: langVM.translate('send_button'),
+                icon: Icons.send_rounded,
                 backgroundColor:
                     Theme.of(context).colorScheme.primary.withOpacity(0.2),
                 foregroundColor: Theme.of(context).colorScheme.primary,
@@ -223,36 +251,72 @@ class _SellerQuestionsScreenState extends State<SellerQuestionsScreen> {
     return await CustomBottomSheets.showContent<String>(
       context: context,
       title: 'Yeni Şablon Oluştur',
+      icon: Icons.post_add_rounded,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           TextField(
             controller: controller,
-            decoration: InputDecoration(
-              hintText: 'Şablon metni...',
-              filled: true,
-              fillColor: Theme.of(context).cardColor,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide.none,
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide.none,
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(
-                    color: Theme.of(context).colorScheme.primary, width: 1.5),
-              ),
-              contentPadding: const EdgeInsets.all(16),
-            ),
             autofocus: true,
             maxLines: 3,
+            minLines: 2,
+            style: TextStyle(
+              color: Theme.of(context).textTheme.bodyLarge?.color,
+              fontSize: 15,
+            ),
+            decoration: InputDecoration(
+              alignLabelWithHint: true,
+              labelText: 'Şablon metni...',
+              labelStyle:
+                  TextStyle(color: Theme.of(context).colorScheme.primary),
+              filled: true,
+              fillColor: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.white.withOpacity(0.05)
+                  : Colors.grey.withOpacity(0.05),
+              prefixIcon: Column(
+                mainAxisAlignment: MainAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    margin: const EdgeInsets.only(left: 12, right: 8, top: 12),
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(Icons.edit_document,
+                        color: Theme.of(context).colorScheme.primary, size: 20),
+                  ),
+                ],
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(20),
+                borderSide: BorderSide(
+                    color:
+                        Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                    width: 1),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(20),
+                borderSide: BorderSide(
+                    color:
+                        Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                    width: 1),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(20),
+                borderSide: BorderSide(
+                    color: Theme.of(context).colorScheme.primary, width: 2),
+              ),
+            ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 28),
           CustomButton(
             text: 'Ekle',
+            icon: Icons.add_circle_outline_rounded,
             onPressed: () => Navigator.pop(context, controller.text.trim()),
           ),
         ],
@@ -369,7 +433,8 @@ class _SellerQuestionsScreenState extends State<SellerQuestionsScreen> {
               }
 
               return ListView.builder(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
+                padding: EdgeInsets.fromLTRB(
+                    16, 0, 16, 100 + MediaQuery.of(context).padding.bottom),
                 itemCount: filteredQuestions.length,
                 itemBuilder: (context, index) {
                   final question = filteredQuestions[index];
@@ -408,9 +473,9 @@ class _SellerQuestionsScreenState extends State<SellerQuestionsScreen> {
                           : null,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 15,
-                          offset: const Offset(0, 5),
+                          color: Colors.black.withOpacity(0.04),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
                         ),
                       ],
                     ),

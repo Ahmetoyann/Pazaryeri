@@ -243,7 +243,8 @@ class _SellerRegisterScreenState extends State<SellerRegisterScreen> {
       appBar: const CustomAppBar(title: Text('Satıcı Kaydı')),
       body: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.fromLTRB(
+              24, 24, 24, 24 + MediaQuery.of(context).padding.bottom),
           child: Form(
             key: _formKey,
             child: Column(

@@ -17,7 +17,25 @@ class CustomSnackbars {
       SnackBar(
         content: Row(
           children: [
-            Icon(icon, color: Colors.white),
+            TweenAnimationBuilder<double>(
+              duration: const Duration(milliseconds: 600),
+              curve: Curves.elasticOut,
+              tween: Tween(begin: 0.0, end: 1.0),
+              builder: (context, value, child) {
+                return Transform.scale(
+                  scale: value,
+                  child: child,
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: Colors.white, size: 24),
+              ),
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
@@ -33,10 +51,10 @@ class CustomSnackbars {
         ),
         backgroundColor: color,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         duration: duration,
-        margin: const EdgeInsets.all(16),
-        elevation: 4,
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+        elevation: 6,
         action: onAction != null
             ? SnackBarAction(
                 label: actionLabel,

@@ -557,55 +557,126 @@ class _CustomerSellerDetailScreenState
     CustomBottomSheets.showContent(
       context: context,
       title: 'Satıcıyı Değerlendir',
+      icon: Icons.star_rate_rounded,
       child: StatefulBuilder(
         builder: (sheetContext, setState) => Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Center(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(5, (index) {
-                  return IconButton(
-                    iconSize: 40,
-                    icon: Icon(
-                      index < selectedRating ? Icons.star : Icons.star_border,
-                      color: Colors.amber,
-                    ),
-                    onPressed: () {
-                      setState(() => selectedRating = index + 1);
-                    },
-                  );
-                }),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: commentController,
-              style:
-                  TextStyle(color: Theme.of(sheetContext).colorScheme.primary),
-              decoration: InputDecoration(
-                hintText: 'Yorumunuzu yazın...',
-                hintStyle: TextStyle(
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Theme.of(sheetContext)
+                      .colorScheme
+                      .primary
+                      .withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
                     color: Theme.of(sheetContext)
                         .colorScheme
                         .primary
-                        .withOpacity(0.7)),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(
-                    color: Theme.of(sheetContext).colorScheme.primary,
+                        .withOpacity(0.2),
                   ),
                 ),
-                filled: true,
-                fillColor: Theme.of(sheetContext).cardColor,
-                contentPadding: const EdgeInsets.all(16),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: List.generate(5, (index) {
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          selectedRating = index + 1;
+                        });
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                        child: AnimatedScale(
+                          scale: selectedRating >= index + 1 ? 1.2 : 1.0,
+                          duration: const Duration(milliseconds: 200),
+                          child: Icon(
+                            selectedRating >= index + 1
+                                ? Icons.star_rounded
+                                : Icons.star_outline_rounded,
+                            color: Colors.amber,
+                            size: 36,
+                          ),
+                        ),
+                      ),
+                    );
+                  }),
+                ),
               ),
-              maxLines: 3,
             ),
             const SizedBox(height: 24),
+            TextField(
+              controller: commentController,
+              maxLines: 4,
+              minLines: 3,
+              style: TextStyle(
+                color: Theme.of(sheetContext).textTheme.bodyLarge?.color,
+                fontSize: 15,
+              ),
+              decoration: InputDecoration(
+                alignLabelWithHint: true,
+                labelText: 'Yorumunuzu yazın...',
+                labelStyle: TextStyle(
+                    color: Theme.of(sheetContext).colorScheme.primary),
+                filled: true,
+                fillColor: Theme.of(sheetContext).brightness == Brightness.dark
+                    ? Colors.white.withOpacity(0.05)
+                    : Colors.grey.withOpacity(0.05),
+                prefixIcon: Column(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      margin:
+                          const EdgeInsets.only(left: 12, right: 8, top: 12),
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Theme.of(sheetContext)
+                            .colorScheme
+                            .primary
+                            .withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(Icons.rate_review_rounded,
+                          color: Theme.of(sheetContext).colorScheme.primary,
+                          size: 20),
+                    ),
+                  ],
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  borderSide: BorderSide(
+                      color: Theme.of(sheetContext)
+                          .colorScheme
+                          .primary
+                          .withOpacity(0.1),
+                      width: 1),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  borderSide: BorderSide(
+                      color: Theme.of(sheetContext)
+                          .colorScheme
+                          .primary
+                          .withOpacity(0.1),
+                      width: 1),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  borderSide: BorderSide(
+                      color: Theme.of(sheetContext).colorScheme.primary,
+                      width: 2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 28),
             CustomButton(
               text: 'Gönder',
+              icon: Icons.send_rounded,
               onPressed: () async {
                 if (selectedRating == 0) {
                   CustomSnackbars.showWarning(
@@ -659,9 +730,9 @@ class _CustomerSellerDetailScreenState
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 20,
-            offset: const Offset(0, 5),
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -991,7 +1062,8 @@ class _CustomerSellerDetailScreenState
           ? const Center(child: CustomLoadingIndicator())
           : _products.isEmpty
               ? SingleChildScrollView(
-                  padding: const EdgeInsets.only(bottom: 100),
+                  padding: EdgeInsets.only(
+                      bottom: 100 + MediaQuery.of(context).padding.bottom),
                   child: Column(
                     children: [
                       _buildSellerInfo(context, langVM),
@@ -1152,7 +1224,8 @@ class _CustomerSellerDetailScreenState
                   ),
                 )
               : GridView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
+                  padding: EdgeInsets.fromLTRB(
+                      16, 0, 16, 100 + MediaQuery.of(context).padding.bottom),
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
                     childAspectRatio: 0.62,
@@ -1188,7 +1261,8 @@ class _CustomerSellerDetailScreenState
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.fromLTRB(
+          16, 16, 16, 100 + MediaQuery.of(context).padding.bottom),
       children: [
         if (_reviews.isEmpty)
           Padding(
@@ -1228,9 +1302,9 @@ class _CustomerSellerDetailScreenState
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
                   ),
                 ],
               ),

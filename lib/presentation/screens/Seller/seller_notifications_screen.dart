@@ -22,6 +22,7 @@ class SellerNotificationsScreen extends StatelessWidget {
     final authVM = Provider.of<AuthViewModel>(context);
     final langVM = Provider.of<LanguageViewModel>(context);
     final user = authVM.currentUser;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     if (user == null) {
       return const SizedBox.shrink();
@@ -76,15 +77,45 @@ class SellerNotificationsScreen extends StatelessWidget {
             child: Column(
               children: [
                 Container(
-                  color: Theme.of(context).scaffoldBackgroundColor,
-                  child: TabBar(
-                    labelColor: Theme.of(context).colorScheme.primary,
-                    unselectedLabelColor: Colors.grey,
-                    indicatorColor: Theme.of(context).colorScheme.primary,
-                    tabs: [
-                      Tab(text: 'Tümü (${notifications.length})'),
-                      Tab(text: 'Okunmamış (${unreadNotifications.length})'),
-                    ],
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? Colors.white.withOpacity(0.05)
+                          : Colors.grey.shade200,
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    child: TabBar(
+                      indicatorSize: TabBarIndicatorSize.tab,
+                      dividerColor: Colors.transparent,
+                      indicator: BoxDecoration(
+                        borderRadius: BorderRadius.circular(30),
+                        color: Theme.of(context).colorScheme.primary,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withOpacity(0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          )
+                        ],
+                      ),
+                      labelColor: Colors.white,
+                      unselectedLabelColor: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withOpacity(0.6),
+                      labelStyle: const TextStyle(fontWeight: FontWeight.bold),
+                      splashBorderRadius: BorderRadius.circular(30),
+                      padding: const EdgeInsets.all(4),
+                      tabs: [
+                        Tab(text: 'Tümü (${notifications.length})'),
+                        Tab(text: 'Okunmamış (${unreadNotifications.length})'),
+                      ],
+                    ),
                   ),
                 ),
                 Expanded(
@@ -129,7 +160,8 @@ class SellerNotificationsScreen extends StatelessWidget {
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.fromLTRB(
+          16, 16, 16, 16 + MediaQuery.of(context).padding.bottom),
       itemCount: notifications.length,
       itemBuilder: (_, index) {
         final notification = notifications[index];
@@ -197,10 +229,10 @@ class SellerNotificationsScreen extends StatelessWidget {
               boxShadow: [
                 BoxShadow(
                   color: isRead
-                      ? Colors.black.withOpacity(0.05)
-                      : notificationColor.withOpacity(0.15),
-                  blurRadius: isRead ? 10 : 15,
-                  offset: const Offset(0, 4),
+                      ? Colors.black.withOpacity(0.04)
+                      : notificationColor.withOpacity(0.1),
+                  blurRadius: isRead ? 8 : 12,
+                  offset: const Offset(0, 2),
                 ),
               ],
             ),

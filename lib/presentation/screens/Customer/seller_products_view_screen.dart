@@ -322,8 +322,8 @@ class _SellerProductsViewScreenState extends State<SellerProductsViewScreen> {
                                       color: Theme.of(context).brightness ==
                                               Brightness.dark
                                           ? Colors.white.withOpacity(0.25)
-                                          : Colors.black.withOpacity(0.2),
-                                      blurRadius: 4,
+                                          : Colors.black.withOpacity(0.05),
+                                      blurRadius: 8,
                                       offset: const Offset(0, 2),
                                     ),
                                   ],
@@ -407,7 +407,8 @@ class _SellerProductsViewScreenState extends State<SellerProductsViewScreen> {
                           ? const Center(
                               child: Text('Bu kategoride ürün bulunamadı.'))
                           : ListView.builder(
-                              padding: const EdgeInsets.all(16),
+                              padding: EdgeInsets.fromLTRB(16, 16, 16,
+                                  16 + MediaQuery.of(context).padding.bottom),
                               itemCount: _filteredProducts.length,
                               itemBuilder: (context, index) {
                                 final product = _filteredProducts[index];

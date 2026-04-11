@@ -64,8 +64,10 @@ class DefaultFirebaseOptions {
     messagingSenderId: '943095534116',
     projectId: 'pazaryeri-57419',
     storageBucket: 'pazaryeri-57419.firebasestorage.app',
-    androidClientId: '943095534116-lnnp0q4g3f7ibu098b9snuq6ilrki9kc.apps.googleusercontent.com',
-    iosClientId: '943095534116-pf4a7geipc7vljmeds7ud12odu6oe56i.apps.googleusercontent.com',
+    androidClientId:
+        '943095534116-lnnp0q4g3f7ibu098b9snuq6ilrki9kc.apps.googleusercontent.com',
+    iosClientId:
+        '943095534116-pf4a7geipc7vljmeds7ud12odu6oe56i.apps.googleusercontent.com',
     iosBundleId: 'com.example.flutterApplication1',
   );
 
@@ -75,8 +77,10 @@ class DefaultFirebaseOptions {
     messagingSenderId: '943095534116',
     projectId: 'pazaryeri-57419',
     storageBucket: 'pazaryeri-57419.firebasestorage.app',
-    androidClientId: '943095534116-lnnp0q4g3f7ibu098b9snuq6ilrki9kc.apps.googleusercontent.com',
-    iosClientId: '943095534116-pf4a7geipc7vljmeds7ud12odu6oe56i.apps.googleusercontent.com',
+    androidClientId:
+        '943095534116-lnnp0q4g3f7ibu098b9snuq6ilrki9kc.apps.googleusercontent.com',
+    iosClientId:
+        '943095534116-pf4a7geipc7vljmeds7ud12odu6oe56i.apps.googleusercontent.com',
     iosBundleId: 'com.example.flutterApplication1',
   );
 
@@ -89,5 +93,4 @@ class DefaultFirebaseOptions {
     storageBucket: 'pazaryeri-57419.firebasestorage.app',
     measurementId: 'G-N2TRPRJ1QJ',
   );
-
 }

@@ -219,15 +219,42 @@ class _SellerReviewsScreenState extends State<SellerReviewsScreen> {
       child: Column(
         children: [
           Container(
-            color: Theme.of(context).cardColor,
-            child: TabBar(
-              labelColor: Theme.of(context).colorScheme.primary,
-              unselectedLabelColor: Colors.grey,
-              indicatorColor: Theme.of(context).colorScheme.primary,
-              tabs: const [
-                Tab(text: 'Değerlendirme'),
-                Tab(text: 'Ürün Değerlendirme'),
-              ],
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Container(
+              decoration: BoxDecoration(
+                color: isDark
+                    ? Colors.white.withOpacity(0.05)
+                    : Colors.grey.shade200,
+                borderRadius: BorderRadius.circular(30),
+              ),
+              child: TabBar(
+                indicatorSize: TabBarIndicatorSize.tab,
+                dividerColor: Colors.transparent,
+                indicator: BoxDecoration(
+                  borderRadius: BorderRadius.circular(30),
+                  color: Theme.of(context).colorScheme.primary,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    )
+                  ],
+                ),
+                labelColor: Colors.white,
+                unselectedLabelColor:
+                    Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                labelStyle: const TextStyle(fontWeight: FontWeight.bold),
+                splashBorderRadius: BorderRadius.circular(30),
+                padding: const EdgeInsets.all(4),
+                tabs: const [
+                  Tab(text: 'Değerlendirme'),
+                  Tab(text: 'Ürün Değerlendirme'),
+                ],
+              ),
             ),
           ),
           Expanded(
@@ -268,7 +295,8 @@ class _SellerReviewsScreenState extends State<SellerReviewsScreen> {
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+      padding: EdgeInsets.fromLTRB(
+          16, 16, 16, 100 + MediaQuery.of(context).padding.bottom),
       itemCount: _sellerReviews.length,
       itemBuilder: (context, index) {
         final review = _sellerReviews[index];
@@ -285,9 +313,9 @@ class _SellerReviewsScreenState extends State<SellerReviewsScreen> {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 15,
-                offset: const Offset(0, 5),
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
               ),
             ],
           ),
@@ -394,9 +422,9 @@ class _SellerReviewsScreenState extends State<SellerReviewsScreen> {
                         : null,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 15,
-                        offset: const Offset(0, 5),
+                        color: Colors.black.withOpacity(0.04),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
                       ),
                     ],
                   ),
@@ -514,7 +542,8 @@ class _SellerReviewsScreenState extends State<SellerReviewsScreen> {
                   ),
                 )
               : ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
+                  padding: EdgeInsets.fromLTRB(
+                      16, 0, 16, 100 + MediaQuery.of(context).padding.bottom),
                   itemCount: _filteredProductReviews.length,
                   itemBuilder: (context, index) {
                     final item = _filteredProductReviews[index];
@@ -543,9 +572,9 @@ class _SellerReviewsScreenState extends State<SellerReviewsScreen> {
                             : null,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 15,
-                            offset: const Offset(0, 5),
+                            color: Colors.black.withOpacity(0.04),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
                           ),
                         ],
                       ),

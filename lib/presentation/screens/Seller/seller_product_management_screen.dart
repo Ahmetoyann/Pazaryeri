@@ -155,24 +155,46 @@ class _SellerProductManagementScreenState
 
   InputDecoration _buildInputDecoration(String label, String iconPath,
       {String? suffixText, String? helperText}) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return InputDecoration(
+      alignLabelWithHint: true,
       labelText: label,
-      prefixIcon: Padding(
-          padding: const EdgeInsets.all(12),
-          child: SvgIcon(
-              iconPath: iconPath, color: colorScheme.primary, size: 28)),
+      labelStyle: TextStyle(color: theme.colorScheme.primary),
+      filled: true,
+      fillColor: isDark
+          ? Colors.white.withOpacity(0.05)
+          : Colors.grey.withOpacity(0.05),
+      prefixIcon: Column(
+        mainAxisAlignment: MainAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            margin:
+                const EdgeInsets.only(left: 12, right: 8, top: 12, bottom: 12),
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: SvgIcon(
+                iconPath: iconPath, color: theme.colorScheme.primary, size: 20),
+          ),
+        ],
+      ),
       suffixText: suffixText,
       helperText: helperText,
       border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: colorScheme.primary.withOpacity(0.5))),
+          borderRadius: BorderRadius.circular(20),
+          borderSide: BorderSide(
+              color: theme.colorScheme.primary.withOpacity(0.1), width: 1)),
       enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: colorScheme.primary.withOpacity(0.5))),
+          borderRadius: BorderRadius.circular(20),
+          borderSide: BorderSide(
+              color: theme.colorScheme.primary.withOpacity(0.1), width: 1)),
       focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: colorScheme.primary, width: 2)),
+          borderRadius: BorderRadius.circular(20),
+          borderSide: BorderSide(color: theme.colorScheme.primary, width: 2)),
     );
   }
 
@@ -282,10 +304,12 @@ class _SellerProductManagementScreenState
           height: 260,
           padding: const EdgeInsets.fromLTRB(12, 24, 24, 12),
           decoration: BoxDecoration(
-            color: Theme.of(context).cardColor,
-            borderRadius: BorderRadius.circular(16),
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white.withOpacity(0.05)
+                : Colors.grey.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(20),
             border: Border.all(
-                color: Theme.of(context).colorScheme.primary.withOpacity(0.5)),
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.1)),
           ),
           child: LineChart(
             LineChartData(
@@ -394,7 +418,12 @@ class _SellerProductManagementScreenState
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        padding: EdgeInsets.fromLTRB(
+          16.0,
+          16.0,
+          16.0,
+          16.0 + MediaQuery.of(context).padding.bottom,
+        ),
         child: Form(
           key: _formKey,
           child: Column(
@@ -414,129 +443,147 @@ class _SellerProductManagementScreenState
                   scrollDirection: Axis.horizontal,
                   children: [
                     // Resim Ekle Butonu
-                    GestureDetector(
-                      onTap: _showImageSourceActionSheet,
-                      child: Container(
-                        width: 100,
-                        height: 100,
-                        margin: const EdgeInsets.only(right: 12),
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .primary
-                              .withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
+                    Container(
+                      margin: const EdgeInsets.only(right: 12),
+                      child: GestureDetector(
+                        onTap: _showImageSourceActionSheet,
+                        child: CustomPaint(
+                          painter: _DashedBorderPainter(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withOpacity(0.5),
+                            borderRadius: 20.0,
+                          ),
+                          child: Container(
+                            width: 100,
+                            height: 100,
+                            decoration: BoxDecoration(
                               color: Theme.of(context)
                                   .colorScheme
                                   .primary
-                                  .withOpacity(0.5)),
+                                  .withOpacity(0.05),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Center(
+                              child: Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .primary
+                                      .withOpacity(0.1),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Icons.add_a_photo_outlined,
+                                  size: 28,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
-                        child: SvgIcon(
-                            iconPath: AppIcons.camera,
-                            size: 36,
-                            color: Theme.of(context).colorScheme.primary),
                       ),
                     ),
                     // Yeni Seçilen Resimler
                     ..._newImages.asMap().entries.map((entry) {
-                      return Stack(
-                        children: [
-                          Container(
-                            width: 100,
-                            height: 100,
-                            margin: const EdgeInsets.only(right: 12),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .primary
-                                      .withOpacity(0.5)),
-                              image: DecorationImage(
-                                image: FileImage(File(entry.value.path)),
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          ),
-                          Positioned(
-                            top: 4,
-                            right: 16,
-                            child: GestureDetector(
-                              onTap: () => _removeNewImage(entry.key),
-                              child: Container(
-                                padding: const EdgeInsets.all(4),
-                                decoration: const BoxDecoration(
-                                  color: Colors.red,
-                                  shape: BoxShape.circle,
+                      return Container(
+                        margin: const EdgeInsets.only(right: 12),
+                        child: Stack(
+                          children: [
+                            Container(
+                              width: 100,
+                              height: 100,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .primary
+                                        .withOpacity(0.1)),
+                                image: DecorationImage(
+                                  image: FileImage(File(entry.value.path)),
+                                  fit: BoxFit.cover,
                                 ),
-                                child: const SvgIcon(
-                                    iconPath: AppIcons.close,
-                                    size: 16,
-                                    color: Colors.white),
                               ),
                             ),
-                          ),
-                        ],
+                            Positioned(
+                              top: 6,
+                              right: 6,
+                              child: GestureDetector(
+                                onTap: () => _removeNewImage(entry.key),
+                                child: Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red.withOpacity(0.9),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.close,
+                                      size: 14, color: Colors.white),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       );
                     }),
                     // Mevcut Resimler
                     ..._existingImages.asMap().entries.map((entry) {
                       final int index = entry.key;
                       final String url = entry.value;
-                      return Stack(
-                        children: [
-                          Container(
-                            width: 100,
-                            height: 100,
-                            margin: const EdgeInsets.only(right: 12),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .primary
-                                      .withOpacity(0.5)),
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(11),
-                              child: Image.network(
-                                url,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return const Center(
-                                    child: Icon(Icons.broken_image,
-                                        color: Colors.grey),
-                                  );
-                                },
+                      return Container(
+                        margin: const EdgeInsets.only(right: 12),
+                        child: Stack(
+                          children: [
+                            Container(
+                              width: 100,
+                              height: 100,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .primary
+                                        .withOpacity(0.1)),
                               ),
-                            ),
-                          ),
-                          Positioned(
-                            top: 4,
-                            right: 16,
-                            child: GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  _deletedImages.add(url);
-                                  _existingImages.removeAt(index);
-                                });
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.all(4),
-                                decoration: const BoxDecoration(
-                                  color: Colors.red,
-                                  shape: BoxShape.circle,
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(19),
+                                child: Image.network(
+                                  url,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return const Center(
+                                      child: Icon(Icons.broken_image,
+                                          color: Colors.grey),
+                                    );
+                                  },
                                 ),
-                                child: const SvgIcon(
-                                    iconPath: AppIcons.close,
-                                    size: 16,
-                                    color: Colors.white),
                               ),
                             ),
-                          ),
-                        ],
+                            Positioned(
+                              top: 6,
+                              right: 6,
+                              child: GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    _deletedImages.add(url);
+                                    _existingImages.removeAt(index);
+                                  });
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red.withOpacity(0.9),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.close,
+                                      size: 14, color: Colors.white),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       );
                     }),
                   ],
@@ -547,6 +594,10 @@ class _SellerProductManagementScreenState
               // Fiyat
               TextFormField(
                 controller: _priceController,
+                style: TextStyle(
+                  color: Theme.of(context).textTheme.bodyLarge?.color,
+                  fontSize: 15,
+                ),
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
                 decoration: _buildInputDecoration('Birim Fiyat (₺)',
@@ -558,6 +609,10 @@ class _SellerProductManagementScreenState
               // Stok
               TextFormField(
                 controller: _stockController,
+                style: TextStyle(
+                  color: Theme.of(context).textTheme.bodyLarge?.color,
+                  fontSize: 15,
+                ),
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
                 decoration:
@@ -572,6 +627,10 @@ class _SellerProductManagementScreenState
               // Satış Adedi
               TextFormField(
                 controller: _salesController,
+                style: TextStyle(
+                  color: Theme.of(context).textTheme.bodyLarge?.color,
+                  fontSize: 15,
+                ),
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
                 decoration: _buildInputDecoration(
@@ -603,6 +662,7 @@ class _SellerProductManagementScreenState
 
               CustomButton(
                 text: 'Güncelle',
+                icon: Icons.save_rounded,
                 onPressed: _updateProduct,
                 backgroundColor:
                     Theme.of(context).colorScheme.primary.withOpacity(0.2),
@@ -613,5 +673,60 @@ class _SellerProductManagementScreenState
         ),
       ),
     );
+  }
+}
+
+class _DashedBorderPainter extends CustomPainter {
+  final Color color;
+  final double strokeWidth;
+  final double dashWidth;
+  final double dashSpace;
+  final double borderRadius;
+
+  _DashedBorderPainter({
+    required this.color,
+    this.strokeWidth = 2.0,
+    this.dashWidth = 8.0,
+    this.dashSpace = 6.0,
+    this.borderRadius = 16.0,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke;
+
+    final rrect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      Radius.circular(borderRadius),
+    );
+
+    final path = Path()..addRRect(rrect);
+    final pathMetrics = path.computeMetrics();
+    final dashedPath = Path();
+
+    for (final metric in pathMetrics) {
+      double distance = 0.0;
+      while (distance < metric.length) {
+        dashedPath.addPath(
+          metric.extractPath(distance, distance + dashWidth),
+          Offset.zero,
+        );
+        distance += dashWidth + dashSpace;
+      }
+    }
+
+    canvas.drawPath(dashedPath, paint);
+  }
+
+  @override
+  bool shouldRepaint(_DashedBorderPainter oldDelegate) {
+    return oldDelegate.color != color ||
+        oldDelegate.strokeWidth != strokeWidth ||
+        oldDelegate.dashWidth != dashWidth ||
+        oldDelegate.dashSpace != dashSpace ||
+        oldDelegate.borderRadius != borderRadius;
   }
 }

@@ -302,17 +302,30 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               AnimatedBuilder(
                                   animation: _glowController,
                                   builder: (context, child) {
+                                    final primary =
+                                        Theme.of(context).colorScheme.primary;
+                                    final isDark =
+                                        Theme.of(context).brightness ==
+                                            Brightness.dark;
                                     return Container(
                                       decoration: BoxDecoration(
                                         borderRadius: BorderRadius.circular(24),
+                                        boxShadow: isDark
+                                            ? [
+                                                BoxShadow(
+                                                  color:
+                                                      primary.withOpacity(0.15),
+                                                  blurRadius: 15,
+                                                  spreadRadius: -2,
+                                                )
+                                              ]
+                                            : null,
                                         gradient: SweepGradient(
                                           colors: [
-                                            Colors.transparent,
-                                            Colors.transparent,
-                                            Theme.of(context)
-                                                .colorScheme
-                                                .primary,
-                                            Colors.transparent,
+                                            primary.withOpacity(0.0),
+                                            primary.withOpacity(0.0),
+                                            primary,
+                                            primary.withOpacity(0.0),
                                           ],
                                           stops: const [0.0, 0.75, 0.95, 1.0],
                                           transform: GradientRotation(
@@ -698,7 +711,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ..._buildNearbyMarketsSlivers(vm),
 
               // Bottom padding for navigation bar
-              const SliverToBoxAdapter(child: SizedBox(height: 80)),
+              SliverToBoxAdapter(
+                  child: SizedBox(
+                      height: 80 + MediaQuery.of(context).padding.bottom)),
             ],
           ),
         ),
@@ -725,9 +740,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     boxShadow: [
                       BoxShadow(
                         color: Theme.of(context).brightness == Brightness.dark
-                            ? Colors.black.withOpacity(0.3)
-                            : Colors.black.withOpacity(0.2),
-                        blurRadius: 4,
+                            ? Colors.black.withOpacity(0.15)
+                            : Colors.black.withOpacity(0.05),
+                        blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
                     ],
@@ -766,9 +781,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withOpacity(0.05),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 4),
+                                    color: Colors.black.withOpacity(0.04),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
                                   ),
                                 ],
                               ),
@@ -873,10 +888,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       boxShadow: [
                         BoxShadow(
                           color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.black.withOpacity(0.3)
-                              : Colors.black.withOpacity(0.1),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
+                              ? Colors.black.withOpacity(0.15)
+                              : Colors.black.withOpacity(0.05),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
                         ),
                       ],
                     ),
