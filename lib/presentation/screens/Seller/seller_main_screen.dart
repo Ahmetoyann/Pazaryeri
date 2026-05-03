@@ -34,8 +34,7 @@ class _SellerMainScreenState extends State<SellerMainScreen>
     with SingleTickerProviderStateMixin {
   late int _currentIndex;
   bool _isVerificationDismissed = false;
-  Timer? _indicatorTimer;
-  bool _isMoving = false;
+  bool _isBottomNavVisible = true;
 
   @override
   void initState() {
@@ -64,7 +63,6 @@ class _SellerMainScreenState extends State<SellerMainScreen>
 
   @override
   void dispose() {
-    _indicatorTimer?.cancel();
     super.dispose();
   }
 
@@ -115,16 +113,9 @@ class _SellerMainScreenState extends State<SellerMainScreen>
   }
 
   Widget _buildBottomNavIcon(BuildContext context, String iconPath,
-      AuthViewModel authVM, String? notificationType,
-      {bool isActive = false}) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final color = isActive
-        ? theme.colorScheme.primary
-        : (isDark ? Colors.white60 : Colors.black54);
-
+      AuthViewModel authVM, String? notificationType, Color color) {
     if (authVM.currentUser == null || notificationType == null) {
-      return SvgIcon(iconPath: iconPath, size: 28, color: color);
+      return SvgIcon(iconPath: iconPath, size: 24, color: color);
     }
 
     return StreamBuilder<List<Map<String, dynamic>>>(
@@ -140,7 +131,7 @@ class _SellerMainScreenState extends State<SellerMainScreen>
           }).length;
         }
 
-        final mainIcon = SvgIcon(iconPath: iconPath, size: 28, color: color);
+        final mainIcon = SvgIcon(iconPath: iconPath, size: 24, color: color);
 
         if (unreadCount == 0) return mainIcon;
 
@@ -181,17 +172,10 @@ class _SellerMainScreenState extends State<SellerMainScreen>
     );
   }
 
-  Widget _buildQuestionTabIcon(
-      BuildContext context, String iconPath, AuthViewModel authVM,
-      {bool isActive = false}) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final color = isActive
-        ? theme.colorScheme.primary
-        : (isDark ? Colors.white60 : Colors.black54);
-
+  Widget _buildQuestionTabIcon(BuildContext context, String iconPath,
+      AuthViewModel authVM, Color color) {
     if (authVM.currentUser == null) {
-      return SvgIcon(iconPath: iconPath, size: 28, color: color);
+      return SvgIcon(iconPath: iconPath, size: 24, color: color);
     }
 
     return StreamBuilder<int>(
@@ -200,7 +184,7 @@ class _SellerMainScreenState extends State<SellerMainScreen>
       builder: (context, snapshot) {
         int count = snapshot.data ?? 0;
 
-        final mainIcon = SvgIcon(iconPath: iconPath, size: 28, color: color);
+        final mainIcon = SvgIcon(iconPath: iconPath, size: 24, color: color);
 
         if (count == 0) return mainIcon;
 
@@ -248,81 +232,82 @@ class _SellerMainScreenState extends State<SellerMainScreen>
     final authVM = Provider.of<AuthViewModel>(context);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final unselectedIconColor = isDark ? Colors.white60 : Colors.black54;
-    const darkNavBackground = Color(0xFF1A1A1A);
-    Widget navBox({
-      required Widget icon,
-      required String label,
-      required bool selected,
-    }) {
-      final base = theme.colorScheme.primary;
-      return AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeOutQuint,
-        height: 48,
-        constraints: BoxConstraints(
-          minWidth: selected ? 82 : 60,
-          maxWidth:
-              selected ? 88 : 68, // Hem taşmayı önler hem hapları genişletir
-        ),
-        padding: selected
-            ? const EdgeInsets.all(4)
-            : const EdgeInsets.symmetric(horizontal: 2),
-        decoration: BoxDecoration(
+    final unselectedIconColor =
+        isDark ? Colors.white60 : Colors.grey.withOpacity(0.8);
+
+    Widget buildNavItem(
+      int itemIndex,
+      String label,
+      Widget Function(Color) iconBuilder,
+    ) {
+      final isSelected = _currentIndex == itemIndex;
+      final primaryColor = theme.colorScheme.primary;
+      final color = isSelected ? primaryColor : unselectedIconColor;
+
+      return GestureDetector(
+        onTap: () {
+          if (_currentIndex != itemIndex) {
+            setState(() {
+              _currentIndex = itemIndex;
+            });
+          }
+        },
+        child: ClipRRect(
           borderRadius: BorderRadius.circular(24),
-          gradient: selected
-              ? null
-              : LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    (isDark ? Colors.white : Colors.black)
-                        .withOpacity(isDark ? 0.18 : 0.12),
-                    (isDark ? Colors.white : Colors.black)
-                        .withOpacity(isDark ? 0.08 : 0.04),
-                  ],
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOutQuint,
+              padding: EdgeInsets.symmetric(
+                horizontal:
+                    isSelected ? 12 : 10, // 5 eleman için padding daraltıldı
+                vertical: 10,
+              ),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? primaryColor.withOpacity(0.2)
+                    : (isDark ? Colors.white : Colors.black).withOpacity(0.05),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: isSelected
+                      ? primaryColor.withOpacity(0.5)
+                      : (isDark ? Colors.white : Colors.black).withOpacity(0.1),
+                  width: 1,
                 ),
-          border: Border.all(
-            color: selected
-                ? base.withOpacity(0.5) // Dış zarı yarı saydam yapıyoruz
-                : (isDark ? Colors.white : Colors.black).withOpacity(0.20),
-            width: selected ? 2 : 1, // Dış zar kalınlığı
-          ),
-        ),
-        child: selected
-            ? Container(
-                alignment: Alignment.center,
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                decoration: BoxDecoration(
-                  color: base, // İç hapın boyalı kısmı
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    style: TextStyle(
-                      fontSize: 10.0,
-                      fontWeight: FontWeight.w700,
-                      color: theme.colorScheme.onPrimary,
-                      letterSpacing: 0.1,
-                    ),
-                  ),
-                ),
-              )
-            : Row(
+              ),
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  icon,
+                  iconBuilder(color),
+                  if (isSelected) ...[
+                    const SizedBox(width: 4),
+                    Text(
+                      label,
+                      style: TextStyle(
+                        color: primaryColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize:
+                            10, // 5 eleman sığması için font biraz daraltıldı
+                      ),
+                    ),
+                  ],
                 ],
               ),
+            ),
+          ),
+        ),
       );
     }
 
     final List<Widget> pages = [
-      const SellerProductsScreen(),
+      SellerProductsScreen(
+        onSwitchToAddProductTab: () {
+          setState(() {
+            _currentIndex = 2; // Ürün Ekle sekmesinin indeksi
+          });
+        },
+      ),
       const SellerStatsScreen(),
       SellerAddProductScreen(
         onProductAdded: () {
@@ -408,351 +393,192 @@ class _SellerMainScreenState extends State<SellerMainScreen>
           ],
         ),
         extendBody: true,
-        body: Column(
-          children: [
-            StreamBuilder<firebase_auth.User?>(
-              stream: firebase_auth.FirebaseAuth.instance.userChanges(),
-              builder: (context, snapshot) {
-                final user = snapshot.data;
-                if (user != null &&
-                    !user.emailVerified &&
-                    !_isVerificationDismissed) {
-                  return Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFFEF5350), Color(0xFFFF7043)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFFEF5350).withOpacity(0.3),
-                            blurRadius: 8,
-                            offset: const Offset(0, 4),
+        body: NotificationListener<ScrollUpdateNotification>(
+          onNotification: (notification) {
+            if (notification.metrics.axis == Axis.vertical) {
+              final dy = notification.scrollDelta ?? 0;
+              if (notification.metrics.pixels <=
+                  notification.metrics.minScrollExtent) {
+                if (!_isBottomNavVisible)
+                  setState(() => _isBottomNavVisible = true);
+              } else if (dy > 4 && _isBottomNavVisible) {
+                setState(() => _isBottomNavVisible = false);
+              } else if (dy < -4 && !_isBottomNavVisible) {
+                setState(() => _isBottomNavVisible = true);
+              }
+            }
+            return false;
+          },
+          child: Column(
+            children: [
+              StreamBuilder<firebase_auth.User?>(
+                stream: firebase_auth.FirebaseAuth.instance.userChanges(),
+                builder: (context, snapshot) {
+                  final user = snapshot.data;
+                  if (user != null &&
+                      !user.emailVerified &&
+                      !_isVerificationDismissed) {
+                    return Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFEF5350), Color(0xFFFF7043)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
                           ),
-                        ],
-                      ),
-                      child: Stack(
-                        children: [
-                          Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              onTap: () => _showEmailVerificationSheet(context),
-                              borderRadius: BorderRadius.circular(16),
-                              child: const Padding(
-                                padding: EdgeInsets.symmetric(
-                                    vertical: 12, horizontal: 16),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(Icons.mark_email_unread,
-                                        color: Colors.white),
-                                    SizedBox(width: 12),
-                                    Text(
-                                      'E-postanızı Doğrulayın',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFFEF5350).withOpacity(0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Stack(
+                          children: [
+                            Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: () =>
+                                    _showEmailVerificationSheet(context),
+                                borderRadius: BorderRadius.circular(16),
+                                child: const Padding(
+                                  padding: EdgeInsets.symmetric(
+                                      vertical: 12, horizontal: 16),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.mark_email_unread,
+                                          color: Colors.white),
+                                      SizedBox(width: 12),
+                                      Text(
+                                        'E-postanızı Doğrulayın',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                          Positioned(
-                            top: 4,
-                            right: 4,
-                            child: GestureDetector(
-                              onTap: () => setState(
-                                  () => _isVerificationDismissed = true),
-                              child: Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Icon(Icons.close,
-                                    color: Colors.white.withOpacity(0.8),
-                                    size: 18),
+                            Positioned(
+                              top: 4,
+                              right: 4,
+                              child: GestureDetector(
+                                onTap: () => setState(
+                                    () => _isVerificationDismissed = true),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: Icon(Icons.close,
+                                      color: Colors.white.withOpacity(0.8),
+                                      size: 18),
+                                ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                  );
-                }
-                return const SizedBox.shrink();
-              },
-            ),
-            Expanded(
-              child: IndexedStack(
-                index: _currentIndex,
-                children: pages,
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
+              ),
+              Expanded(
+                child: IndexedStack(
+                  index: _currentIndex,
+                  children: pages,
+                ),
+              ),
+            ],
+          ),
+        ),
+        bottomNavigationBar: AnimatedSlide(
+          offset: _isBottomNavVisible ? Offset.zero : const Offset(0, 1.5),
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOutCubic,
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.bottomCenter,
+                end: Alignment.topCenter,
+                colors: [
+                  theme.scaffoldBackgroundColor,
+                  theme.scaffoldBackgroundColor.withOpacity(isDark ? 0.9 : 0.7),
+                  theme.scaffoldBackgroundColor.withOpacity(isDark ? 0.4 : 0.1),
+                  Colors.transparent,
+                ],
+                stops: const [0.0, 0.6, 0.9, 1.0],
               ),
             ),
-          ],
-        ),
-        bottomNavigationBar: Container(
-          decoration: BoxDecoration(
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(24),
-            ),
-            border: null,
-            boxShadow: const [],
-          ),
-          child: ClipRRect(
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(24),
-            ),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-              child: SizedBox(
-                height: 75 + MediaQuery.of(context).padding.bottom,
-                child: Stack(
+            child: SafeArea(
+              bottom: true,
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(8, 16, 8, 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    Positioned.fill(
-                      child: IgnorePointer(
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            color: (isDark ? Colors.black : Colors.white)
-                                .withOpacity(isDark ? 0.4 : 0.5),
-                          ),
-                        ),
+                    buildNavItem(
+                      0,
+                      langVM.translate('my_products_tab'),
+                      (c) => SvgIcon(
+                        iconPath: _currentIndex == 0
+                            ? AppIcons.inventoryActive
+                            : AppIcons.inventory,
+                        color: c,
+                        size: 24,
                       ),
                     ),
-                    Padding(
-                      padding: EdgeInsets.only(
-                        left: 0,
-                        right:
-                            0, // Hapların tam yayılması ve yakınlaşması için yan boşlukları sıfırladık
-                        bottom: MediaQuery.of(context).padding.bottom,
+                    buildNavItem(
+                      1,
+                      langVM.translate('statistics_tab'),
+                      (c) => Icon(
+                        _currentIndex == 1
+                            ? Icons.bar_chart_rounded
+                            : Icons.bar_chart_outlined,
+                        color: c,
+                        size: 24,
                       ),
-                      child: MediaQuery.removePadding(
-                        context: context,
-                        removeBottom: true,
-                        child: Theme(
-                          data: Theme.of(context).copyWith(
-                            splashColor: Colors.transparent,
-                            highlightColor: Colors.transparent,
-                            splashFactory: NoSplash.splashFactory,
-                          ),
-                          child: BottomNavigationBar(
-                            currentIndex: _currentIndex,
-                            onTap: (index) {
-                              if (_currentIndex == index) return;
-                              setState(() {
-                                _currentIndex = index;
-                                _isMoving = true;
-                              });
-                              _indicatorTimer?.cancel();
-                              _indicatorTimer =
-                                  Timer(const Duration(milliseconds: 300), () {
-                                if (mounted) setState(() => _isMoving = false);
-                              });
-                            },
-                            backgroundColor: Colors.transparent,
-                            elevation: 0,
-                            type: BottomNavigationBarType.fixed,
-                            showSelectedLabels: false,
-                            showUnselectedLabels: false,
-                            selectedItemColor: theme.colorScheme.primary,
-                            unselectedItemColor: Colors.grey,
-                            unselectedFontSize: 8,
-                            selectedFontSize: 10,
-                            iconSize: 28,
-                            items: [
-                              BottomNavigationBarItem(
-                                icon: AnimatedScale(
-                                  scale: _isMoving ? 0.8 : 1.0,
-                                  duration: const Duration(milliseconds: 150),
-                                  child: AnimatedOpacity(
-                                    opacity: _isMoving ? 0.5 : 1.0,
-                                    duration: const Duration(milliseconds: 150),
-                                    child: navBox(
-                                      label:
-                                          langVM.translate('my_products_tab'),
-                                      selected: false,
-                                      icon: SvgIcon(
-                                          iconPath: AppIcons.inventory,
-                                          size: 24,
-                                          color: unselectedIconColor),
-                                    ),
-                                  ),
-                                ),
-                                activeIcon: TweenAnimationBuilder<double>(
-                                  duration: const Duration(milliseconds: 400),
-                                  curve: Curves.easeOutBack,
-                                  tween: Tween(begin: 0.5, end: 1.0),
-                                  builder: (context, value, child) =>
-                                      Transform.scale(
-                                    scale: value,
-                                    child: child,
-                                  ),
-                                  child: navBox(
-                                    label: langVM.translate('my_products_tab'),
-                                    selected: true,
-                                    icon: SvgIcon(
-                                        iconPath: AppIcons.inventoryActive,
-                                        size: 24,
-                                        color: theme.colorScheme.primary),
-                                  ),
-                                ),
-                                label: '',
-                              ),
-                              BottomNavigationBarItem(
-                                icon: AnimatedScale(
-                                  scale: _isMoving ? 0.8 : 1.0,
-                                  duration: const Duration(milliseconds: 150),
-                                  child: AnimatedOpacity(
-                                    opacity: _isMoving ? 0.5 : 1.0,
-                                    duration: const Duration(milliseconds: 150),
-                                    child: navBox(
-                                      label: langVM.translate('statistics_tab'),
-                                      selected: false,
-                                      icon: SvgIcon(
-                                          iconPath: AppIcons.chart,
-                                          size: 24,
-                                          color: unselectedIconColor),
-                                    ),
-                                  ),
-                                ),
-                                activeIcon: TweenAnimationBuilder<double>(
-                                  duration: const Duration(milliseconds: 400),
-                                  curve: Curves.easeOutBack,
-                                  tween: Tween(begin: 0.5, end: 1.0),
-                                  builder: (context, value, child) =>
-                                      Transform.scale(
-                                    scale: value,
-                                    child: child,
-                                  ),
-                                  child: navBox(
-                                    label: langVM.translate('statistics_tab'),
-                                    selected: true,
-                                    icon: Icon(Icons.bar_chart_rounded,
-                                        size: 24,
-                                        color: theme.colorScheme.primary),
-                                  ),
-                                ),
-                                label: '',
-                              ),
-                              BottomNavigationBarItem(
-                                icon: AnimatedScale(
-                                  scale: _isMoving ? 0.8 : 1.0,
-                                  duration: const Duration(milliseconds: 150),
-                                  child: AnimatedOpacity(
-                                    opacity: _isMoving ? 0.5 : 1.0,
-                                    duration: const Duration(milliseconds: 150),
-                                    child: navBox(
-                                      label:
-                                          langVM.translate('add_product_tab'),
-                                      selected: false,
-                                      icon: SvgIcon(
-                                          iconPath: AppIcons.add,
-                                          size: 24,
-                                          color: unselectedIconColor),
-                                    ),
-                                  ),
-                                ),
-                                activeIcon: TweenAnimationBuilder<double>(
-                                  duration: const Duration(milliseconds: 400),
-                                  curve: Curves.easeOutBack,
-                                  tween: Tween(begin: 0.5, end: 1.0),
-                                  builder: (context, value, child) =>
-                                      Transform.scale(
-                                    scale: value,
-                                    child: child,
-                                  ),
-                                  child: navBox(
-                                    label: langVM.translate('add_product_tab'),
-                                    selected: true,
-                                    icon: SvgIcon(
-                                        iconPath: AppIcons.addActive,
-                                        size: 24,
-                                        color: theme.colorScheme.primary),
-                                  ),
-                                ),
-                                label: '',
-                              ),
-                              BottomNavigationBarItem(
-                                icon: AnimatedScale(
-                                  scale: _isMoving ? 0.8 : 1.0,
-                                  duration: const Duration(milliseconds: 150),
-                                  child: AnimatedOpacity(
-                                    opacity: _isMoving ? 0.5 : 1.0,
-                                    duration: const Duration(milliseconds: 150),
-                                    child: navBox(
-                                      label: langVM.translate('questions_tab'),
-                                      selected: false,
-                                      icon: _buildQuestionTabIcon(
-                                          context, AppIcons.question, authVM,
-                                          isActive: false),
-                                    ),
-                                  ),
-                                ),
-                                activeIcon: TweenAnimationBuilder<double>(
-                                  duration: const Duration(milliseconds: 400),
-                                  curve: Curves.easeOutBack,
-                                  tween: Tween(begin: 0.5, end: 1.0),
-                                  builder: (context, value, child) =>
-                                      Transform.scale(
-                                    scale: value,
-                                    child: child,
-                                  ),
-                                  child: navBox(
-                                    label: langVM.translate('questions_tab'),
-                                    selected: true,
-                                    icon: _buildQuestionTabIcon(context,
-                                        AppIcons.questionActive, authVM,
-                                        isActive: true),
-                                  ),
-                                ),
-                                label: '',
-                              ),
-                              BottomNavigationBarItem(
-                                icon: AnimatedScale(
-                                  scale: _isMoving ? 0.8 : 1.0,
-                                  duration: const Duration(milliseconds: 150),
-                                  child: AnimatedOpacity(
-                                    opacity: _isMoving ? 0.5 : 1.0,
-                                    duration: const Duration(milliseconds: 150),
-                                    child: navBox(
-                                      label:
-                                          langVM.translate('reviews_tab_short'),
-                                      selected: false,
-                                      icon: _buildBottomNavIcon(
-                                          context,
-                                          AppIcons.starBorder,
-                                          authVM,
-                                          'new_review',
-                                          isActive: false),
-                                    ),
-                                  ),
-                                ),
-                                activeIcon: TweenAnimationBuilder<double>(
-                                  duration: const Duration(milliseconds: 400),
-                                  curve: Curves.easeOutBack,
-                                  tween: Tween(begin: 0.5, end: 1.0),
-                                  builder: (context, value, child) =>
-                                      Transform.scale(
-                                    scale: value,
-                                    child: child,
-                                  ),
-                                  child: navBox(
-                                    label:
-                                        langVM.translate('reviews_tab_short'),
-                                    selected: true,
-                                    icon: _buildBottomNavIcon(context,
-                                        AppIcons.star, authVM, 'new_review',
-                                        isActive: true),
-                                  ),
-                                ),
-                                label: '',
-                              ),
-                            ],
-                          ),
-                        ),
+                    ),
+                    buildNavItem(
+                      2,
+                      langVM.translate('add_product_tab'),
+                      (c) => SvgIcon(
+                        iconPath: _currentIndex == 2
+                            ? AppIcons.addActive
+                            : AppIcons.add,
+                        color: c,
+                        size: 24,
+                      ),
+                    ),
+                    buildNavItem(
+                      3,
+                      langVM.translate('questions_tab'),
+                      (c) => _buildQuestionTabIcon(
+                        context,
+                        _currentIndex == 3
+                            ? AppIcons.questionActive
+                            : AppIcons.question,
+                        authVM,
+                        c,
+                      ),
+                    ),
+                    buildNavItem(
+                      4,
+                      langVM.translate('reviews_tab_short'),
+                      (c) => _buildBottomNavIcon(
+                        context,
+                        _currentIndex == 4
+                            ? AppIcons.star
+                            : AppIcons.starBorder,
+                        authVM,
+                        'new_review',
+                        c,
                       ),
                     ),
                   ],

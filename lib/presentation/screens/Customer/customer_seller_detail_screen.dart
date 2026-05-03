@@ -1045,7 +1045,9 @@ class _CustomerSellerDetailScreenState
     return Scaffold(
       extendBodyBehindAppBar: true,
       extendBody: true,
-      backgroundColor: isDark ? Colors.black : const Color(0xFFF5F5F5),
+      backgroundColor: isDark
+          ? Theme.of(context).scaffoldBackgroundColor
+          : const Color(0xFFF5F5F5),
       appBar: CustomAppBar(
         title: Text(langVM.translate('seller_details')),
         actions: [

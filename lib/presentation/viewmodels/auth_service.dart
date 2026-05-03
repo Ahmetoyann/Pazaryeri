@@ -2261,6 +2261,33 @@ class AuthService {
     }
   }
 
+  /// Kullanıcının e-posta adresine 6 haneli doğrulama kodu gönderir (Firebase Trigger Email)
+  Future<void> sendVerificationCodeEmail(String toEmail, String code) async {
+    try {
+      await FirebaseFirestore.instance.collection('mail').add({
+        'to': [toEmail],
+        'message': {
+          'subject': 'Pazaryeri - Hesabınızı Silme Doğrulama Kodu',
+          'html': '''
+            <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+              <h2 style="color: #d32f2f;">Hesap Silme Talebi</h2>
+              <p>Merhaba,</p>
+              <p>Pazaryeri uygulamasındaki hesabınızı silmek için bir talepte bulundunuz.</p>
+              <p>İşlemi onaylamak için aşağıdaki 6 haneli doğrulama kodunu uygulamaya giriniz:</p>
+              <div style="background-color: #f5f5f5; padding: 15px; text-align: center; border-radius: 8px; margin: 20px 0;">
+                <h1 style="margin: 0; letter-spacing: 5px; color: #333;">$code</h1>
+              </div>
+              <p style="font-size: 12px; color: #777;">Eğer bu talebi siz yapmadıysanız, bu e-postayı dikkate almayınız ve şifrenizi hemen değiştiriniz.</p>
+            </div>
+          ''',
+        },
+      });
+    } catch (e) {
+      debugPrint('Doğrulama e-postası gönderilemedi: $e');
+      throw e;
+    }
+  }
+
   // --- PAZAR VE SATICI İŞLEMLERİ (MOCK) ---
 
   // Belirli bir pazarın satıcılarını getirir

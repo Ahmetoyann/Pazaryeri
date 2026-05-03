@@ -100,6 +100,8 @@ class MyApp extends StatelessWidget {
               GoogleFonts.interTextTheme(baseTheme.textTheme);
           final boldTheme = baseTheme.copyWith(
             textTheme: modernTextTheme,
+            scaffoldBackgroundColor: const Color(0xFF161616), // Göz yormayan yumuşak siyah
+            canvasColor: const Color(0xFF161616),
           );
 
           // Modern Light Tema
@@ -186,9 +188,9 @@ class MyApp extends StatelessWidget {
                             end: Alignment.bottomRight,
                             colors: isDark
                                 ? [
-                                    const Color(0xFF121212),
-                                    const Color(0xFF121212)
-                                  ] // Spotify benzeri koyu gri
+                                    const Color(0xFF161616),
+                                    const Color(0xFF161616)
+                                  ] // Daha göz yormayan yumuşak siyah
                                 : [Colors.white, Colors.white],
                           ),
                         ),
@@ -712,6 +714,7 @@ class MainScaffold extends StatefulWidget {
 class _MainScaffoldState extends State<MainScaffold> {
   int _index = 0;
   bool _isDrawerOpen = false;
+  bool _isBottomNavVisible = true;
 
   final _screens = const [
     HomeScreen(),
@@ -879,73 +882,70 @@ class _MainScaffoldState extends State<MainScaffold> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     // Seçili olmayan ikonlar için daha okunabilir dinamik bir renk
-    final unselectedIconColor = isDark ? Colors.white60 : Colors.black54;
+    final unselectedIconColor =
+        isDark ? Colors.white60 : Colors.grey.withOpacity(0.8);
     final isDesktop = MediaQuery.of(context).size.width > 800; // Web kontrolü
-    Widget navBox({
-      required Widget icon,
-      required String label,
-      required bool selected,
-    }) {
-      final base = theme.colorScheme.primary;
-      return AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeOutQuint,
-        height: 48,
-        constraints: BoxConstraints(minWidth: selected ? 110 : 64),
-        padding: selected
-            ? const EdgeInsets.all(4)
-            : const EdgeInsets.symmetric(horizontal: 16),
-        decoration: BoxDecoration(
+
+    Widget buildNavItem(
+      int itemIndex,
+      String label,
+      Widget Function(Color) iconBuilder,
+    ) {
+      final isSelected = _index == itemIndex;
+      final primaryColor = theme.colorScheme.primary;
+      final color = isSelected ? primaryColor : unselectedIconColor;
+
+      return GestureDetector(
+        onTap: () {
+          if (_index != itemIndex) {
+            setState(() {
+              _index = itemIndex;
+            });
+          }
+        },
+        child: ClipRRect(
           borderRadius: BorderRadius.circular(24),
-          gradient: selected
-              ? null
-              : LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    (isDark ? Colors.white : Colors.black).withOpacity(isDark
-                        ? 0.18
-                        : 0.12), // Seçili olmayanlar için canlı glassmorphism
-                    (isDark ? Colors.white : Colors.black)
-                        .withOpacity(isDark ? 0.08 : 0.04),
-                  ],
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOutQuint,
+              padding: EdgeInsets.symmetric(
+                horizontal: isSelected ? 16 : 14,
+                vertical: 12,
+              ),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? primaryColor.withOpacity(0.2)
+                    : (isDark ? Colors.white : Colors.black).withOpacity(0.05),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: isSelected
+                      ? primaryColor.withOpacity(0.5)
+                      : (isDark ? Colors.white : Colors.black).withOpacity(0.1),
+                  width: 1,
                 ),
-          border: Border.all(
-            color: selected
-                ? base.withOpacity(0.5) // Dış zarı yarı saydam yapıyoruz
-                : (isDark ? Colors.white : Colors.black).withOpacity(0.20),
-            width: selected ? 2 : 1, // Dış zarın kalınlığı
-          ),
-        ),
-        child: selected
-            ? Container(
-                alignment: Alignment.center,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  color: base, // İç hapın tamamen boyalı kısmı
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    style: TextStyle(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w700,
-                      color: theme.colorScheme.onPrimary,
-                      letterSpacing: 0.2,
-                    ),
-                  ),
-                ),
-              )
-            : Row(
+              ),
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  icon,
+                  iconBuilder(color),
+                  if (isSelected) ...[
+                    const SizedBox(width: 6),
+                    Text(
+                      label,
+                      style: TextStyle(
+                        color: primaryColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
                 ],
               ),
+            ),
+          ),
+        ),
       );
     }
 
@@ -960,261 +960,163 @@ class _MainScaffoldState extends State<MainScaffold> {
         },
         drawer:
             isDesktop ? null : const SideMenuDrawer(), // Web'de drawer gizlenir
-        body: Stack(
-          children: [
-            Row(
-              children: [
-                if (isDesktop)
-                  NavigationRail(
-                    selectedIndex: _index,
-                    onDestinationSelected: (i) => setState(() => _index = i),
-                    labelType: NavigationRailLabelType.all,
-                    backgroundColor: Theme.of(context).colorScheme.surface,
-                    destinations: [
-                      NavigationRailDestination(
-                        icon: const Icon(Icons.storefront_outlined),
-                        selectedIcon: const Icon(Icons.storefront),
-                        label: Text(langVM.translate('home_title')),
+        body: NotificationListener<ScrollUpdateNotification>(
+          onNotification: (notification) {
+            if (notification.metrics.axis == Axis.vertical) {
+              final dy = notification.scrollDelta ?? 0;
+              if (notification.metrics.pixels <=
+                  notification.metrics.minScrollExtent) {
+                if (!_isBottomNavVisible)
+                  setState(() => _isBottomNavVisible = true);
+              } else if (dy > 4 && _isBottomNavVisible) {
+                setState(() => _isBottomNavVisible = false);
+              } else if (dy < -4 && !_isBottomNavVisible) {
+                setState(() => _isBottomNavVisible = true);
+              }
+            }
+            return false;
+          },
+          child: Stack(
+            children: [
+              Row(
+                children: [
+                  if (isDesktop)
+                    NavigationRail(
+                      selectedIndex: _index,
+                      onDestinationSelected: (i) => setState(() => _index = i),
+                      labelType: NavigationRailLabelType.all,
+                      backgroundColor: Theme.of(context).colorScheme.surface,
+                      destinations: [
+                        NavigationRailDestination(
+                          icon: const Icon(Icons.storefront_outlined),
+                          selectedIcon: const Icon(Icons.storefront),
+                          label: Text(langVM.translate('home_title')),
+                        ),
+                        NavigationRailDestination(
+                          icon: SvgIcon(
+                              iconPath: AppIcons.search,
+                              color: Colors.grey,
+                              size: 24),
+                          selectedIcon: SvgIcon(
+                              iconPath: AppIcons.searchActive,
+                              color: Theme.of(context).colorScheme.primary,
+                              size: 24),
+                          label: Text(langVM.translate('search_tab')),
+                        ),
+                        NavigationRailDestination(
+                          icon: SvgIcon(
+                              iconPath: AppIcons.products,
+                              color: Colors.grey,
+                              size: 24),
+                          selectedIcon: SvgIcon(
+                              iconPath: AppIcons.productsActive,
+                              color: Theme.of(context).colorScheme.primary,
+                              size: 24),
+                          label: Text(langVM.translate('products_tab')),
+                        ),
+                        NavigationRailDestination(
+                          icon: const Icon(Icons.report_outlined),
+                          selectedIcon: const Icon(Icons.report),
+                          label: Text(langVM.translate('report_tab')),
+                        ),
+                      ],
+                    ),
+                  if (isDesktop) const VerticalDivider(thickness: 1, width: 1),
+                  Expanded(
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(
+                            maxWidth: 1200), // İçerik çok uzamasın
+                        child: IndexedStack(index: _index, children: _screens),
                       ),
-                      NavigationRailDestination(
-                        icon: SvgIcon(
-                            iconPath: AppIcons.search,
-                            color: Colors.grey,
-                            size: 24),
-                        selectedIcon: SvgIcon(
-                            iconPath: AppIcons.searchActive,
-                            color: Theme.of(context).colorScheme.primary,
-                            size: 24),
-                        label: Text(langVM.translate('search_tab')),
-                      ),
-                      NavigationRailDestination(
-                        icon: SvgIcon(
-                            iconPath: AppIcons.products,
-                            color: Colors.grey,
-                            size: 24),
-                        selectedIcon: SvgIcon(
-                            iconPath: AppIcons.productsActive,
-                            color: Theme.of(context).colorScheme.primary,
-                            size: 24),
-                        label: Text(langVM.translate('products_tab')),
-                      ),
-                      NavigationRailDestination(
-                        icon: const Icon(Icons.report_outlined),
-                        selectedIcon: const Icon(Icons.report),
-                        label: Text(langVM.translate('report_tab')),
-                      ),
-                    ],
-                  ),
-                if (isDesktop) const VerticalDivider(thickness: 1, width: 1),
-                Expanded(
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(
-                          maxWidth: 1200), // İçerik çok uzamasın
-                      child: IndexedStack(index: _index, children: _screens),
                     ),
                   ),
-                ),
-              ],
-            ),
-            // Drawer açıkken arka planı bulanıklaştır
-            if (_isDrawerOpen)
-              Positioned.fill(
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3),
-                  child: Container(color: Colors.transparent),
-                ),
+                ],
               ),
-          ],
+              // Drawer açıkken arka planı bulanıklaştır
+              if (_isDrawerOpen)
+                Positioned.fill(
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3),
+                    child: Container(color: Colors.transparent),
+                  ),
+                ),
+            ],
+          ),
         ),
         bottomNavigationBar: _isDrawerOpen || isDesktop
             ? null
-            : Container(
-                decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(24),
+            : AnimatedSlide(
+                offset:
+                    _isBottomNavVisible ? Offset.zero : const Offset(0, 1.5),
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOutCubic,
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.bottomCenter,
+                      end: Alignment.topCenter,
+                      colors: [
+                        theme.scaffoldBackgroundColor,
+                        theme.scaffoldBackgroundColor
+                            .withOpacity(isDark ? 0.9 : 0.7),
+                        theme.scaffoldBackgroundColor
+                            .withOpacity(isDark ? 0.4 : 0.1),
+                        Colors.transparent,
+                      ],
+                      stops: const [0.0, 0.6, 0.9, 1.0],
+                    ),
                   ),
-                  border: null,
-                  boxShadow: const [],
-                ),
-                child: ClipRRect(
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(24),
-                  ),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-                    child: SizedBox(
-                      height: 75 + MediaQuery.of(context).padding.bottom,
-                      child: Stack(
+                  child: SafeArea(
+                    bottom: true,
+                    top: false,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
-                          Positioned.fill(
-                            child: DecoratedBox(
-                              decoration: BoxDecoration(
-                                color: (isDark ? Colors.black : Colors.white)
-                                    .withOpacity(isDark ? 0.4 : 0.5),
-                              ),
+                          buildNavItem(
+                            0,
+                            langVM.translate('home_title'),
+                            (c) => Icon(
+                              _index == 0
+                                  ? Icons.storefront
+                                  : Icons.storefront_outlined,
+                              color: c,
+                              size: 24,
                             ),
                           ),
-                          Padding(
-                            padding: EdgeInsets.only(
-                              left: 12,
-                              right: 12,
-                              bottom: MediaQuery.of(context).padding.bottom,
+                          buildNavItem(
+                            1,
+                            langVM.translate('search_tab'),
+                            (c) => SvgIcon(
+                              iconPath: _index == 1
+                                  ? AppIcons.searchActive
+                                  : AppIcons.search,
+                              color: c,
+                              size: 24,
                             ),
-                            child: MediaQuery.removePadding(
-                              context: context,
-                              removeBottom: true,
-                              child: Theme(
-                                data: Theme.of(context).copyWith(
-                                  splashColor: Colors.transparent,
-                                  highlightColor: Colors.transparent,
-                                  splashFactory: NoSplash.splashFactory,
-                                ),
-                                child: BottomNavigationBar(
-                                  currentIndex: _index,
-                                  onTap: (i) {
-                                    if (_index == i) return;
-                                    setState(() {
-                                      _index = i;
-                                    });
-                                  },
-                                  backgroundColor: Colors.transparent,
-                                  elevation: 0,
-                                  type: BottomNavigationBarType.fixed,
-                                  showSelectedLabels: false,
-                                  showUnselectedLabels: false,
-                                  selectedItemColor: theme.colorScheme.primary,
-                                  unselectedItemColor: Colors.grey,
-                                  unselectedFontSize: 8,
-                                  selectedFontSize: 10,
-                                  iconSize: 24,
-                                  items: [
-                                    BottomNavigationBarItem(
-                                      icon: navBox(
-                                        label: langVM.translate('home_title'),
-                                        selected: false,
-                                        icon: Icon(
-                                          Icons.storefront_outlined,
-                                          color: unselectedIconColor,
-                                          size: 24,
-                                        ),
-                                      ),
-                                      activeIcon: TweenAnimationBuilder<double>(
-                                        duration:
-                                            const Duration(milliseconds: 400),
-                                        curve: Curves.easeOutBack,
-                                        tween: Tween(begin: 0.5, end: 1.0),
-                                        builder: (context, value, child) =>
-                                            Transform.scale(
-                                          scale: value,
-                                          child: child,
-                                        ),
-                                        child: navBox(
-                                          label: langVM.translate('home_title'),
-                                          selected: true,
-                                          icon: Icon(Icons.storefront,
-                                              color: theme.colorScheme.primary,
-                                              size: 24),
-                                        ),
-                                      ),
-                                      label: '',
-                                    ),
-                                    BottomNavigationBarItem(
-                                      icon: navBox(
-                                        label: langVM.translate('search_tab'),
-                                        selected: false,
-                                        icon: SvgIcon(
-                                          iconPath: AppIcons.search,
-                                          color: unselectedIconColor,
-                                          size: 24,
-                                        ),
-                                      ),
-                                      activeIcon: TweenAnimationBuilder<double>(
-                                        duration:
-                                            const Duration(milliseconds: 400),
-                                        curve: Curves.easeOutBack,
-                                        tween: Tween(begin: 0.5, end: 1.0),
-                                        builder: (context, value, child) =>
-                                            Transform.scale(
-                                          scale: value,
-                                          child: child,
-                                        ),
-                                        child: navBox(
-                                          label: langVM.translate('search_tab'),
-                                          selected: true,
-                                          icon: SvgIcon(
-                                              iconPath: AppIcons.searchActive,
-                                              color: theme.colorScheme.primary,
-                                              size: 24),
-                                        ),
-                                      ),
-                                      label: '',
-                                    ),
-                                    BottomNavigationBarItem(
-                                      icon: navBox(
-                                        label: langVM.translate('products_tab'),
-                                        selected: false,
-                                        icon: SvgIcon(
-                                          iconPath: AppIcons.products,
-                                          color: unselectedIconColor,
-                                          size: 24,
-                                        ),
-                                      ),
-                                      activeIcon: TweenAnimationBuilder<double>(
-                                        duration:
-                                            const Duration(milliseconds: 400),
-                                        curve: Curves.easeOutBack,
-                                        tween: Tween(begin: 0.5, end: 1.0),
-                                        builder: (context, value, child) =>
-                                            Transform.scale(
-                                          scale: value,
-                                          child: child,
-                                        ),
-                                        child: navBox(
-                                          label:
-                                              langVM.translate('products_tab'),
-                                          selected: true,
-                                          icon: SvgIcon(
-                                              iconPath: AppIcons.productsActive,
-                                              color: theme.colorScheme.primary,
-                                              size: 24),
-                                        ),
-                                      ),
-                                      label: '',
-                                    ),
-                                    BottomNavigationBarItem(
-                                      icon: navBox(
-                                        label: langVM.translate('report_tab'),
-                                        selected: false,
-                                        icon: Icon(
-                                          Icons.report_outlined,
-                                          color: unselectedIconColor,
-                                          size: 24,
-                                        ),
-                                      ),
-                                      activeIcon: TweenAnimationBuilder<double>(
-                                        duration:
-                                            const Duration(milliseconds: 400),
-                                        curve: Curves.easeOutBack,
-                                        tween: Tween(begin: 0.5, end: 1.0),
-                                        builder: (context, value, child) =>
-                                            Transform.scale(
-                                          scale: value,
-                                          child: child,
-                                        ),
-                                        child: navBox(
-                                          label: langVM.translate('report_tab'),
-                                          selected: true,
-                                          icon: Icon(Icons.report,
-                                              color: theme.colorScheme.primary,
-                                              size: 24),
-                                        ),
-                                      ),
-                                      label: '',
-                                    ),
-                                  ],
-                                ),
-                              ),
+                          ),
+                          buildNavItem(
+                            2,
+                            langVM.translate('products_tab'),
+                            (c) => SvgIcon(
+                              iconPath: _index == 2
+                                  ? AppIcons.productsActive
+                                  : AppIcons.products,
+                              color: c,
+                              size: 24,
+                            ),
+                          ),
+                          buildNavItem(
+                            3,
+                            langVM.translate('report_tab'),
+                            (c) => Icon(
+                              _index == 3
+                                  ? Icons.report
+                                  : Icons.report_outlined,
+                              color: c,
+                              size: 24,
                             ),
                           ),
                         ],

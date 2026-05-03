@@ -18,6 +18,7 @@ import '../../widgets/loading_overlay.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/product_card.dart';
 import '../../widgets/custom_search_bar.dart';
+import '../../widgets/empty_state_view.dart';
 
 class ProductsScreen extends StatefulWidget {
   const ProductsScreen({super.key});
@@ -277,7 +278,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                   height: MediaQuery.of(context).size.height * 0.75,
                   decoration: BoxDecoration(
                     color: Theme.of(context).brightness == Brightness.dark
-                        ? const Color(0xFF121212)
+                        ? Theme.of(context).scaffoldBackgroundColor
                         : Colors.white,
                   ),
                   child: Column(
@@ -645,13 +646,6 @@ class _ProductsScreenState extends State<ProductsScreen> {
           ),
           decoration: BoxDecoration(
             color: Theme.of(context).scaffoldBackgroundColor,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 5),
-              ),
-            ],
           ),
           child: Column(
             children: [
@@ -692,7 +686,10 @@ class _ProductsScreenState extends State<ProductsScreen> {
                         ),
                         child: IconButton(
                           icon: Icon(Icons.filter_list,
-                              color: Theme.of(context).colorScheme.primary),
+                              color: Theme.of(context).brightness ==
+                                      Brightness.dark
+                                  ? Colors.white.withOpacity(0.8)
+                                  : Theme.of(context).colorScheme.primary),
                           tooltip: 'Filtrele',
                           onPressed: _showFilterBottomSheet,
                         ),
@@ -738,9 +735,14 @@ class _ProductsScreenState extends State<ProductsScreen> {
                           children: [
                             SizedBox(
                               height: MediaQuery.of(context).size.height * 0.6,
-                              child: Center(
-                                  child: Text(
-                                      langVM.translate('no_products_added'))),
+                              child: EmptyStateView(
+                                iconPath: AppIcons.products,
+                                title: langVM.translate('no_products_added'),
+                                message:
+                                    'Şu an için pazarlarda listelenen bir ürün bulunmuyor. Satıcılar ürün eklediğinde burada görünecektir.',
+                                actionLabel: langVM.translate('retry'),
+                                onActionPressed: _refreshProducts,
+                              ),
                             ),
                           ],
                         ),

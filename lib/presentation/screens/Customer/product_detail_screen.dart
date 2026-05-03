@@ -1168,7 +1168,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
     return Scaffold(
       extendBodyBehindAppBar: true,
       backgroundColor:
-          isDark ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
+          isDark ? Theme.of(context).scaffoldBackgroundColor : const Color(0xFFF5F5F5),
       appBar: CustomAppBar(
         title: _showTitle ? Text(product['name']) : const SizedBox.shrink(),
         backgroundColor: _showTitle ? null : Colors.transparent,

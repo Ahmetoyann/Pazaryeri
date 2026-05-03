@@ -5,7 +5,8 @@ import 'svg_icon.dart';
 import '../../core/constants/app_icons.dart';
 
 class CustomBottomSheets {
-  static const Color _darkSheetBackground = Color(0xFF121212);
+  static const Color _darkSheetBackground =
+      Color(0xFF1C1C1E); // Katman hiyerarşisi (elevation) için bir tık aydınlık
 
   /// Temel BottomSheet yapılandırması (Tüm sheetler bunu kullanacak)
   static Future<T?> _showBase<T>({
@@ -50,10 +51,7 @@ class CustomBottomSheets {
                       height: 4,
                       margin: const EdgeInsets.only(bottom: 24),
                       decoration: BoxDecoration(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .primary
-                            .withOpacity(0.2),
+                        color: Colors.black.withOpacity(isDark ? 0.2 : 0.1),
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),

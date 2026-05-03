@@ -267,7 +267,7 @@ class _SellerLoginScreenState extends State<SellerLoginScreen> {
                           child: Text(
                             langVM.translate('forgot_password'),
                             style: TextStyle(
-                              color: Theme.of(context).colorScheme.secondary,
+                              color: Theme.of(context).colorScheme.primary,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -297,7 +297,7 @@ class _SellerLoginScreenState extends State<SellerLoginScreen> {
                           child: Text(
                             "Satıcı Kaydı",
                             style: TextStyle(
-                              color: Theme.of(context).colorScheme.secondary,
+                              color: Theme.of(context).colorScheme.primary,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -313,7 +313,8 @@ class _SellerLoginScreenState extends State<SellerLoginScreen> {
             top: 40,
             left: 16,
             child: IconButton(
-              icon: Icon(Icons.arrow_back, size: 24),
+              icon: Icon(Icons.arrow_back,
+                  color: Theme.of(context).colorScheme.primary, size: 24),
               onPressed: () => Navigator.of(context).pop(),
             ),
           ),

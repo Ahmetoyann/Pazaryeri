@@ -104,7 +104,10 @@ class MarketCard extends StatelessWidget {
             vertical: 8,
           ),
           decoration: BoxDecoration(
-            color: theme.cardColor,
+            color: isDark
+                ? Colors.grey.withOpacity(0.08)
+                : theme
+                    .cardColor, // Karanlık modda hafif transparan, açık modda kart rengi
             borderRadius: BorderRadius.circular(24),
             boxShadow: [
               BoxShadow(
@@ -114,7 +117,9 @@ class MarketCard extends StatelessWidget {
               ),
             ],
             border: Border.all(
-              color: Colors.grey.withOpacity(0.4),
+              color: isDark
+                  ? Colors.grey.withOpacity(0.2)
+                  : theme.primaryColor.withOpacity(0.3),
               width: 1,
             ),
           ),

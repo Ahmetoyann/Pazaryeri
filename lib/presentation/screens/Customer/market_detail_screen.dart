@@ -429,9 +429,6 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
         title: Text(widget.market.name),
         actions: [
           IconButton(
-              icon: const Icon(Icons.ios_share_rounded, size: 20),
-              onPressed: _shareMarket),
-          IconButton(
             icon: Icon(isFav ? Icons.favorite : Icons.favorite_border),
             color: isFav ? Colors.red : null,
             onPressed: () async {
@@ -439,41 +436,6 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
                 homeVM.toggleFavorite(widget.market.id);
               }
             },
-          ),
-          GestureDetector(
-            onTap: () {
-              if (_reviewsTitleKey.currentContext != null) {
-                Scrollable.ensureVisible(
-                  _reviewsTitleKey.currentContext!,
-                  duration: const Duration(milliseconds: 800),
-                  curve: Curves.easeInOutCubic,
-                  alignment: 0.1,
-                );
-              }
-            },
-            child: Container(
-              margin: const EdgeInsets.only(right: 16),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const SvgIcon(
-                      iconPath: AppIcons.star, color: Colors.amber, size: 20),
-                  const SizedBox(width: 4),
-                  Text(
-                    _averageRating.toStringAsFixed(1),
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
           ),
         ],
       ),
@@ -649,22 +611,12 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
                           color: isBeforeOpening
                               ? Colors.orange.withOpacity(0.1)
                               : (isOpenNow
-                                  ? Theme.of(context)
-                                      .colorScheme
-                                      .primary
-                                      .withOpacity(0.1)
+                                  ? Colors.green.withOpacity(0.1)
                                   : Theme.of(context)
                                       .colorScheme
                                       .error
                                       .withOpacity(0.1)),
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: isBeforeOpening
-                                ? Colors.orange
-                                : (isOpenNow
-                                    ? Theme.of(context).colorScheme.primary
-                                    : Theme.of(context).colorScheme.error),
-                          ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -675,7 +627,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
                                 color: isBeforeOpening
                                     ? Colors.orange
                                     : (isOpenNow
-                                        ? Theme.of(context).colorScheme.primary
+                                        ? Colors.green
                                         : Theme.of(context).colorScheme.error),
                                 shape: BoxShape.circle,
                               ),
@@ -701,7 +653,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
                                 color: isBeforeOpening
                                     ? Colors.orange
                                     : (isOpenNow
-                                        ? Theme.of(context).colorScheme.primary
+                                        ? Colors.green
                                         : Theme.of(context).colorScheme.error),
                                 fontWeight: FontWeight.bold,
                               ),
@@ -757,6 +709,12 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
                     AppIcons.location,
                     langVM.translate('address_label'),
                     '${widget.market.description}\n${widget.market.address.neighborhood}, ${widget.market.address.district} / ${widget.market.address.city}',
+                    trailing: IconButton(
+                      icon: const Icon(Icons.ios_share_rounded, size: 22),
+                      color: Theme.of(context).colorScheme.primary,
+                      tooltip: 'Pazarı Paylaş',
+                      onPressed: _shareMarket,
+                    ),
                   ),
                   const SizedBox(height: 16),
                   Container(
@@ -906,26 +864,6 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
                                   fontWeight: FontWeight.bold,
                                 ),
                           ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .primary
-                                  .withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              '${_reviews.length}',
-                              style: TextStyle(
-                                color: Theme.of(context).colorScheme.primary,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ),
                         ],
                       ),
                       Container(
@@ -1020,9 +958,68 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            langVM.translate('rate_market'),
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                langVM.translate('rate_market'),
+                style:
+                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              Row(
+                children: [
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '${_reviews.length}',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.primary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const SvgIcon(
+                            iconPath: AppIcons.star,
+                            color: Colors.amber,
+                            size: 16),
+                        const SizedBox(width: 4),
+                        Text(
+                          _averageRating.toStringAsFixed(1),
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.primary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
           const SizedBox(height: 8),
           Center(
@@ -1490,8 +1487,9 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
     BuildContext context,
     String iconPath,
     String title,
-    String value,
-  ) {
+    String value, {
+    Widget? trailing,
+  }) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1523,6 +1521,10 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
             ],
           ),
         ),
+        if (trailing != null) ...[
+          const SizedBox(width: 8),
+          trailing,
+        ],
       ],
     );
   }

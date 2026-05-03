@@ -25,5 +25,9 @@ doc/api/
 *.js.deps
 *.js.map
 
-.flutter-plugins
+.flutter-plugins 
 .flutter-plugins-dependencies
+
+# Android release imzalama dosyaları
+key.properties
+*.jks

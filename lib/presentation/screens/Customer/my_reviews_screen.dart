@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -257,92 +258,90 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
     required Color color,
     required VoidCallback onTap,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Expanded(
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              color,
-              color.withOpacity(0.7),
-            ],
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: color.withOpacity(0.3),
-              blurRadius: 12,
-              offset: const Offset(0, 6),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              color: color.withOpacity(isDark ? 0.15 : 0.08),
+              border: Border.all(
+                color: color.withOpacity(0.3),
+                width: 1.5,
+              ),
             ),
-          ],
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(24),
-            child: Stack(
-              children: [
-                // Arka plan ikonu (Dekoratif)
-                Positioned(
-                  right: -30,
-                  bottom: -30,
-                  child: iconPath != null
-                      ? SvgIcon(
-                          iconPath: iconPath,
-                          size: 140,
-                          color: Colors.white.withOpacity(0.15),
-                        )
-                      : Icon(
-                          icon,
-                          size: 140,
-                          color: Colors.white.withOpacity(0.15),
-                        ),
-                ),
-                // İçerik
-                Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: iconPath != null
-                            ? SvgIcon(
-                                iconPath: iconPath,
-                                size: 32,
-                                color: Colors.white,
-                              )
-                            : Icon(icon, size: 32, color: Colors.white),
-                      ),
-                      const Spacer(),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              title,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 0.5,
-                              ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: onTap,
+                borderRadius: BorderRadius.circular(24),
+                child: Stack(
+                  children: [
+                    // Arka plan ikonu (Dekoratif)
+                    Positioned(
+                      right: -30,
+                      bottom: -30,
+                      child: iconPath != null
+                          ? SvgIcon(
+                              iconPath: iconPath,
+                              size: 140,
+                              color: color.withOpacity(0.25),
+                            )
+                          : Icon(
+                              icon,
+                              size: 140,
+                              color: color.withOpacity(0.25),
                             ),
+                    ),
+                    // İçerik
+                    Padding(
+                      padding: const EdgeInsets.all(24.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: color.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: iconPath != null
+                                ? SvgIcon(
+                                    iconPath: iconPath,
+                                    size: 32,
+                                    color: color,
+                                  )
+                                : Icon(icon, size: 32, color: color),
                           ),
-                          const Icon(Icons.arrow_forward, color: Colors.white),
+                          const Spacer(),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  title,
+                                  style: TextStyle(
+                                    color:
+                                        isDark ? Colors.white : Colors.black87,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ),
+                              Icon(Icons.arrow_forward, color: color),
+                            ],
+                          ),
                         ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),
@@ -443,7 +442,7 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
                 ? (isDark
                     ? Theme.of(context).colorScheme.primary.withOpacity(0.15)
                     : Colors.orange.shade50)
-                : (isDark ? Theme.of(context).cardColor : Colors.white),
+                : (isDark ? Colors.grey.withOpacity(0.08) : Colors.white),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: isHighlighted

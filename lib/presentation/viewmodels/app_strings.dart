@@ -47,7 +47,7 @@ class AppStrings {
       'clear_selection': 'Seçimi Temizle',
       'error_prefix': 'Hata',
       'location_settings': 'Konum ayarları',
-      'retry': 'Yeniden Dene',
+      'retry': 'Yenile',
       'province_not_found': 'iline ait pazar bulunamadı.',
       'market_closed_today': 'Bugün kapalı',
       'market_open_today': 'Bugün açık',

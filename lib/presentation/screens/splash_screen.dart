@@ -16,6 +16,7 @@ class _SplashScreenState extends State<SplashScreen>
   late AnimationController _controller;
   late Animation<double> _opacityAnimation;
   late Animation<double> _scaleAnimation;
+  late Animation<double> _subtitleOpacityAnimation;
 
   @override
   void initState() {
@@ -31,6 +32,14 @@ class _SplashScreenState extends State<SplashScreen>
 
     _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeOutBack),
+    );
+
+    // Alt yazının ana animasyonun yarısında başlayıp fade-in olmasını sağlar
+    _subtitleOpacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.5, 1.0, curve: Curves.easeIn),
+      ),
     );
 
     _controller.forward();
@@ -101,6 +110,8 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
+    final langVM = Provider.of<LanguageViewModel>(context);
+
     return Scaffold(
       body: Center(
         child: AnimatedBuilder(
@@ -122,14 +133,9 @@ class _SplashScreenState extends State<SplashScreen>
                 height: 180,
                 padding: const EdgeInsets.all(30),
                 decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Theme.of(context).cardColor,
-                    border: Border.all(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .primary
-                            .withOpacity(0.3),
-                        width: 1.5)),
+                  shape: BoxShape.circle,
+                  color: Theme.of(context).cardColor,
+                ),
                 child: Image.asset('assets/images/copilot_ikon.png'),
               ),
               const SizedBox(height: 24),
@@ -140,6 +146,21 @@ class _SplashScreenState extends State<SplashScreen>
                       letterSpacing: 1.0,
                       color: Theme.of(context).colorScheme.primary,
                     ),
+              ),
+              const SizedBox(height: 8),
+              FadeTransition(
+                opacity: _subtitleOpacityAnimation,
+                child: Text(
+                  langVM.translate('app_slogan'),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: 0.5,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withOpacity(0.7),
+                      ),
+                ),
               ),
             ],
           ),

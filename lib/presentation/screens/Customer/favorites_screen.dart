@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../viewmodels/home_viewmodel.dart';
@@ -145,90 +146,90 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     required Color color,
     required VoidCallback onTap,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Expanded(
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              color,
-              color.withOpacity(0.7),
-            ],
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: color.withOpacity(0.3),
-              blurRadius: 12,
-              offset: const Offset(0, 6),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              color: color.withOpacity(isDark ? 0.15 : 0.08),
+              border: Border.all(
+                color: color.withOpacity(0.3),
+                width: 1.5,
+              ),
             ),
-          ],
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(24),
-            child: Stack(
-              children: [
-                // Arka plan ikonu (Dekoratif)
-                Positioned(
-                  right: -30,
-                  bottom: -30,
-                  child: iconPath != null
-                      ? SvgIcon(
-                          iconPath: iconPath,
-                          size: 140,
-                          color: Colors.white.withOpacity(0.15),
-                        )
-                      : Icon(
-                          icon,
-                          size: 140,
-                          color: Colors.white.withOpacity(0.15),
-                        ),
-                ),
-                // İçerik
-                Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: iconPath != null
-                            ? SvgIcon(
-                                iconPath: iconPath,
-                                size: 32,
-                                color: Colors.white,
-                              )
-                            : Icon(icon, size: 32, color: Colors.white),
-                      ),
-                      const Spacer(),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            title,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 0.5,
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: onTap,
+                borderRadius: BorderRadius.circular(24),
+                child: Stack(
+                  children: [
+                    // Arka plan ikonu (Dekoratif)
+                    Positioned(
+                      right: -30,
+                      bottom: -30,
+                      child: iconPath != null
+                          ? SvgIcon(
+                              iconPath: iconPath,
+                              size: 140,
+                              color: color.withOpacity(0.25),
+                            )
+                          : Icon(
+                              icon,
+                              size: 140,
+                              color: color.withOpacity(0.25),
                             ),
+                    ),
+                    // İçerik
+                    Padding(
+                      padding: const EdgeInsets.all(24.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: color.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: iconPath != null
+                                ? SvgIcon(
+                                    iconPath: iconPath,
+                                    size: 32,
+                                    color: color,
+                                  )
+                                : Icon(icon, size: 32, color: color),
                           ),
-                          const Icon(Icons.arrow_forward, color: Colors.white),
+                          const Spacer(),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  title,
+                                  style: TextStyle(
+                                    color:
+                                        isDark ? Colors.white : Colors.black87,
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ),
+                              Icon(Icons.arrow_forward, color: color),
+                            ],
+                          ),
                         ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),
@@ -313,6 +314,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             final reviewCount = (seller['reviewCount'] as num?)?.toInt() ?? 0;
             final profilePic = seller['profilePicture'];
 
+            final isDark = Theme.of(context).brightness == Brightness.dark;
+
             return GestureDetector(
               onTap: () {
                 Navigator.push(
@@ -338,7 +341,9 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                 margin: const EdgeInsets.only(bottom: 16),
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).cardColor,
+                  color: isDark
+                      ? Colors.grey.withOpacity(0.08)
+                      : Theme.of(context).cardColor,
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
@@ -348,7 +353,9 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                     ),
                   ],
                   border: Border.all(
-                    color: Colors.white.withOpacity(0.1),
+                    color: isDark
+                        ? Colors.white.withOpacity(0.1)
+                        : Colors.grey.withOpacity(0.1),
                     width: 1,
                   ),
                 ),

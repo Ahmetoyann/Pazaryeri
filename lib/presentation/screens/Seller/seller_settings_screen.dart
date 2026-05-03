@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'dart:ui';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:image_cropper/image_cropper.dart';
@@ -360,6 +362,293 @@ class _SellerSettingsScreenState extends State<SellerSettingsScreen> {
         borderRadius: BorderRadius.circular(16),
         borderSide: BorderSide(color: theme.colorScheme.primary, width: 1.5),
       ),
+    );
+  }
+
+  Future<void> _showDeleteAccountConfirmation() async {
+    final langVM = Provider.of<LanguageViewModel>(context, listen: false);
+
+    final bool confirm = await DialogService.showConfirmation(
+      context,
+      title: langVM.translate('delete_account_confirm_title'), // Hesabı Sil
+      message: langVM.translate('delete_account_confirm_message'),
+      confirmText: langVM.translate('yes'),
+      cancelText: langVM.translate('no'),
+      icon: Icons.person_remove_rounded,
+      confirmColor: Colors.red,
+    );
+
+    if (confirm && mounted) {
+      _showEmailVerificationDeleteDialog();
+    }
+  }
+
+  void _showEmailVerificationDeleteDialog() {
+    final authVM = Provider.of<AuthViewModel>(context, listen: false);
+    final langVM = Provider.of<LanguageViewModel>(context, listen: false);
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final TextEditingController codeController = TextEditingController();
+
+    int step = 0; // 0: Onay, 1: Kod Girme
+    bool isLoading = false;
+    String? errorMessage;
+    String generatedCode = ""; // Uygulama içinde üretilecek gerçek kod
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return PopScope(
+              canPop: !isLoading,
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                child: Dialog(
+                  backgroundColor: Colors.transparent,
+                  elevation: 0,
+                  child: Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surface,
+                      borderRadius: BorderRadius.circular(28),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 24,
+                          offset: const Offset(0, 12),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.error.withOpacity(0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            step == 0
+                                ? Icons.mark_email_read_rounded
+                                : Icons.dialpad_rounded,
+                            size: 40,
+                            color: theme.colorScheme.error,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        Text(
+                          step == 0 ? 'Doğrulama Kodu Gönder' : 'Kodu Girin',
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          step == 0
+                              ? 'Hesabınızı silmek için kayıtlı e-posta adresinize 6 haneli bir doğrulama kodu göndereceğiz. Onaylıyor musunuz?'
+                              : 'Lütfen e-posta adresinize gönderilen 6 haneli doğrulama kodunu girin.',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurface.withOpacity(0.7),
+                            height: 1.5,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 24),
+                        if (step == 1)
+                          TextField(
+                            controller: codeController,
+                            keyboardType: TextInputType.number,
+                            maxLength: 6,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                                fontSize: 24,
+                                letterSpacing: 8,
+                                fontWeight: FontWeight.bold),
+                            decoration: InputDecoration(
+                              counterText: "",
+                              hintText: "000000",
+                              filled: true,
+                              fillColor: isDark
+                                  ? theme.cardColor
+                                  : Colors.grey.shade50,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                borderSide: BorderSide(
+                                    color: theme.dividerColor.withOpacity(0.2)),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                borderSide: BorderSide(
+                                    color: theme.dividerColor.withOpacity(0.2)),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                borderSide: BorderSide(
+                                    color: theme.colorScheme.primary, width: 2),
+                              ),
+                            ),
+                          ),
+                        if (errorMessage != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 16),
+                            child: Text(
+                              errorMessage!,
+                              style: TextStyle(
+                                color: theme.colorScheme.error,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        const SizedBox(height: 24),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextButton(
+                                onPressed: isLoading
+                                    ? null
+                                    : () => Navigator.pop(context),
+                                style: TextButton.styleFrom(
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 16),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                ),
+                                child: Text(
+                                  langVM.translate('cancel'),
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: theme.colorScheme.onSurface
+                                        .withOpacity(0.7),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: FilledButton(
+                                onPressed: isLoading
+                                    ? null
+                                    : () async {
+                                        if (step == 0) {
+                                          setState(() {
+                                            isLoading = true;
+                                            errorMessage = null;
+                                          });
+
+                                          try {
+                                            // 6 haneli rastgele kod oluştur
+                                            final random = Random();
+                                            generatedCode = (100000 +
+                                                    random.nextInt(900000))
+                                                .toString();
+
+                                            final userEmail =
+                                                authVM.currentUser?.email;
+                                            if (userEmail != null) {
+                                              await AuthService.instance
+                                                  .sendVerificationCodeEmail(
+                                                      userEmail, generatedCode);
+                                            } else {
+                                              throw Exception(
+                                                  "Kullanıcı e-postası bulunamadı.");
+                                            }
+
+                                            setState(() {
+                                              isLoading = false;
+                                              step = 1;
+                                            });
+                                          } catch (e) {
+                                            setState(() {
+                                              isLoading = false;
+                                              errorMessage =
+                                                  'E-posta gönderilemedi. Lütfen daha sonra tekrar deneyin.';
+                                            });
+                                          }
+                                        } else {
+                                          final code =
+                                              codeController.text.trim();
+                                          if (code.isEmpty || code.length < 6) {
+                                            setState(() => errorMessage =
+                                                'Lütfen 6 haneli kodu eksiksiz girin.');
+                                            return;
+                                          }
+                                          if (code != generatedCode) {
+                                            setState(() => errorMessage =
+                                                'Hatalı kod girdiniz. Lütfen tekrar deneyin.');
+                                            return;
+                                          }
+                                          setState(() {
+                                            isLoading = true;
+                                            errorMessage = null;
+                                          });
+                                          try {
+                                            // Firestore'dan silme işlemi ve uygulamadan çıkış yapma işlemini başlatır
+                                            await authVM.deleteAccount();
+                                            if (context.mounted) {
+                                              Navigator.pop(
+                                                  context); // Pencereyi kapat
+                                              Navigator.of(context).popUntil(
+                                                  (route) => route
+                                                      .isFirst); // Ana giriş sayfasına dön
+                                              CustomSnackbars.showSuccess(
+                                                  context,
+                                                  'Hesabınız başarıyla silindi.');
+                                            }
+                                          } catch (e) {
+                                            setState(() {
+                                              isLoading = false;
+                                              errorMessage =
+                                                  'Silme işlemi başarısız: Lütfen tekrar giriş yapıp deneyin.';
+                                            });
+                                          }
+                                        }
+                                      },
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: theme.colorScheme.error,
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 16),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                ),
+                                child: isLoading
+                                    ? const SizedBox(
+                                        height: 20,
+                                        width: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.white,
+                                        ),
+                                      )
+                                    : Text(
+                                        step == 0
+                                            ? 'Kodu Gönder'
+                                            : 'Hesabı Sil',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -771,6 +1060,16 @@ class _SellerSettingsScreenState extends State<SellerSettingsScreen> {
                   text: langVM.translate('logout'),
                   icon: Icons.logout,
                   onPressed: _showLogoutConfirmation,
+                  backgroundColor: Colors.red.withOpacity(0.1),
+                  foregroundColor: Colors.red,
+                ),
+                const SizedBox(height: 16),
+                // Hesabı Sil Butonu
+                CustomButton(
+                  text: langVM.translate(
+                      'delete_account'), // AppStrings dosyasında "Hesabımı Sil" olarak tanımlı
+                  icon: Icons.person_remove_rounded,
+                  onPressed: _showDeleteAccountConfirmation,
                   backgroundColor: Colors.red.withOpacity(0.1),
                   foregroundColor: Colors.red,
                 ),

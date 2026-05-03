@@ -103,17 +103,17 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
       centerTitle: centerTitle,
       automaticallyImplyLeading: automaticallyImplyLeading,
       backgroundColor:
-          backgroundColor ?? (isDark ? surfaceColor : Colors.white),
+          backgroundColor ?? Theme.of(context).scaffoldBackgroundColor,
       surfaceTintColor: Colors.transparent,
-      elevation: elevation ?? 2,
+      elevation: elevation ?? 0,
       shadowColor: Colors.black.withOpacity(0.1),
-      scrolledUnderElevation: elevation ?? 2,
+      scrolledUnderElevation: elevation ?? 0,
       bottom: bottom,
-      iconTheme: Theme.of(context).iconTheme.copyWith(
-            color: Theme.of(context).colorScheme.primary,
-          ),
+      iconTheme: IconThemeData(
+        color: isDark ? Colors.white.withOpacity(0.8) : effectiveContentColor,
+      ),
       titleTextStyle: TextStyle(
-        color: effectiveContentColor,
+        color: isDark ? Colors.white.withOpacity(0.8) : effectiveContentColor,
         fontWeight: FontWeight.w900,
         fontSize: 21,
         shadows: [

@@ -127,7 +127,8 @@ class _LoginScreenState extends State<LoginScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: Icon(Icons.arrow_back,
+              color: Theme.of(context).colorScheme.primary),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),

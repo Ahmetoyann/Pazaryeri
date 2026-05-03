@@ -12,9 +12,12 @@ import '../../../presentation/widgets/svg_icon.dart';
 import '../../widgets/loading_overlay.dart';
 import '../../widgets/custom_bottom_sheets.dart';
 import '../../widgets/custom_snackbars.dart';
+import '../../widgets/empty_state_view.dart';
 
 class SellerProductsScreen extends StatefulWidget {
-  const SellerProductsScreen({super.key});
+  final VoidCallback? onSwitchToAddProductTab;
+
+  const SellerProductsScreen({super.key, this.onSwitchToAddProductTab});
 
   @override
   State<SellerProductsScreen> createState() => _SellerProductsScreenState();
@@ -146,37 +149,38 @@ class _SellerProductsScreenState extends State<SellerProductsScreen> {
 
     if (sellerVM.myProducts.isEmpty) {
       return RefreshIndicator(
-        onRefresh: () async {
-          await sellerVM.loadProducts();
-        },
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: SizedBox(
-            height: MediaQuery.of(context).size.height * 0.6,
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  SvgIcon(
-                      iconPath: AppIcons.inventory,
-                      size: 72,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withOpacity(0.2)),
-                  const SizedBox(height: 16),
-                  Text("Henüz ürün eklemediniz.",
-                      style: TextStyle(
-                          fontSize: 17,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withOpacity(0.5))),
-                ],
+        onRefresh: () => sellerVM.loadProducts(),
+        child: LayoutBuilder(builder: (context, constraints) {
+          return SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: EmptyStateView(
+                iconPath: AppIcons.inventory,
+                title: 'Henüz ürününüz yok',
+                message: 'Satışa başlamak için ilk ürününüzü ekleyin.',
+                actionLabel: 'İlk Ürünü Ekle',
+                actionIcon: Icons.add_shopping_cart_rounded,
+                onActionPressed: () {
+                  if (widget.onSwitchToAddProductTab != null) {
+                    widget.onSwitchToAddProductTab!();
+                  } else {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => SellerAddProductScreen(
+                          onProductAdded: () {
+                            sellerVM.loadProducts();
+                          },
+                        ),
+                      ),
+                    );
+                  }
+                },
               ),
             ),
-          ),
-        ),
+          );
+        }),
       );
     }
 
@@ -227,6 +231,8 @@ class _SellerProductsScreenState extends State<SellerProductsScreen> {
             },
             onDismissed: (direction) async {
               final productId = product.id;
+              final scaffoldMessenger = ScaffoldMessenger.of(this.context);
+              final localLang = langVM;
 
               // Geri alabilmek için silinmeden önce Firestore'dan yedeğini alıyoruz
               Map<String, dynamic>? deletedData;
@@ -245,15 +251,13 @@ class _SellerProductsScreenState extends State<SellerProductsScreen> {
               if (mounted) {
                 CustomSnackbars.showUndo(
                   this.context,
-                  langVM.translate('success_product_deleted'),
+                  localLang.translate('success_product_deleted'),
                   () async {
                     if (deletedData != null) {
-                      // Geri Al tıklandığında aynı ID ile veritabanına geri yükle
                       await FirebaseFirestore.instance
                           .collection('products')
                           .doc(productId)
                           .set(deletedData);
-                      // Listeyi yenile
                       if (mounted) await sellerVM.loadProducts();
                     }
                   },

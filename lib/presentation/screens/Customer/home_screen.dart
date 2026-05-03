@@ -27,7 +27,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   late AnimationController _pulseController;
-  late AnimationController _glowController;
 
   @override
   void initState() {
@@ -36,17 +35,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat(reverse: true);
-
-    _glowController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 3),
-    )..repeat();
   }
 
   @override
   void dispose() {
     _pulseController.dispose();
-    _glowController.dispose();
     super.dispose();
   }
 
@@ -238,7 +231,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.primary),
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white.withOpacity(0.8)
+                              : Theme.of(context).colorScheme.primary),
                     ),
                     GestureDetector(
                       onTap: () => _openMapSearch(vm),
@@ -248,13 +243,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         decoration: BoxDecoration(
                           color: Theme.of(context).colorScheme.surface,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                              color: Theme.of(context).colorScheme.primary),
                         ),
                         child: Text(
                           langVM.translate('see_all'),
                           style: TextStyle(
-                            color: Theme.of(context).colorScheme.primary,
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.white.withOpacity(0.8)
+                                    : Theme.of(context).colorScheme.primary,
                             fontWeight: FontWeight.bold,
                             fontSize: 12,
                           ),
@@ -299,52 +295,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           child: Stack(
                             clipBehavior: Clip.none,
                             children: [
-                              AnimatedBuilder(
-                                  animation: _glowController,
-                                  builder: (context, child) {
-                                    final primary =
-                                        Theme.of(context).colorScheme.primary;
-                                    final isDark =
-                                        Theme.of(context).brightness ==
-                                            Brightness.dark;
-                                    return Container(
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(24),
-                                        boxShadow: isDark
-                                            ? [
-                                                BoxShadow(
-                                                  color:
-                                                      primary.withOpacity(0.15),
-                                                  blurRadius: 15,
-                                                  spreadRadius: -2,
-                                                )
-                                              ]
-                                            : null,
-                                        gradient: SweepGradient(
-                                          colors: [
-                                            primary.withOpacity(0.0),
-                                            primary.withOpacity(0.0),
-                                            primary,
-                                            primary.withOpacity(0.0),
-                                          ],
-                                          stops: const [0.0, 0.75, 0.95, 1.0],
-                                          transform: GradientRotation(
-                                              _glowController.value *
-                                                  2 *
-                                                  3.1415926535),
-                                        ),
-                                      ),
-                                      padding: const EdgeInsets.all(2.5),
-                                      child: ClipRRect(
-                                        borderRadius:
-                                            BorderRadius.circular(21.5),
-                                        child: Container(
-                                          color: Theme.of(context).cardColor,
-                                          child: card,
-                                        ),
-                                      ),
-                                    );
-                                  }),
+                              SizedBox(
+                                height: double.infinity,
+                                child: card,
+                              ),
                               Positioned(
                                 top: -10,
                                 right: -10,
@@ -407,7 +361,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.primary),
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white.withOpacity(0.8)
+                          : Theme.of(context).colorScheme.primary),
                 ),
                 const SizedBox(height: 12),
               ],
@@ -469,7 +425,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             decoration: BoxDecoration(
                               color: Theme.of(context).brightness ==
                                       Brightness.dark
-                                  ? Theme.of(context).cardColor
+                                  ? Theme.of(context)
+                                      .colorScheme
+                                      .primary
+                                      .withOpacity(0.1)
                                   : Colors.white,
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(
@@ -504,7 +463,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 ),
                                 isExpanded: true,
                                 icon: SvgIcon(
-                                    iconPath: AppIcons.market,
+                                    iconPath: AppIcons.location,
                                     color:
                                         Theme.of(context).colorScheme.primary),
                                 items: vm.allCities.map((String city) {
@@ -534,16 +493,16 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                       : Colors.grey.shade100)
                                   : (Theme.of(context).brightness ==
                                           Brightness.dark
-                                      ? Theme.of(context).cardColor
+                                      ? Colors.white.withOpacity(0.1)
                                       : Colors.white),
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(
                                 color: vm.selectedCityFilter == null
                                     ? Colors.transparent
-                                    : Theme.of(context)
-                                        .colorScheme
-                                        .primary
-                                        .withOpacity(0.2),
+                                    : Theme.of(context).brightness ==
+                                            Brightness.dark
+                                        ? Colors.white.withOpacity(0.2)
+                                        : Colors.grey.withOpacity(0.2),
                                 width: 1.5,
                               ),
                               boxShadow: vm.selectedCityFilter == null
@@ -622,7 +581,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 ),
                                 decoration: BoxDecoration(
                                   color: isSelected
-                                      ? Theme.of(context).colorScheme.primary
+                                      ? Theme.of(context)
+                                          .colorScheme
+                                          .primary
+                                          .withOpacity(0.2)
                                       : Theme.of(context).cardColor,
                                   borderRadius: BorderRadius.circular(20),
                                   border: Border.all(
@@ -631,25 +593,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                         : Colors.grey.withOpacity(0.3),
                                     width: 1,
                                   ),
-                                  boxShadow: isSelected
-                                      ? [
-                                          BoxShadow(
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .primary
-                                                .withOpacity(0.4),
-                                            blurRadius: 8,
-                                            offset: const Offset(0, 4),
-                                          ),
-                                        ]
-                                      : null,
                                 ),
                                 alignment: Alignment.center,
                                 child: Text(
                                   dayDisplay,
                                   style: TextStyle(
                                     color: isSelected
-                                        ? Colors.white
+                                        ? Theme.of(context).colorScheme.primary
                                         : Theme.of(context)
                                             .colorScheme
                                             .onSurface
@@ -749,7 +699,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   ),
                   child: IconButton(
                     icon: Icon(Icons.menu,
-                        color: Theme.of(context).colorScheme.primary),
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white.withOpacity(0.8)
+                            : Theme.of(context).colorScheme.primary),
                     onPressed: () => Scaffold.of(context).openDrawer(),
                   ),
                 ),
@@ -897,34 +849,26 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     ),
                     child: Row(
                       children: [
-                        ScaleTransition(
-                          scale: Tween<double>(begin: 0.9, end: 1.1).animate(
-                            CurvedAnimation(
-                              parent: _pulseController,
-                              curve: Curves.easeInOut,
-                            ),
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.primary,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .primary
+                                    .withOpacity(0.8),
+                                blurRadius: 8,
+                                spreadRadius: 2,
+                              ),
+                            ],
                           ),
-                          child: Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.primary,
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .primary
-                                      .withOpacity(0.8),
-                                  blurRadius: 8,
-                                  spreadRadius: 2,
-                                ),
-                              ],
-                            ),
-                            child: const SvgIcon(
-                              iconPath: AppIcons.location,
-                              color: Colors.white,
-                              size: 20,
-                            ),
+                          child: const SvgIcon(
+                            iconPath: AppIcons.location,
+                            color: Colors.white,
+                            size: 20,
                           ),
                         ),
                         const SizedBox(width: 12),

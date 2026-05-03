@@ -10,8 +10,8 @@ class CustomSnackbars {
     VoidCallback? onAction,
     String actionLabel = 'Geri Al',
   }) {
-    // Varsa mevcut snackbar'ı gizle
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    // Varsa mevcut veya birikmiş snackbar'ları gizle
+    ScaffoldMessenger.of(context).clearSnackBars();
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -42,26 +42,48 @@ class CustomSnackbars {
                 message,
                 style: const TextStyle(
                   color: Colors.white,
-                  fontWeight: FontWeight.w500,
-                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14.5,
                 ),
               ),
             ),
+            if (onAction != null)
+              Container(
+                margin: const EdgeInsets.only(left: 8),
+                child: TextButton(
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                    onAction();
+                  },
+                  style: TextButton.styleFrom(
+                    backgroundColor: Colors.white.withOpacity(0.2),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: Text(
+                    actionLabel,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 13),
+                  ),
+                ),
+              ),
           ],
         ),
         backgroundColor: color,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         duration: duration,
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-        elevation: 6,
-        action: onAction != null
-            ? SnackBarAction(
-                label: actionLabel,
-                textColor: Colors.white,
-                onPressed: onAction,
-              )
-            : null,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+        elevation: 8,
+        action:
+            null, // Butonu content içine alarak otomatik kapanmama sorununu bypass ettik!
       ),
     );
   }
@@ -116,9 +138,10 @@ class CustomSnackbars {
     _show(
       context,
       message: message,
-      icon: Icons.undo,
-      color: const Color(0xFF323232),
-      duration: const Duration(seconds: 4),
+      icon: Icons.restore_rounded,
+      color:
+          const Color(0xFF2C2C2E), // Apple tarzı daha modern ve soft koyu gri
+      duration: const Duration(seconds: 5), // Kesin olarak 5 saniye
       onAction: onUndo,
       actionLabel: undoLabel,
     );

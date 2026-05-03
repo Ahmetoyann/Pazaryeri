@@ -1,4 +1,5 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <!-- Location permission is required if you use location features (geolocator/geocoding) -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
@@ -8,13 +9,13 @@
     <!-- Optional: internet permission if fetching remote data -->
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Required for Speech to Text functionality in Products Screen -->
-    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" tools:node="remove" />
     <!-- Tell Play Store that GPS hardware is not required (helps devices without GPS) -->
     <uses-feature android:name="android.hardware.location.gps" android:required="false" />
     <application
         android:label="Pazaryeri"
-        android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:name="${applicationName}" 
+        android:icon="@mipmap/ic_launcher"> 
         <activity
             android:name=".MainActivity"
             android:exported="true"

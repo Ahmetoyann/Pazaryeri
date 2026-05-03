@@ -14,6 +14,7 @@ import '../../../core/constants/app_icons.dart';
 import '../../../presentation/widgets/svg_icon.dart';
 import '../../widgets/loading_overlay.dart';
 import '../../widgets/custom_search_bar.dart';
+import '../../widgets/empty_state_view.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -418,7 +419,12 @@ class _SearchScreenState extends State<SearchScreen> {
       );
     }
     return results.isEmpty
-        ? Center(child: Text(langVM.translate('no_results')))
+        ? EmptyStateView(
+            iconData: Icons.search_off,
+            title: langVM.translate('no_results'),
+            message:
+                'Aradığınız kelimeye uygun bir satıcı veya pazar bulunamadı.',
+          )
         : ListView.separated(
             padding: const EdgeInsets.all(16),
             itemCount: results.length,
@@ -513,7 +519,11 @@ class _SearchScreenState extends State<SearchScreen> {
     }
 
     if (_sellerResults.isEmpty) {
-      return Center(child: Text(langVM.translate('no_results')));
+      return EmptyStateView(
+        iconData: Icons.search_off,
+        title: langVM.translate('no_results'),
+        message: 'Aradığınız kelimeye uygun bir satıcı veya pazar bulunamadı.',
+      );
     }
 
     return ListView.builder(
@@ -542,7 +552,7 @@ class _SearchScreenState extends State<SearchScreen> {
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
           decoration: BoxDecoration(
-            color: isDark ? Theme.of(context).cardColor : Colors.white,
+            color: isDark ? Colors.grey.withOpacity(0.08) : Colors.white,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: isDark

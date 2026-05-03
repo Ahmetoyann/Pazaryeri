@@ -231,11 +231,33 @@ class MyReportsScreen extends StatelessWidget {
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
-                                          Text(
-                                            '${report['reportedName']}',
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 16,
+                                          Text.rich(
+                                            TextSpan(
+                                              children: [
+                                                TextSpan(
+                                                  text:
+                                                      '${report['reportedName']}',
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 16,
+                                                  ),
+                                                ),
+                                                TextSpan(
+                                                  text:
+                                                      report['type'] == 'seller'
+                                                          ? ' (satıcı)'
+                                                          : ' (pazar)',
+                                                  style: TextStyle(
+                                                    fontSize: 12,
+                                                    fontWeight:
+                                                        FontWeight.normal,
+                                                    color: Theme.of(context)
+                                                        .colorScheme
+                                                        .onSurface
+                                                        .withOpacity(0.6),
+                                                  ),
+                                                ),
+                                              ],
                                             ),
                                           ),
                                           const SizedBox(height: 4),
@@ -287,6 +309,46 @@ class MyReportsScreen extends StatelessWidget {
                                         .withOpacity(0.8),
                                   ),
                                 ),
+                                if (report['imageUrl'] != null &&
+                                    report['imageUrl']
+                                        .toString()
+                                        .isNotEmpty) ...[
+                                  const SizedBox(height: 12),
+                                  GestureDetector(
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => Scaffold(
+                                            backgroundColor: Colors.black,
+                                            appBar: AppBar(
+                                              backgroundColor: Colors.black,
+                                              iconTheme: const IconThemeData(
+                                                  color: Colors.white),
+                                            ),
+                                            body: Center(
+                                              child: InteractiveViewer(
+                                                child: Image.network(
+                                                    report['imageUrl']),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: Image.network(
+                                        report['imageUrl'],
+                                        height: 150,
+                                        width: double.infinity,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (c, e, s) =>
+                                            const SizedBox(),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                           ),

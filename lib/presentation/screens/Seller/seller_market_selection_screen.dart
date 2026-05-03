@@ -10,6 +10,7 @@ import '../../../core/constants/app_icons.dart';
 import '../../../presentation/widgets/svg_icon.dart';
 import '../../widgets/loading_overlay.dart';
 import '../../widgets/custom_search_bar.dart';
+import '../../widgets/empty_state_view.dart';
 
 class SellerMarketSelectionScreen extends StatefulWidget {
   const SellerMarketSelectionScreen({super.key});
@@ -217,15 +218,12 @@ class _SellerMarketSelectionScreenState
               child: _isLoadingMarkets
                   ? const Center(child: CustomLoadingIndicator())
                   : _filteredMarkets.isEmpty
-                      ? Center(
-                          child: Text(
-                          langVM.translate('no_results'),
-                          style: TextStyle(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withOpacity(0.6)),
-                        ))
+                      ? EmptyStateView(
+                          iconData: Icons.search_off,
+                          title: langVM.translate('no_results'),
+                          message:
+                              'Arama kriterlerinize uygun pazar bulunamadı.',
+                        )
                       : ListView.builder(
                           padding: EdgeInsets.zero,
                           itemCount: _filteredMarkets.length,

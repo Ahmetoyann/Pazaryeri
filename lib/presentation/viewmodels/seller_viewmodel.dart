@@ -397,16 +397,25 @@ class SellerViewModel extends ChangeNotifier {
 
   Future<void> removeProduct(String productId) async {
     try {
-      final product = _myProducts.firstWhere((p) => p.id == productId);
-      if (product.imagePath != null) {
-        await AuthService.instance.deleteImageFromStorage(product.imagePath!);
+      final productIndex = _myProducts.indexWhere((p) => p.id == productId);
+      if (productIndex != -1) {
+        final product = _myProducts[productIndex];
+
+        // Optimistik UI güncellemesi: Silinen ürün UI'dan anında kaldırılır
+        _myProducts = List.from(_myProducts)..removeAt(productIndex);
+        notifyListeners();
+
+        if (product.imagePath != null) {
+          await AuthService.instance.deleteImageFromStorage(product.imagePath!);
+        }
+        await AuthService.instance.deleteProductFromDb(
+            productId); // Firebase üzerinden kesinlikle silinir
       }
-      await AuthService.instance.deleteProductFromDb(productId);
-      await loadProducts();
     } catch (e) {
       debugPrint('Ürün silinemedi: $e');
+      // Bir hata meydana gelirse listeyi Firebase'den tekrar çekerek yenileriz
+      await loadProducts();
     }
-    notifyListeners();
   }
 
   Future<void> updateProduct({
