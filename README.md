@@ -113,7 +113,7 @@ Uygulamanın tam fonksiyonlu çalışması için aşağıdaki izinlerin yapılan
 
 ## 📂 Proje Mimarisi ve Klasör Yapısı
 
-Pazaryeri/
+```Pazaryeri/
 ├── lib/
 │   ├── core/
 │   │   └── constants/
