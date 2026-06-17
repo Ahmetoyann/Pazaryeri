@@ -78,7 +78,7 @@ class _LoginScreenState extends State<LoginScreen> {
             color.withOpacity(0.7),
           ],
         ),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
             color: color.withOpacity(0.4),
@@ -103,7 +103,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Text(
                   title,
                   style: const TextStyle(
-                    fontSize: 18,
+                    fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
                     letterSpacing: 1,
@@ -166,15 +166,16 @@ class _LoginScreenState extends State<LoginScreen> {
                       color: Theme.of(context).colorScheme.primary,
                     )),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 32),
               Text(
                 langVM.translate('welcome_title'),
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.primary,
                     ),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 80),
               _buildLoginButton(
                 context,
                 title: langVM.translate('google_login'),

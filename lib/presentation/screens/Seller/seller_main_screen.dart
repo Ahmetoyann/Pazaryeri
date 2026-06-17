@@ -232,8 +232,6 @@ class _SellerMainScreenState extends State<SellerMainScreen>
     final authVM = Provider.of<AuthViewModel>(context);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final unselectedIconColor =
-        isDark ? Colors.white60 : Colors.grey.withOpacity(0.8);
 
     Widget buildNavItem(
       int itemIndex,
@@ -242,9 +240,10 @@ class _SellerMainScreenState extends State<SellerMainScreen>
     ) {
       final isSelected = _currentIndex == itemIndex;
       final primaryColor = theme.colorScheme.primary;
-      final color = isSelected ? primaryColor : unselectedIconColor;
+      final color = isSelected ? primaryColor : Colors.grey.withOpacity(0.8);
 
       return GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: () {
           if (_currentIndex != itemIndex) {
             setState(() {
@@ -252,50 +251,26 @@ class _SellerMainScreenState extends State<SellerMainScreen>
             });
           }
         },
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(24),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeOutQuint,
-              padding: EdgeInsets.symmetric(
-                horizontal:
-                    isSelected ? 12 : 10, // 5 eleman için padding daraltıldı
-                vertical: 10,
-              ),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? primaryColor.withOpacity(0.2)
-                    : (isDark ? Colors.white : Colors.black).withOpacity(0.05),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                  color: isSelected
-                      ? primaryColor.withOpacity(0.5)
-                      : (isDark ? Colors.white : Colors.black).withOpacity(0.1),
-                  width: 1,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                iconBuilder(color),
+                const SizedBox(height: 4),
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: color,
+                    fontWeight:
+                        isSelected ? FontWeight.bold : FontWeight.normal,
+                    fontSize: 10,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  iconBuilder(color),
-                  if (isSelected) ...[
-                    const SizedBox(width: 4),
-                    Text(
-                      label,
-                      style: TextStyle(
-                        color: primaryColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize:
-                            10, // 5 eleman sığması için font biraz daraltıldı
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
+              ]),
         ),
       );
     }
@@ -503,23 +478,22 @@ class _SellerMainScreenState extends State<SellerMainScreen>
           curve: Curves.easeInOutCubic,
           child: Container(
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.bottomCenter,
-                end: Alignment.topCenter,
-                colors: [
-                  theme.scaffoldBackgroundColor,
-                  theme.scaffoldBackgroundColor.withOpacity(isDark ? 0.9 : 0.7),
-                  theme.scaffoldBackgroundColor.withOpacity(isDark ? 0.4 : 0.1),
-                  Colors.transparent,
-                ],
-                stops: const [0.0, 0.6, 0.9, 1.0],
-              ),
+              color: isDark ? const Color(0xFF161616) : Colors.white,
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(24)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(isDark ? 0.2 : 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, -2),
+                ),
+              ],
             ),
             child: SafeArea(
               bottom: true,
               top: false,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(8, 16, 8, 12),
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [

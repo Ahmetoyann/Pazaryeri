@@ -402,11 +402,11 @@ class _SellerRegisterScreenState extends State<SellerRegisterScreen> {
                   decoration: _inputDecoration(context, 'Şifre', AppIcons.lock)
                       .copyWith(
                     suffixIcon: IconButton(
-                      icon: SvgIcon(
-                          iconPath: _obscurePassword
-                              ? AppIcons.visibility
-                              : AppIcons.visibilityOff,
-                          color: theme.colorScheme.primary,
+                      icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility
+                              : Icons.visibility_off,
+                          color: theme.colorScheme.onSurface,
                           size: 24),
                       onPressed: () =>
                           setState(() => _obscurePassword = !_obscurePassword),
@@ -485,11 +485,11 @@ class _SellerRegisterScreenState extends State<SellerRegisterScreen> {
                       _inputDecoration(context, 'Şifre Tekrar', AppIcons.lock)
                           .copyWith(
                     suffixIcon: IconButton(
-                      icon: SvgIcon(
-                          iconPath: _obscureConfirmPassword
-                              ? AppIcons.visibility
-                              : AppIcons.visibilityOff,
-                          color: theme.colorScheme.primary,
+                      icon: Icon(
+                          _obscureConfirmPassword
+                              ? Icons.visibility
+                              : Icons.visibility_off,
+                          color: theme.colorScheme.onSurface,
                           size: 24),
                       onPressed: () => setState(() =>
                           _obscureConfirmPassword = !_obscureConfirmPassword),

@@ -80,8 +80,10 @@ class EmptyStateView extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(12),
                 ),
+                backgroundColor: Colors.grey.withOpacity(0.1),
+                side: BorderSide(color: Colors.grey.withOpacity(0.1), width: 1),
               ),
             ),
           ],

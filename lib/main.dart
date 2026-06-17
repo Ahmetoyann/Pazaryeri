@@ -55,7 +55,6 @@ void main(List<String> args) async {
   // Böylece uygulama arka planı (Scaffold veya Gradient) üst çubuğun altından da kusursuzca görünür.
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
-    systemNavigationBarColor: Colors.transparent,
   ));
 
   await Firebase.initializeApp(
@@ -100,8 +99,17 @@ class MyApp extends StatelessWidget {
               GoogleFonts.interTextTheme(baseTheme.textTheme);
           final boldTheme = baseTheme.copyWith(
             textTheme: modernTextTheme,
-            scaffoldBackgroundColor: const Color(0xFF161616), // Göz yormayan yumuşak siyah
+            scaffoldBackgroundColor:
+                const Color(0xFF161616), // Göz yormayan yumuşak siyah
             canvasColor: const Color(0xFF161616),
+            appBarTheme: baseTheme.appBarTheme.copyWith(
+              systemOverlayStyle: const SystemUiOverlayStyle(
+                statusBarColor: Colors.transparent,
+                statusBarIconBrightness: Brightness.light,
+                systemNavigationBarColor: Color(0xFF161616),
+                systemNavigationBarIconBrightness: Brightness.light,
+              ),
+            ),
           );
 
           // Modern Light Tema
@@ -139,6 +147,8 @@ class MyApp extends StatelessWidget {
                 statusBarColor: Colors.transparent,
                 statusBarIconBrightness: Brightness.dark,
                 statusBarBrightness: Brightness.light,
+                systemNavigationBarColor: Colors.white,
+                systemNavigationBarIconBrightness: Brightness.dark,
               ),
             ),
             inputDecorationTheme: InputDecorationTheme(
@@ -176,28 +186,41 @@ class MyApp extends StatelessWidget {
               ],
               builder: (context, child) {
                 final isDark = Theme.of(context).brightness == Brightness.dark;
-                return Stack(
-                  children: [
-                    Positioned.fill(
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 500),
-                        curve: Curves.easeInOut,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: isDark
-                                ? [
-                                    const Color(0xFF161616),
-                                    const Color(0xFF161616)
-                                  ] // Daha göz yormayan yumuşak siyah
-                                : [Colors.white, Colors.white],
+                final overlayStyle = SystemUiOverlayStyle(
+                  statusBarColor: Colors.transparent,
+                  statusBarIconBrightness:
+                      isDark ? Brightness.light : Brightness.dark,
+                  systemNavigationBarColor:
+                      isDark ? const Color(0xFF161616) : Colors.white,
+                  systemNavigationBarIconBrightness:
+                      isDark ? Brightness.light : Brightness.dark,
+                );
+                return AnnotatedRegion<SystemUiOverlayStyle>(
+                  value: overlayStyle,
+                  child: Stack(
+                    children: [
+                      Positioned.fill(
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 500),
+                          curve: Curves.easeInOut,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: isDark
+                                  ? [
+                                      const Color(0xFF161616),
+                                      const Color(0xFF161616)
+                                    ] // Daha göz yormayan yumuşak siyah
+                                  : [Colors.white, Colors.white],
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    if (child != null) GlobalConnectivityManager(child: child),
-                  ],
+                      if (child != null)
+                        GlobalConnectivityManager(child: child),
+                    ],
+                  ),
                 );
               },
               home: StartupConnectivityWrapper(
@@ -715,6 +738,7 @@ class _MainScaffoldState extends State<MainScaffold> {
   int _index = 0;
   bool _isDrawerOpen = false;
   bool _isBottomNavVisible = true;
+  bool _isExtended = false;
 
   final _screens = const [
     HomeScreen(),
@@ -881,9 +905,6 @@ class _MainScaffoldState extends State<MainScaffold> {
     final authVM = Provider.of<AuthViewModel>(context);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    // Seçili olmayan ikonlar için daha okunabilir dinamik bir renk
-    final unselectedIconColor =
-        isDark ? Colors.white60 : Colors.grey.withOpacity(0.8);
     final isDesktop = MediaQuery.of(context).size.width > 800; // Web kontrolü
 
     Widget buildNavItem(
@@ -893,9 +914,10 @@ class _MainScaffoldState extends State<MainScaffold> {
     ) {
       final isSelected = _index == itemIndex;
       final primaryColor = theme.colorScheme.primary;
-      final color = isSelected ? primaryColor : unselectedIconColor;
+      final color = isSelected ? primaryColor : Colors.grey.withOpacity(0.8);
 
       return GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: () {
           if (_index != itemIndex) {
             setState(() {
@@ -903,48 +925,24 @@ class _MainScaffoldState extends State<MainScaffold> {
             });
           }
         },
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(24),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeOutQuint,
-              padding: EdgeInsets.symmetric(
-                horizontal: isSelected ? 16 : 14,
-                vertical: 12,
-              ),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? primaryColor.withOpacity(0.2)
-                    : (isDark ? Colors.white : Colors.black).withOpacity(0.05),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                  color: isSelected
-                      ? primaryColor.withOpacity(0.5)
-                      : (isDark ? Colors.white : Colors.black).withOpacity(0.1),
-                  width: 1,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                iconBuilder(color),
+                const SizedBox(height: 4),
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: color,
+                    fontWeight:
+                        isSelected ? FontWeight.bold : FontWeight.normal,
+                    fontSize: 10,
+                  ),
                 ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  iconBuilder(color),
-                  if (isSelected) ...[
-                    const SizedBox(width: 6),
-                    Text(
-                      label,
-                      style: TextStyle(
-                        color: primaryColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
+              ]),
         ),
       );
     }
@@ -982,9 +980,18 @@ class _MainScaffoldState extends State<MainScaffold> {
                 children: [
                   if (isDesktop)
                     NavigationRail(
+                      extended: _isExtended,
+                      minExtendedWidth: 200,
+                      leading: IconButton(
+                        icon: const Icon(Icons.menu),
+                        onPressed: () =>
+                            setState(() => _isExtended = !_isExtended),
+                      ),
                       selectedIndex: _index,
                       onDestinationSelected: (i) => setState(() => _index = i),
-                      labelType: NavigationRailLabelType.all,
+                      labelType: _isExtended
+                          ? NavigationRailLabelType.none
+                          : NavigationRailLabelType.all,
                       backgroundColor: Theme.of(context).colorScheme.surface,
                       destinations: [
                         NavigationRailDestination(
@@ -1053,25 +1060,23 @@ class _MainScaffoldState extends State<MainScaffold> {
                 curve: Curves.easeInOutCubic,
                 child: Container(
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.bottomCenter,
-                      end: Alignment.topCenter,
-                      colors: [
-                        theme.scaffoldBackgroundColor,
-                        theme.scaffoldBackgroundColor
-                            .withOpacity(isDark ? 0.9 : 0.7),
-                        theme.scaffoldBackgroundColor
-                            .withOpacity(isDark ? 0.4 : 0.1),
-                        Colors.transparent,
-                      ],
-                      stops: const [0.0, 0.6, 0.9, 1.0],
-                    ),
+                    color: isDark ? const Color(0xFF161616) : Colors.white,
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(24)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(isDark ? 0.2 : 0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, -2),
+                      ),
+                    ],
                   ),
                   child: SafeArea(
                     bottom: true,
                     top: false,
                     child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 8),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [

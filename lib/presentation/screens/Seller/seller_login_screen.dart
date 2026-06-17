@@ -229,10 +229,10 @@ class _SellerLoginScreenState extends State<SellerLoginScreen> {
                               langVM.translate('password_label'), AppIcons.lock)
                           .copyWith(
                         suffixIcon: IconButton(
-                          icon: SvgIcon(
-                              iconPath: _obscurePassword
-                                  ? AppIcons.visibility
-                                  : AppIcons.visibilityOff,
+                          icon: Icon(
+                              _obscurePassword
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
                               color: Theme.of(context).iconTheme.color ??
                                   Theme.of(context).colorScheme.onSurface,
                               size: 28),

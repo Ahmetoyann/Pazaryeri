@@ -52,6 +52,16 @@ class HomeViewModel extends ChangeNotifier {
       notifyListeners();
 
       final coord = await _locationService.getCurrentCoordinates();
+
+      if (coord == null) {
+        state = ViewState
+            .idle; // Error state yerine idle verip manuel kullanım şansı tanıyoruz
+        errorMessage =
+            'Konum bilgisine ulaşılamadı. Lütfen tarayıcı izinlerini kontrol edin veya manuel olarak bir il seçerek devam edin.';
+        notifyListeners();
+        return;
+      }
+
       print('HomeViewModel: got coords ${coord.latitude}, ${coord.longitude}');
       final address = await _locationService.getAddressFromCoordinates(
         lat: coord.latitude,
